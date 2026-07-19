@@ -271,7 +271,9 @@ sub assign_swizzle {
         $v->[ $idx[$_] ] = $val[$_] for 0 .. $#idx;
     }
     else {
-        my $sv = $value;
+        # Scalar writes snap too — the store is into f32 storage (numpy's
+        # float32 dtype / JS's Float32Array both round scalar assignments).
+        my $sv = f32($value);
         $v->[$_] = $sv for @idx;
     }
     return $v;

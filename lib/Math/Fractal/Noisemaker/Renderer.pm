@@ -16,6 +16,7 @@ use File::Spec     ();
 use JSON::PP       ();
 use Exporter 'import';
 
+use Math::Fractal::Noisemaker::DSL qw(compile_dsl);
 use Math::Fractal::Noisemaker::KernelCache;
 use Math::Fractal::Noisemaker::PassRunner qw(run_pass run_pass_deriv);
 use Math::Fractal::Noisemaker::Runtime;
@@ -26,7 +27,7 @@ use Math::Fractal::Noisemaker::DrawOps       ();
 use Math::Fractal::Noisemaker::OverlayGen    ();
 use Math::Fractal::Noisemaker::PaletteData   ();
 
-our @EXPORT_OK = qw(render_effect meta bundle_dir);
+our @EXPORT_OK = qw(render_effect render_dsl meta bundle_dir);
 
 my $_JSON = JSON::PP->new->utf8;
 my $META;
@@ -340,6 +341,74 @@ sub render_effect {
         $attachments{$_} = $result for @out_names;
     }
     return $result;
+}
+
+# ---- Polymorphic DSL rendering (port of renderer.py render_dsl tail) ----
+
+# Turn a compiled surface binding into a Surface (or undef for unbound):
+# '@current' is the chain's current image, ['surface', 'oN'] a named surface
+# that must already have been written.
+sub _resolve_surface_marker {
+    my ($marker, $current, $surfaces) = @_;
+    return $current if !ref $marker && $marker eq '@current';
+    my $name = $marker->[1];
+    my $surf = $surfaces->{$name};
+    die "Surface $name has not been written\n" unless defined $surf;
+    return $surf;
+}
+
+# Mirror the JS renderer's per-step binding: the chain's current image is the
+# effect's inputTex; each surface param is bound by param name (the path
+# render_effect resolves), and external textures (imageTex/textTex/named)
+# pass straight through. Explicit surface args and inputTex-defaults win over
+# them.
+sub _run_effect_step {
+    my ($step, $current, $surfaces, $external_textures, $width, $height, $seed, $time) = @_;
+    my %inputs = %{ $external_textures || {} };
+    $inputs{inputTex} = $current if defined $current;
+    for my $pname (sort keys %{ $step->{surfaces} }) {
+        my $surf = _resolve_surface_marker($step->{surfaces}{$pname}, $current, $surfaces);
+        $inputs{$pname} = $surf if defined $surf;
+    }
+    return render_effect(
+        $step->{effect_id}, $step->{params}, \%inputs,
+        width => $width, height => $height, seed => $seed, time => $time,
+    );
+}
+
+# Render a Polymorphic DSL program on the CPU — the Perl counterpart of
+# noisemaker-cpu's CpuRenderer.render(). Compiles the program to a plan, then
+# threads each chain's `current` surface through read/write/effect steps over
+# a named-surface map (o0..o7), running one render_effect per effect step.
+sub render_dsl {
+    my ($source, %opt) = @_;
+    my $width  = defined $opt{width}  ? $opt{width}  : 512;
+    my $height = defined $opt{height} ? $opt{height} : 512;
+    my $seed   = defined $opt{seed}   ? $opt{seed}   : 1;
+    my $time   = defined $opt{time}   ? $opt{time}   : 0.0;
+    my $external_textures = $opt{external_textures};
+    my %surfaces = %{ $opt{seed_surfaces} || {} };
+    my $plan = compile_dsl($source, meta()->{effects});
+    for my $chain (@{ $plan->{chains} }) {
+        my $current;
+        for my $step (@{ $chain->{steps} }) {
+            my $kind = $step->{kind};
+            if ($kind eq 'read') {
+                $current = $surfaces{ $step->{surface} };
+                die "Surface $step->{surface} has not been written\n" unless defined $current;
+            }
+            elsif ($kind eq 'write') {
+                $surfaces{ $step->{surface} } = $current;
+            }
+            else {
+                $current = _run_effect_step($step, $current, \%surfaces, $external_textures,
+                    $width, $height, $seed, $time);
+            }
+        }
+    }
+    my $rendered = $surfaces{ $plan->{render_surface} };
+    die "Surface $plan->{render_surface} has not been written\n" unless defined $rendered;
+    return $rendered;
 }
 
 1;

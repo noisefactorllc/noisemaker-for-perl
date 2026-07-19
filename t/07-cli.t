@@ -261,10 +261,12 @@ SKIP: {
     my $available = eval { Math::Fractal::Noisemaker::Renderer->can('render_dsl') };
     skip 'Math::Fractal::Noisemaker::Renderer::render_dsl not implemented yet', 2 unless $available;
 
+    # Same program as noisemaker-python test_run_reads_dsl_from_stdin: the
+    # run subcommand reads the DSL source from stdin (no default program).
     my $filename = File::Spec->catfile($TMPDIR, 'run.png');
     my ($rc, $out, $err) = run_cli(
         [ 'run', '--width', 4, '--height', 4, '--filename', $filename ],
-        stdin => '',
+        stdin => "search synth\nsolid(color: #336699).write(o0)\nrender(o0)\n",
     );
     is($rc, 0, 'run exits 0') or diag("stdout=[$out] stderr=[$err]");
     ok(-f $filename, 'run wrote an output file');
