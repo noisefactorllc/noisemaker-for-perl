@@ -24,13 +24,14 @@ use File::Path qw(make_path);
 use File::Spec ();
 use POSIX      qw(WIFSIGNALED WTERMSIG WEXITSTATUS);
 
+use Math::Fractal::Noisemaker;
 use Math::Fractal::Noisemaker::Renderer qw(render_effect meta);
 use Math::Fractal::Noisemaker::PNG      qw(encode_png decode_png);
 
 Configure(qw(no_ignore_case));
 
 use constant MAX_SEED_VALUE => 2**32 - 1;
-use constant VERSION_STRING => 'make-noise (Math::Fractal::Noisemaker) 1.000';
+sub VERSION_STRING { "make-noise (Math::Fractal::Noisemaker) $Math::Fractal::Noisemaker::VERSION" }
 
 my %COMMANDS = (
     generate => \&cmd_generate,
@@ -69,8 +70,11 @@ sub main {
     if ($@) {
         my $err = $@;
         $err .= "\n" unless $err =~ /\n\z/;
+        # click exits 2 for usage/parameter errors, 1 for runtime failures;
+        # usage-class dies carry a "usage: " sentinel prefix (stripped here).
+        my $usage_error = $err =~ s/^usage: //;
         print STDERR $err;
-        return 1;
+        return $usage_error ? 2 : 1;
     }
     return defined $rc ? $rc : 0;
 }
@@ -167,7 +171,7 @@ sub cmd_generate {
     _require_positive_int($height, 'height');
 
     my $effect = shift @argv;
-    die "Missing argument 'EFFECT'.\n" unless defined $effect;
+    die "usage: Missing argument 'EFFECT'.\n" unless defined $effect;
     _no_extra_args(@argv);
 
     ($effect, $seed) = _prologue($effect, $seed, 'generator');
@@ -200,9 +204,9 @@ sub cmd_apply {
     return 2 unless $ok;
 
     my $effect = shift @argv;
-    die "Missing argument 'EFFECT'.\n" unless defined $effect;
+    die "usage: Missing argument 'EFFECT'.\n" unless defined $effect;
     my $input_filename = shift @argv;
-    die "Missing argument 'INPUT_FILENAME'.\n" unless defined $input_filename;
+    die "usage: Missing argument 'INPUT_FILENAME'.\n" unless defined $input_filename;
     _no_extra_args(@argv);
     die "Invalid value for 'INPUT_FILENAME': Path '$input_filename' does not exist.\n"
         unless -e $input_filename && !-d _;
@@ -253,7 +257,7 @@ sub cmd_animate {
     _require_positive_int($fps,         'fps');
 
     my $effect = shift @argv;
-    die "Missing argument 'EFFECT'.\n" unless defined $effect;
+    die "usage: Missing argument 'EFFECT'.\n" unless defined $effect;
     _no_extra_args(@argv);
 
     ($effect, $seed) = _prologue($effect, $seed, 'generator');
@@ -362,10 +366,10 @@ sub cmd_run {
     }
     for my $pair (@textures) {
         my $idx = index($pair, '=');
-        die "Expected NAME=FILE, received '$pair'\n" if $idx < 0;
+        die "usage: Expected NAME=FILE, received '$pair'\n" if $idx < 0;
         my $name = substr($pair, 0, $idx);
         my $path = substr($pair, $idx + 1);
-        die "Expected NAME=FILE, received '$pair'\n" unless length($name) && length($path);
+        die "usage: Expected NAME=FILE, received '$pair'\n" unless length($name) && length($path);
         die "No such texture file: $path\n" unless -f $path;
         $external{$name} = _load_png($path);
     }
@@ -400,7 +404,7 @@ sub _resolve_effect {
         @pool = sort keys %$effects unless @pool;
         return $pool[ int(rand(scalar @pool)) ];
     }
-    die "Unknown effect: $effect. Pass 'random' or a catalog id like 'synth/curl'.\n"
+    die "usage: Unknown effect: $effect. Pass 'random' or a catalog id like 'synth/curl'.\n"
         unless exists $effects->{$effect};
     return $effect;
 }
@@ -419,7 +423,7 @@ sub _parse_params {
     my %params;
     for my $kv (@$pairs) {
         my $idx = index($kv, '=');
-        die "Expected NAME=VALUE, received '$kv'\n" if $idx < 0;
+        die "usage: Expected NAME=VALUE, received '$kv'\n" if $idx < 0;
         $params{ substr($kv, 0, $idx) } = substr($kv, $idx + 1);
     }
     return \%params;
@@ -455,7 +459,7 @@ sub _load_png {
 
 sub _require_positive_int {
     my ($value, $opt_name) = @_;
-    die "--$opt_name must be a positive integer\n"
+    die "usage: --$opt_name must be a positive integer\n"
         unless defined $value && $value =~ /^\d+$/ && $value > 0;
 }
 

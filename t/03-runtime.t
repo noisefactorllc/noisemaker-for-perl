@@ -100,4 +100,33 @@ $rt->deriv_reset('replay', [{ dFdx => 0.25, dFdy => 0.5, fwidth => 0.75 }]);
 is($rt->dFdx(1.5), 0.25, 'replay returns fine diff');
 $rt->deriv_reset(undef);
 
+# --- review regression goldens (python-verified) ---
+
+# negative int >> is ARITHMETIC (Perl's raw >> on negative IVs is logical-64)
+is($rt->binary('>>', -8, 2, 1, 'int'), -2, 'negative int >> arithmetic');
+is($rt->binary('>>', -1, 31, 1, 'int'), -1, 'int -1 >> 31 stays -1');
+
+# huge floats WRAP mod 2^32 (Perl int() saturates past IV_MAX)
+is($rt->to_uint(1e20), 1661992960, 'to_uint(1e20) wraps like JS >>> 0');
+is($rt->to_int(-1e20), -1661992960, 'to_int(-1e20) wraps signed');
+
+# NaN propagation through min/max/clamp/sign (numpy semantics)
+my $qnan = 9**9**9 - 9**9**9;
+my $mn = $rt->component_wise('min', $rt->f(1.0), $qnan);
+ok($mn != $mn, 'min(1, NaN) is NaN');
+my $sg = $rt->component_wise('sign', $qnan);
+ok($sg != $sg, 'sign(NaN) is NaN');
+
+# deriv record snaps raw deferred-f64 vectors to f32 (Float32Array semantics)
+$rt->deriv_reset('record');
+my $rawv = $rt->binary('/', $rt->construct(2, 0.1, 0.2), $rt->construct(2, 0.3, 0.7), 2, 'float');
+$rt->dFdx($rawv);
+my $rec = $rt->deriv_log->[0][1];
+feq($rec->[0], 0.3333333134651184, 'deriv record snaps [0]');
+feq($rec->[1], 0.2857142984867096, 'deriv record snaps [1]');
+$rt->deriv_reset(undef);
+
+# fdiv honors negative-zero denominators
+is(Math::Fractal::Noisemaker::UintMath::fdiv(5.0, -0.0), -(9**9**9), 'fdiv(5, -0.0) = -Inf');
+
 done_testing();

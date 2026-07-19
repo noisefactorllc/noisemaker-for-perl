@@ -136,4 +136,36 @@ like(
     'render: read of unwritten surface dies'
 );
 
+# let value + partial bindings merge into a chain call (python: test_render_let_value_and_partial_bindings)
+{
+    my $program = "search synth, filter\n"
+        . "let amt = 3\n"
+        . "let base = noise(scaleX: 7, scaleY: 7)\n"
+        . "base(seed: 11).posterize(levels: amt).write(o0)\n"
+        . "render(o0)\n";
+    my $plan = compile_dsl($program, $effects);
+    my $step = $plan->{chains}[0]{steps}[0];
+    is($step->{effect_id}, 'synth/noise', 'partial resolves to the bound effect');
+    is($step->{params}{seed}, 11, 'call args merge over partial args');
+    is($step->{params}{scaleX}, 7, 'partial args survive the merge');
+    my $post = $plan->{chains}[0]{steps}[1];
+    is($post->{params}{levels}, 3, 'let value binding substitutes into args');
+    my $surface = render_dsl($program, width => 8, height => 8, seed => 1);
+    is($surface->width, 8, 'let/partial program renders');
+}
+
+# arithmetic + vector/array values (python: test_arithmetic_and_array_values_render)
+{
+    my $plan = compile_dsl(
+        "search synth\nnoise(scaleX: 4 * 2, scaleY: 16 / 2, seed: 3).write(o0)\nrender(o0)", $effects);
+    my $step = $plan->{chains}[0]{steps}[0];
+    is($step->{params}{scaleX}, 8, 'binary arithmetic evaluates');
+    is($step->{params}{scaleY}, 8, 'division evaluates');
+    my $surface = render_dsl(
+        "search synth\nsolid(color: [0.2, 0.4, 0.6]).write(o0)\nrender(o0)",
+        width => 2, height => 2);
+    my @px = unpack 'C4', $surface->to_rgba8;
+    is_deeply([@px[0 .. 2]], [51, 102, 153], 'array color value renders');
+}
+
 done_testing();

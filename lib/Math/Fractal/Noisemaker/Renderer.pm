@@ -118,16 +118,17 @@ sub _remap_uniform_data {
     my $g = sub { my ($name, $default) = @_; defined $u->{$name} ? $u->{$name} : $default };
     my @data = map { [0.0, 0.0, 0.0, 0.0] } 1 .. 267;
     my $bg = $g->('bgColor', [0, 0, 0]);
-    $data[0] = [$bg->[0], $bg->[1], $bg->[2], $g->('bgAlpha', 1)];
-    $data[1] = [$g->('zoneCount', 0), $g->('smoothEdge', 0.04), 0, $g->('time', 0)];
+    # Elements snap to f32 — the reference packs a Float32Array (numpy F32).
+    $data[0] = [map { f32($_) } $bg->[0], $bg->[1], $bg->[2], $g->('bgAlpha', 1)];
+    $data[1] = [map { f32($_) } $g->('zoneCount', 0), $g->('smoothEdge', 0.04), 0, $g->('time', 0)];
     for my $zone (0 .. 7) {
         $data[ 2 + $zone ] = [
-            $g->("zone${zone}_count", 0), $g->("zone${zone}_active", 0),
+            map { f32($_) } $g->("zone${zone}_count", 0), $g->("zone${zone}_active", 0),
             0, $g->("zone${zone}_alpha", 1),
         ];
         for my $pair (0 .. 31) {
             my $v = $g->("zone${zone}_v${pair}", [0, 0, 0, 0]);
-            $data[ 10 + $zone * 32 + $pair ] = [@$v];
+            $data[ 10 + $zone * 32 + $pair ] = [map { f32($_) } @$v];
         }
     }
     $data[266] = [0.0 + $width, 0.0 + $height, 0, 0];
@@ -295,7 +296,9 @@ sub render_effect {
                 $pass_uniforms{$glsl_name} = $uniforms->{$param_name};
             }
         }
-        my @out_names = values %{ $p->{outputs} || {} };
+        # Sorted for determinism: every current pass has at most one output,
+        # but hash order must never pick the format-defining attachment.
+        my @out_names = map { $p->{outputs}{$_} } sort keys %{ $p->{outputs} || {} };
         my $fmt = 'rgba16f';
         if (@out_names && $eff->{textures} && $eff->{textures}{ $out_names[0] }) {
             $fmt = $eff->{textures}{ $out_names[0] }{format} || 'rgba16f';
@@ -307,7 +310,7 @@ sub render_effect {
         if ($draw_op) {
             # CPU-only draw op (e.g. point-scatter): fresh destination seeds
             # from the prior same-name attachment (accumulator) or clears.
-            my ($src_name) = values %{ $p->{inputs} || {} };
+            my ($src_name) = map { $p->{inputs}{$_} } sort keys %{ $p->{inputs} || {} };
             $src_name = 'inputTex' unless defined $src_name;
             my $src = $textures{$src_name} || $textures{inputTex} || $blank;
             $result = Math::Fractal::Noisemaker::Surface->new($width, $height);

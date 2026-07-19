@@ -33,11 +33,14 @@ my $INF = 9**9**9;
 my $NAN = $INF - $INF;
 
 # IEEE division: n/0 -> +-Inf, 0/0 -> NaN (Perl's / dies on zero divide).
+# Honors the sign of a negative-zero denominator (n / -0.0 == -Inf).
 sub fdiv {
     my ($n, $d) = @_;
     if ($d == 0) {
         return $NAN if $n == 0 || $n != $n;
-        return $n > 0 ? $INF : -$INF;
+        my $neg_zero = (unpack('Q', pack('d', $d)) >> 63) & 1;
+        my $inf = ($n > 0) == !$neg_zero ? $INF : -$INF;
+        return $inf;
     }
     return $n / $d;
 }

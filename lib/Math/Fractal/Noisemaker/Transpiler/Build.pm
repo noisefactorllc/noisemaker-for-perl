@@ -203,6 +203,8 @@ sub run {
         $ids = eligible_ids();
     }
     elsif (my ($i) = grep { $argv[$_] eq '--only' } 0 .. $#argv) {
+        die "--only requires a comma-separated effect-id list\n"
+            if $i >= $#argv || $argv[ $i + 1 ] =~ /^--/;
         $ids = [split /,/, $argv[ $i + 1 ]];
     }
     else {

@@ -264,13 +264,24 @@ sub _json5_decode {
             $i = $j;
             next;
         }
+        # JSON5 relaxations handled IN the walk, so string contents (already
+        # emitted whole above) can never be corrupted by them:
+        if ($c eq ',') {    # trailing comma before } or ] — drop it
+            my $k = $i + 1;
+            $k++ while $k < $n && substr($text, $k, 1) =~ /[ \t\n\r]/;
+            if ($k < $n && (substr($text, $k, 1) eq '}' || substr($text, $k, 1) eq ']')) {
+                $i++;
+                next;
+            }
+        }
+        if ($c eq '+' && $i + 1 < $n && substr($text, $i + 1, 1) =~ /\d/) {
+            $i++;           # explicit plus sign on a number — drop it
+            next;
+        }
         push @out, $c;
         $i++;
     }
-    my $json = join '', @out;
-    $json =~ s/,(\s*[}\]])/$1/g;    # trailing commas
-    $json =~ s/\+(\d)/$1/g;         # +1 -> 1
-    return $_JSON->decode($json);
+    return $_JSON->decode(join '', @out);
 }
 
 # Read the single JS value (string/object/array literal) at $start.

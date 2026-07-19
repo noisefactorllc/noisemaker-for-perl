@@ -8,7 +8,9 @@ WriteMakefile(
     VERSION_FROM     => 'lib/Math/Fractal/Noisemaker.pm',
     ABSTRACT_FROM    => 'lib/Math/Fractal/Noisemaker.pm',
     LICENSE          => 'mit',
-    MIN_PERL_VERSION => '5.020',
+    # 5.22 floor: the runtime uses POSIX::log2/atan/trunc (C99 math batch,
+    # added to POSIX in 5.22) for exact libm parity with the reference engine.
+    MIN_PERL_VERSION => '5.022',
     EXE_FILES        => ['bin/make-noise'],
     PREREQ_PM        => {
         # Core modules only: JSON::PP, Compress::Zlib, POSIX, HTTP::Tiny,

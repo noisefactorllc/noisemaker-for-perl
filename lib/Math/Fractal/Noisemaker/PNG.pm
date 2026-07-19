@@ -243,7 +243,6 @@ sub decode_png {
     my $decoded = _decode_scanlines(join('', @idat_chunks), $width, $height, $components);
     my @trns = defined $transparency ? unpack('C*', $transparency) : ();
     my @pal  = defined $palette      ? unpack('C*', $palette)      : ();
-    my $rgba = "\x00" x ($width * $height * 4);
     my @out;
     for my $pixel (0 .. $width * $height - 1) {
         my $source = $pixel * $components;

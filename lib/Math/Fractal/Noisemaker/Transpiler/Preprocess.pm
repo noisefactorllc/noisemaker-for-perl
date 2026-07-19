@@ -216,12 +216,18 @@ sub _eval_cond {
     $expr =~ s/defined\s*\(\s*(\w+)\s*\)/exists $defines->{$1} ? 1 : 0/ge;
     $expr =~ s/defined\s+(\w+)/exists $defines->{$1} ? 1 : 0/ge;
     $expr = _expand($expr, $defines);
+    # Hex literals evaluate numerically (translate before the letter scrub
+    # below would zero the 'x').
+    $expr =~ s/\b0[xX][0-9a-fA-F]+\b/hex($&)/ge;
     # undefined identifiers evaluate to 0 in C/GLSL #if; keep true/false
     $expr =~ s/\b([A-Za-z_]\w*)\b/($1 eq 'true' || $1 eq 'false') ? $1 : '0'/ge;
     $expr =~ s/\btrue\b/1/g;
     $expr =~ s/\bfalse\b/0/g;
-    # Only arithmetic/comparison/logic characters may remain; then eval.
+    # Only arithmetic/comparison/logic characters may remain; then eval. The
+    # charset admits < and > individually, but adjacent <> would be Perl's
+    # readline operator (blocks on STDIN) — reject it outright.
     return 0 if $expr =~ /[^\d\s()<>=!&|^+\-*\/%~]/;
+    return 0 if $expr =~ /<\s*>/;
     my $result = eval $expr;    ## no critic (eval of sanitized numeric expr)
     return $@ ? 0 : ($result ? 1 : 0);
 }

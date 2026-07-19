@@ -290,7 +290,9 @@ sub render_worm_overlay {
     }
     for my $v (@{ $surface->data }) {
         my $x = $v < 0 ? 0 : $v > 1 ? 1 : $v;
-        $v = POSIX::floor($x * 255.0 + 0.5) / 255.0;
+        # Snap to f32 — Surface data holds float32-representable values (the
+        # Python port gets this free from the numpy dtype).
+        $v = _f32(POSIX::floor($x * 255.0 + 0.5) / 255.0);
     }
     return $surface;
 }

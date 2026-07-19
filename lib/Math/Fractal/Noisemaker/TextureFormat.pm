@@ -67,11 +67,15 @@ sub quantize_texture {
         $_ = float16_truncate($_) for @$d;
     }
     elsif ($fmt eq 'rgba8' || $fmt eq 'rgba8unorm') {
+        # Mirror the reference exactly: value <= 0 ? 0 : value >= 1 ? 1 :
+        # round(value*255)/255. NaN fails both comparisons and PROPAGATES
+        # (floor(NaN) is NaN, no die) — the oracle and Python keep NaN too.
         for (@$d) {
             my $x = $_;
-            $x = 0.0 if !($x == $x) || $x < 0.0;    # NaN or negative -> 0
-            $x = 1.0 if $x > 1.0;
-            $_ = unpack('f', pack('f', POSIX::floor($x * 255.0 + 0.5) / 255.0));
+            $_ =
+                  $x <= 0.0 ? 0.0
+                : $x >= 1.0 ? 1.0
+                : unpack('f', pack('f', POSIX::floor($x * 255.0 + 0.5) / 255.0));
         }
     }
     return $surface;

@@ -12,9 +12,10 @@ use warnings;
 
 sub load_kernel {
     my ($source, $name) = @_;
+    $name = defined $name ? $name : '<kernel>';
     my $result = eval $source;    ## no critic — this is the codegen contract
-    die "kernel source failed to compile: $@" if $@;
-    die "kernel source did not yield a { kernel => ... } hashref\n"
+    die "kernel '$name' failed to compile: $@" if $@;
+    die "kernel '$name' did not yield a { kernel => ... } hashref\n"
         unless ref $result eq 'HASH' && ref $result->{kernel} eq 'CODE';
     return $result;
 }
@@ -45,7 +46,7 @@ sub get {
     }
     $self->{misses}++;
     my $source = $source_factory->();
-    my $kernel = load_kernel($source);
+    my $kernel = load_kernel($source, $key);
     $self->{entries}{$key} = { kernel => $kernel, size => length $source };
     $self->{bytes} += length $source;
     push @{ $self->{order} }, $key;

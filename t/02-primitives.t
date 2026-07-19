@@ -85,4 +85,12 @@ substr($corrupt, 20, 1) ^= "\x01";
 eval { decode_png($corrupt) };
 ok($@, 'decode rejects corrupt CRC');
 
+# rgba8 quantize: NaN propagates (oracle semantics), clamp handles the rest
+my $qn = Math::Fractal::Noisemaker::Surface->new(1, 1, [$nan, -0.5, 0.5, 2.0]);
+quantize_texture($qn, 'rgba8unorm');
+ok($qn->data->[0] != $qn->data->[0], 'rgba8 quantize keeps NaN');
+is($qn->data->[1], 0.0, 'rgba8 quantize clamps negative to 0');
+feq($qn->data->[2], 0.501960813999176, 'rgba8 quantize rounds 0.5 (f32 of 128/255)');
+is($qn->data->[3], 1.0, 'rgba8 quantize clamps >1 to 1');
+
 done_testing();

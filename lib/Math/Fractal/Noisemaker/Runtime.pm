@@ -94,7 +94,10 @@ sub _deriv {
     my ($self, $op, $v) = @_;
     my $mode = $self->{_deriv_mode} || '';
     if ($mode eq 'record') {
-        push @{ $self->{_deriv_log} }, [$op, _is_vec($v) ? [@$v] : $v + 0];
+        # Recorded values snap to f32 — the reference records into a
+        # Float32Array (numpy F32 array in the Python port); recording raw
+        # deferred f64 would double-round differently in deriv_fine.
+        push @{ $self->{_deriv_log} }, [$op, _is_vec($v) ? [map { f32($_) } @$v] : $v + 0];
         $self->{_deriv_i}++;
         return _zero_like($v);
     }
@@ -181,22 +184,26 @@ sub construct {
     }
     my @supplied = grep { defined } @rest;
     if ($base eq 'int' || $base eq 'uint') {
+        # Truncate-and-wrap via u32 (Perl int() saturates past IV_MAX where
+        # GLSL/JS wrap mod 2^32); _s32 restores the sign for int.
+        my $wrap = $base eq 'uint'
+            ? \&Math::Fractal::Noisemaker::UintMath::u32
+            : sub { _s32(Math::Fractal::Noisemaker::UintMath::u32($_[0])) };
         if (@supplied == 1 && !_is_vec($supplied[0]) && $width > 1) {
-            my $iv = int($supplied[0]);
-            $iv = $base eq 'uint' ? ($iv & _U32) : _s32($iv);
+            my $iv = $wrap->($supplied[0]);
             return bless [($iv) x $width], 'Math::Fractal::Noisemaker::Runtime::IVec';
         }
         my @ivals;
         for my $c (@supplied) {
-            if (_is_vec($c)) { push @ivals, map { int $_ } @$c }
-            else             { push @ivals, int $c }
+            if (_is_vec($c)) { push @ivals, map { $wrap->($_) } @$c }
+            else             { push @ivals, $wrap->($c) }
         }
-        @ivals = map { $base eq 'uint' ? ($_ & _U32) : _s32($_) } @ivals;
         return $ivals[0] if $width == 1;
         return bless [@ivals[0 .. $width - 1]], 'Math::Fractal::Noisemaker::Runtime::IVec';
     }
     if ($width == 1) {
         my $c = $supplied[0];
+        die "construct(1) requires a component\n" unless defined $c;
         return f32(_is_vec($c) ? $c->[0] : $c);
     }
     if (@supplied == 1 && !_is_vec($supplied[0])) {
@@ -208,6 +215,7 @@ sub construct {
         if (_is_vec($c)) { push @vals, map { f32($_) } @$c }
         else             { push @vals, f32($c) }
     }
+    die "construct($width) with no components\n" unless @vals;
     if (@vals < $width) {    # pad by repeating last (defensive)
         push @vals, ($vals[-1]) x ($width - @vals);
     }
@@ -347,7 +355,13 @@ sub _int_scalar {
     return _s32($a | $b) if $op eq '|';
     return _s32($a ^ $b) if $op eq '^';
     return _s32($a << ($b & 31)) if $op eq '<<';
-    return $a >> ($b & 31)       if $op eq '>>';
+    if ($op eq '>>') {
+        # Perl's >> on a negative IV is a 64-bit LOGICAL shift; GLSL/JS/Python
+        # use an arithmetic shift. The low 32 bits of the logical result equal
+        # the arithmetic-shift result for int32-range operands; _s32 restores
+        # the sign.
+        return _s32($a >> ($b & 31));
+    }
     if ($op eq '/') { return $b ? _s32(int($a / $b)) : 0 }
     if ($op eq '%') { return $b ? _s32($a - $b * int($a / $b)) : 0 }
     die "unsupported int op '$op'\n";
@@ -374,6 +388,10 @@ sub _logical {
         }
         return $op eq '==' ? ($a == $b ? 1 : 0) : ($a != $b ? 1 : 0);
     }
+    # Ordering comparisons are scalar-only (the codegen routes vector
+    # comparisons to lessThan/greaterThan/...). Comparing arrayrefs here
+    # would silently compare addresses — fail loudly instead.
+    die "scalar relational '$op' applied to a vector\n" if _is_vec($a) || _is_vec($b);
     return ($a < $b  ? 1 : 0) if $op eq '<';
     return ($a > $b  ? 1 : 0) if $op eq '>';
     return ($a <= $b ? 1 : 0) if $op eq '<=';
@@ -440,14 +458,14 @@ my %COMPONENT = (
     tan         => sub { POSIX::tan($_[0]) },
     asin        => sub { POSIX::asin($_[0]) },
     acos        => sub { POSIX::acos($_[0]) },
-    atan        => sub { atan2($_[0], 1) },
+    atan        => sub { POSIX::atan($_[0]) },    # native libm atan, matching Math.atan/np.arctan
     sinh        => sub { POSIX::sinh($_[0]) },
     cosh        => sub { POSIX::cosh($_[0]) },
     tanh        => sub { POSIX::tanh($_[0]) },
     exp         => sub { exp $_[0] },
     log         => \&_safe_log,
-    exp2        => sub { 2**$_[0] },
-    log2        => sub { fdiv(_safe_log($_[0]), log(2)) },
+    exp2        => sub { 2**$_[0] },              # the JS oracle uses Math.pow(2, x) too
+    log2        => sub { POSIX::log2($_[0]) },    # native libm log2 (log(x)/log(2) differs ~1 ULP often)
     radians     => sub { $_[0] * ($PI / 180.0) },
     degrees     => sub { $_[0] * (180.0 / $PI) },
     min         => \&_nmin,
@@ -567,23 +585,31 @@ sub uint_bits_to_float { f32(Math::Fractal::Noisemaker::UintMath::uint_bits_to_f
 sub pack_half_2x16 { Math::Fractal::Noisemaker::UintMath::pack_half_2x16([0.0 + $_[1][0], 0.0 + $_[1][1]]) }
 
 sub unpack_half_2x16 {
-    my $r = Math::Fractal::Noisemaker::UintMath::unpack_half_2x16(int($_[1]) & _U32);
+    my $r = Math::Fractal::Noisemaker::UintMath::unpack_half_2x16(Math::Fractal::Noisemaker::UintMath::u32($_[1]));
     return [map { f32($_) } @$r];
 }
 
 sub to_int {
     my ($self, $x) = @_;
-    return _s32(int($x)) unless _is_vec($x);    # GLSL int(float) truncates, then wraps
+    # GLSL int(float) truncates toward zero, then wraps. Route through u32 so
+    # huge floats WRAP mod 2^32 (Perl int() saturates at IV_MAX past 2^63).
+    # The vector path mirrors the reference's plain int64 cast (no 32-bit wrap).
+    return _s32(Math::Fractal::Noisemaker::UintMath::u32($x)) unless _is_vec($x);
     return bless [map { int $_ } @$x], 'Math::Fractal::Noisemaker::Runtime::IVec';
 }
 
 sub to_uint {
     my ($self, $x) = @_;
-    return int($x) & _U32 unless _is_vec($x);
-    return bless [map { int($_) & _U32 } @$x], 'Math::Fractal::Noisemaker::Runtime::IVec';
+    return Math::Fractal::Noisemaker::UintMath::u32($x) unless _is_vec($x);
+    return bless [map { Math::Fractal::Noisemaker::UintMath::u32($_) } @$x],
+        'Math::Fractal::Noisemaker::Runtime::IVec';
 }
 
 # ---- vector geometry (snap args to f32, accumulate float64, round once) ----
+#
+# NB: this package defines subs named `length`, `f`, and `i` (kernel-facing
+# methods). Inside this file, always call the builtins as CORE::length etc.
+# if ever needed — a bareword call would resolve to the method.
 
 sub _dot_raw {
     my ($a, $b) = @_;

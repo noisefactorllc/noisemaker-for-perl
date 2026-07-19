@@ -272,4 +272,36 @@ SKIP: {
     ok(-f $filename, 'run wrote an output file');
 }
 
+# --- run with --input / --texture, and DSL error surfacing ---
+{
+    my $dir = File::Temp->newdir;
+    my $tex = File::Spec->catfile($dir, 'tex.png');
+    my ($rc0) = run_cli(['generate', 'synth/solid', '--width', '4', '--height', '4',
+                         '--param', 'color=#4080c0', '--filename', $tex]);
+    is($rc0, 0, 'texture source renders');
+
+    # media samples imageTex — bound via --input
+    my $out = File::Spec->catfile($dir, 'media.png');
+    my ($rc1, $so1, $se1) = run_cli(
+        ['run', '--width', '4', '--height', '4', '--input', $tex, '--filename', $out],
+        stdin => "search synth\nmedia(imageSize: [4, 4]).write(o0)\nrender(o0)\n");
+    is($rc1, 0, "run --input binds imageTex: $se1");
+    ok(-s $out, 'run --input wrote a png');
+
+    # --texture NAME=FILE named binding
+    my $out2 = File::Spec->catfile($dir, 'media2.png');
+    my ($rc2, $so2, $se2) = run_cli(
+        ['run', '--width', '4', '--height', '4', '--texture', "imageTex=$tex",
+         '--texture', "textTex=$tex", '--filename', $out2],
+        stdin => "search synth\nmedia(imageSize: [4, 4]).write(o0)\nrender(o0)\n");
+    is($rc2, 0, "run --texture binds named samplers: $se2");
+
+    # a DSL compile error surfaces cleanly with a nonzero exit
+    my ($rc3, $so3, $se3) = run_cli(
+        ['run', '--width', '4', '--height', '4'],
+        stdin => "solid().write(o0)\nrender(o0)\n");
+    isnt($rc3, 0, 'DSL error (missing search) exits nonzero');
+    like($se3, qr/Missing required search directive/, 'DSL error message surfaces');
+}
+
 done_testing();
