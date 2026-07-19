@@ -1,0 +1,503 @@
+#!/usr/bin/env perl
+
+# make-noise -- render the Noisemaker shader catalog on the CPU.
+#
+# Faithful Perl port of the noisemaker-py click CLI (noisemaker_cpu/cli.py):
+# same subcommands (generate/apply/animate/run), option names, defaults, and
+# output messages, ported as closely as Getopt::Long allows. Renders a
+# catalog effect by id (e.g. 'synth/curl', 'filter/chrome'); 'random' picks
+# one at random, partitioned by kind (generators for generate/animate,
+# filters for apply) so it never picks an effect that would render
+# degenerately.
+#
+# Usage: make-noise COMMAND [OPTIONS] [ARGS]...
+
+use strict;
+use warnings;
+
+use FindBin ();
+use lib "$FindBin::Bin/../lib";
+
+use Getopt::Long qw(GetOptionsFromArray Configure);
+use File::Temp ();
+use File::Path qw(make_path);
+use File::Spec ();
+use POSIX      qw(WIFSIGNALED WTERMSIG WEXITSTATUS);
+
+use Math::Fractal::Noisemaker::Renderer qw(render_effect meta);
+use Math::Fractal::Noisemaker::PNG      qw(encode_png decode_png);
+
+Configure(qw(no_ignore_case));
+
+use constant MAX_SEED_VALUE => 2**32 - 1;
+use constant VERSION_STRING => 'make-noise (Math::Fractal::Noisemaker) 1.000';
+
+my %COMMANDS = (
+    generate => \&cmd_generate,
+    apply    => \&cmd_apply,
+    animate  => \&cmd_animate,
+    run      => \&cmd_run,
+);
+
+$| = 1;
+exit main(@ARGV);
+
+# ---------------------------------------------------------------------------
+# Dispatch
+# ---------------------------------------------------------------------------
+
+sub main {
+    my @argv = @_;
+
+    if (!@argv || $argv[0] eq '-h' || $argv[0] eq '--help') {
+        print usage();
+        return 0;
+    }
+    if ($argv[0] eq '--version') {
+        print VERSION_STRING . "\n";
+        return 0;
+    }
+
+    my $command = shift @argv;
+    my $handler = $COMMANDS{$command};
+    if (!$handler) {
+        print STDERR "Unknown command: '$command'. Choose from: generate, apply, animate, run.\n";
+        return 2;
+    }
+
+    my $rc = eval { $handler->(@argv) };
+    if ($@) {
+        my $err = $@;
+        $err .= "\n" unless $err =~ /\n\z/;
+        print STDERR $err;
+        return 1;
+    }
+    return defined $rc ? $rc : 0;
+}
+
+sub usage {
+    return <<'USAGE';
+Usage: make-noise COMMAND [OPTIONS] [ARGS]...
+
+  Noisemaker for Perl -- render the Noisemaker shader catalog on the CPU.
+
+  Renders a catalog effect by id (e.g. 'synth/curl', 'filter/chrome');
+  'random' picks one at random. 'generate' takes no input and 'apply' takes
+  the input image as a positional argument; 'random' is partitioned by kind
+  (generators for generate/animate, filters for apply) so it never picks an
+  effect that would render degenerately.
+
+Commands:
+  generate EFFECT       Render a catalog effect to a .png
+  apply EFFECT INPUT    Apply an effect to a .png image
+  animate EFFECT        Render an effect over time to an animation (.mp4)
+  run                   Render a Polymorphic DSL program read from STDIN
+
+Global options:
+  -h, --help             Show this message and exit.
+  --version               Show the version and exit.
+
+Options for generate EFFECT:
+  --width INTEGER        Output width, in pixels [default: 1024]
+  --height INTEGER       Output height, in pixels [default: 1024]
+  --time FLOAT           Time value for the Z axis / animation phase [default: 0.0]
+  --seed INTEGER         Random seed. Might not affect all effects.
+  --filename PATH        Image output filename (.png) [default: art.png]
+  --param NAME=VALUE     Effect parameter (repeatable)
+
+Options for apply EFFECT INPUT:
+  --time FLOAT           Time value for the Z axis / animation phase [default: 0.0]
+  --seed INTEGER         Random seed. Might not affect all effects.
+  --filename PATH        Image output filename (.png) [default: mangled.png]
+  --param NAME=VALUE     Effect parameter (repeatable)
+
+Options for animate EFFECT:
+  --width INTEGER        Output width, in pixels [default: 512]
+  --height INTEGER       Output height, in pixels [default: 512]
+  --seed INTEGER         Random seed. Might not affect all effects.
+  --filename PATH        Animation output filename (.mp4) [default: animation.mp4]
+  --frame-count INTEGER  How many frames total [default: 50]
+  --fps INTEGER          Frames per second for the encoded video [default: 30]
+  --speed FLOAT          Time-sweep multiplier, loops of the [0,1) time phase [default: 1.0]
+  --save-frames DIR      Directory to also write the PNG frames into
+  --param NAME=VALUE     Effect parameter (repeatable)
+
+Options for run (reads a DSL program from STDIN):
+  --width INTEGER        Output width, in pixels [default: 512]
+  --height INTEGER       Output height, in pixels [default: 512]
+  --time FLOAT           Time value for the Z axis / animation phase [default: 0.0]
+  --seed INTEGER         Deterministic render seed threaded into effect seed params [default: 1]
+  --filename PATH        Image output filename (.png) [default: art.png]
+  --input FILE           PNG bound as imageTex and textTex
+  --texture NAME=FILE    External PNG texture (repeatable)
+
+EFFECT may be 'random' or a catalog id like 'synth/curl'.
+Run 'make-noise COMMAND --help' for this same reference.
+USAGE
+}
+
+# ---------------------------------------------------------------------------
+# Commands
+# ---------------------------------------------------------------------------
+
+sub cmd_generate {
+    my @argv        = @_;
+    my $width       = 1024;
+    my $height      = 1024;
+    my $time_value  = 0.0;
+    my $seed;
+    my $filename    = 'art.png';
+    my @params;
+    my $help        = 0;
+
+    my $ok = GetOptionsFromArray(
+        \@argv,
+        'width=i'    => \$width,
+        'height=i'   => \$height,
+        'time=f'     => \$time_value,
+        'seed=i'     => \$seed,
+        'filename=s' => \$filename,
+        'param=s'    => \@params,
+        'help|h'     => \$help,
+    );
+    if ($help) { print usage(); return 0 }
+    return 2 unless $ok;
+
+    _require_positive_int($width,  'width');
+    _require_positive_int($height, 'height');
+
+    my $effect = shift @argv;
+    die "Missing argument 'EFFECT'.\n" unless defined $effect;
+    _no_extra_args(@argv);
+
+    ($effect, $seed) = _prologue($effect, $seed, 'generator');
+    my $surface = render_effect(
+        $effect, _parse_params(\@params), undef,
+        width => $width, height => $height, seed => $seed, time => $time_value,
+    );
+    _write_png($surface, $filename);
+    print "Rendered ${width}x${height} -> $filename\n";
+    return 0;
+}
+
+sub cmd_apply {
+    my @argv       = @_;
+    my $time_value = 0.0;
+    my $seed;
+    my $filename   = 'mangled.png';
+    my @params;
+    my $help       = 0;
+
+    my $ok = GetOptionsFromArray(
+        \@argv,
+        'time=f'     => \$time_value,
+        'seed=i'     => \$seed,
+        'filename=s' => \$filename,
+        'param=s'    => \@params,
+        'help|h'     => \$help,
+    );
+    if ($help) { print usage(); return 0 }
+    return 2 unless $ok;
+
+    my $effect = shift @argv;
+    die "Missing argument 'EFFECT'.\n" unless defined $effect;
+    my $input_filename = shift @argv;
+    die "Missing argument 'INPUT_FILENAME'.\n" unless defined $input_filename;
+    _no_extra_args(@argv);
+    die "Invalid value for 'INPUT_FILENAME': Path '$input_filename' does not exist.\n"
+        unless -e $input_filename && !-d _;
+
+    ($effect, $seed) = _prologue($effect, $seed, 'filter');
+    my $source  = _load_png($input_filename);
+    my $surface = render_effect(
+        $effect, _parse_params(\@params), _bind_input($effect, $source),
+        width => $source->width, height => $source->height, seed => $seed, time => $time_value,
+    );
+    _write_png($surface, $filename);
+    print 'Rendered ' . $source->width . 'x' . $source->height . " -> $filename\n";
+    return 0;
+}
+
+sub cmd_animate {
+    my @argv        = @_;
+    my $width       = 512;
+    my $height      = 512;
+    my $seed;
+    my $filename    = 'animation.mp4';
+    my $frame_count = 50;
+    my $fps         = 30;
+    my $speed       = 1.0;
+    my $save_frames;
+    my @params;
+    my $help        = 0;
+
+    my $ok = GetOptionsFromArray(
+        \@argv,
+        'width=i'       => \$width,
+        'height=i'      => \$height,
+        'seed=i'        => \$seed,
+        'filename=s'    => \$filename,
+        'frame-count=i' => \$frame_count,
+        'fps=i'         => \$fps,
+        'speed=f'       => \$speed,
+        'save-frames=s' => \$save_frames,
+        'param=s'       => \@params,
+        'help|h'        => \$help,
+    );
+    if ($help) { print usage(); return 0 }
+    return 2 unless $ok;
+
+    _require_positive_int($width,       'width');
+    _require_positive_int($height,      'height');
+    _require_positive_int($frame_count, 'frame-count');
+    _require_positive_int($fps,         'fps');
+
+    my $effect = shift @argv;
+    die "Missing argument 'EFFECT'.\n" unless defined $effect;
+    _no_extra_args(@argv);
+
+    ($effect, $seed) = _prologue($effect, $seed, 'generator');
+    my $parsed = _parse_params(\@params);
+
+    # Cleaned up automatically (even on die) unless --save-frames was given,
+    # since File::Temp::Dir removes the directory when this object is
+    # destroyed -- including during eval-caught stack unwinding.
+    my $tempdir_obj;
+    my $frames_dir = $save_frames;
+    if (!defined $frames_dir) {
+        $tempdir_obj = File::Temp->newdir('noisemaker-pl-XXXXXX', TMPDIR => 1);
+        $frames_dir  = $tempdir_obj->dirname;
+    }
+    make_path($frames_dir);
+
+    for my $i (0 .. $frame_count - 1) {
+        my $time_value = ($i / $frame_count) * $speed;    # sweep [0,1) phase, `speed` loops
+        my $surface = render_effect(
+            $effect, $parsed, undef,
+            width => $width, height => $height, seed => $seed, time => $time_value,
+        );
+        _write_png($surface, File::Spec->catfile($frames_dir, sprintf('frame_%04d.png', $i)));
+    }
+
+    my $ffmpeg = _which('ffmpeg');
+    if (!defined $ffmpeg) {
+        if (defined $save_frames) {
+            print "ffmpeg not found; wrote $frame_count frames to $frames_dir (no video).\n";
+            return 0;
+        }
+        die "ffmpeg not found; install it, or pass --save-frames DIR to keep the PNG frames.\n";
+    }
+
+    my @cmd = (
+        $ffmpeg, '-y',
+        '-framerate', $fps,
+        '-i',         File::Spec->catfile($frames_dir, 'frame_%04d.png'),
+        '-vf',        'pad=ceil(iw/2)*2:ceil(ih/2)*2',
+        '-c:v',       'libx264',
+        '-pix_fmt',   'yuv420p',
+        $filename,
+    );
+    my ($raw, $stderr_path) = _run_capturing_stderr(@cmd);
+    if ($raw == -1) {
+        unlink $stderr_path;
+        die "ffmpeg failed to execute: $!\n";
+    }
+    if (WIFSIGNALED($raw)) {
+        unlink $stderr_path;
+        die 'ffmpeg was killed by signal ' . WTERMSIG($raw) . "\n";
+    }
+    if (WEXITSTATUS($raw) != 0) {
+        my @tail = _tail_lines($stderr_path, 5);
+        unlink $stderr_path;
+        die "ffmpeg failed:\n" . join("\n", @tail) . "\n";
+    }
+    unlink $stderr_path;
+    print "Rendered $frame_count frames (${width}x${height}) -> $filename\n";
+    return 0;
+}
+
+sub cmd_run {
+    my @argv          = @_;
+    my $width         = 512;
+    my $height        = 512;
+    my $time_value    = 0.0;
+    my $seed          = 1;
+    my $filename      = 'art.png';
+    my $input_filename;
+    my @textures;
+    my $help          = 0;
+
+    my $ok = GetOptionsFromArray(
+        \@argv,
+        'width=i'    => \$width,
+        'height=i'   => \$height,
+        'time=f'     => \$time_value,
+        'seed=i'     => \$seed,
+        'filename=s' => \$filename,
+        'input=s'    => \$input_filename,
+        'texture=s'  => \@textures,
+        'help|h'     => \$help,
+    );
+    if ($help) { print usage(); return 0 }
+    return 2 unless $ok;
+
+    _require_positive_int($width,  'width');
+    _require_positive_int($height, 'height');
+    _no_extra_args(@argv);
+
+    die "Invalid value for '--input': Path '$input_filename' does not exist.\n"
+        if defined $input_filename && !(-e $input_filename && !-d _);
+
+    my $source_program = do { local $/; <STDIN> };
+    $source_program = '' unless defined $source_program;
+
+    # Build the DSL's external-texture map: --input binds one PNG as both
+    # imageTex and textTex (mirroring the JS CLI); --texture NAME=FILE binds
+    # a named sampler (repeatable).
+    my %external;
+    if (defined $input_filename) {
+        my $surface = _load_png($input_filename);
+        $external{imageTex} = $surface;
+        $external{textTex}  = $surface;
+    }
+    for my $pair (@textures) {
+        my $idx = index($pair, '=');
+        die "Expected NAME=FILE, received '$pair'\n" if $idx < 0;
+        my $name = substr($pair, 0, $idx);
+        my $path = substr($pair, $idx + 1);
+        die "Expected NAME=FILE, received '$pair'\n" unless length($name) && length($path);
+        die "No such texture file: $path\n" unless -f $path;
+        $external{$name} = _load_png($path);
+    }
+
+    die "render_dsl is not available in Math::Fractal::Noisemaker::Renderer yet.\n"
+        unless Math::Fractal::Noisemaker::Renderer->can('render_dsl');
+
+    my $surface = Math::Fractal::Noisemaker::Renderer::render_dsl(
+        $source_program,
+        width              => $width,
+        height             => $height,
+        seed               => $seed,
+        time               => $time_value,
+        external_textures  => \%external,
+    );
+    _write_png($surface, $filename);
+    print 'Rendered ' . $surface->width . 'x' . $surface->height . " -> $filename\n";
+    return 0;
+}
+
+# ---------------------------------------------------------------------------
+# Shared helpers (ported from noisemaker_cpu/cli.py)
+# ---------------------------------------------------------------------------
+
+# Resolve an EFFECT argument to a catalog id. `random` picks from effects of
+# the given `kind` ("generator"/"filter"); an explicit id is used as-is.
+sub _resolve_effect {
+    my ($effect, $kind) = @_;
+    my $effects = meta()->{effects};
+    if ($effect eq 'random') {
+        my @pool = sort grep { !defined $kind || (($effects->{$_}{kind} || '') eq $kind) } keys %$effects;
+        @pool = sort keys %$effects unless @pool;
+        return $pool[ int(rand(scalar @pool)) ];
+    }
+    die "Unknown effect: $effect. Pass 'random' or a catalog id like 'synth/curl'.\n"
+        unless exists $effects->{$effect};
+    return $effect;
+}
+
+# Shared command entry: resolve the effect, default the seed, echo the id.
+sub _prologue {
+    my ($effect, $seed, $kind) = @_;
+    $effect = _resolve_effect($effect, $kind);
+    $seed = 1 + int(rand(MAX_SEED_VALUE)) unless defined $seed;
+    print "$effect\n";
+    return ($effect, $seed);
+}
+
+sub _parse_params {
+    my ($pairs) = @_;
+    my %params;
+    for my $kv (@$pairs) {
+        my $idx = index($kv, '=');
+        die "Expected NAME=VALUE, received '$kv'\n" if $idx < 0;
+        $params{ substr($kv, 0, $idx) } = substr($kv, $idx + 1);
+    }
+    return \%params;
+}
+
+# An effect that reads a host texture (filter/text, synth/media) binds the
+# same image, mirroring the noisemaker/js CLI's input (imageTex + textTex).
+sub _bind_input {
+    my ($effect_id, $surface) = @_;
+    my %inputs = (inputTex => $surface);
+    my $external = meta()->{effects}{$effect_id}{externalTexture};
+    $inputs{$external} = $surface if $external;
+    return \%inputs;
+}
+
+sub _write_png {
+    my ($surface, $filename) = @_;
+    my (undef, $dir, undef) = File::Spec->splitpath($filename);
+    make_path($dir) if length $dir;
+    open my $fh, '>:raw', $filename or die "cannot write $filename: $!\n";
+    print {$fh} encode_png($surface);
+    close $fh or die "cannot write $filename: $!\n";
+}
+
+sub _load_png {
+    my ($path) = @_;
+    open my $fh, '<:raw', $path or die "cannot read $path: $!\n";
+    local $/;
+    my $bytes = <$fh>;
+    close $fh;
+    return decode_png($bytes);
+}
+
+sub _require_positive_int {
+    my ($value, $opt_name) = @_;
+    die "--$opt_name must be a positive integer\n"
+        unless defined $value && $value =~ /^\d+$/ && $value > 0;
+}
+
+sub _no_extra_args {
+    my (@argv) = @_;
+    return unless @argv;
+    die 'Got unexpected extra argument' . (@argv > 1 ? 's' : '') . ' (' . join(' ', @argv) . ")\n";
+}
+
+# `which`-style PATH scan (core File::Spec; no shelling out to `which`).
+sub _which {
+    my ($prog) = @_;
+    for my $dir (File::Spec->path()) {
+        my $candidate = File::Spec->catfile($dir, $prog);
+        return $candidate if -f $candidate && -x _;
+    }
+    return undef;
+}
+
+# Run @cmd (list form, no shell) with its stderr captured to a temp file.
+# Returns the raw system() status (decode with WEXITSTATUS/WIFSIGNALED) and
+# the temp file path.
+sub _run_capturing_stderr {
+    my (@cmd) = @_;
+    my ($fh, $path) = File::Temp::tempfile(UNLINK => 1);
+    close $fh;
+    open(my $saved_stderr, '>&', \*STDERR) or die "cannot save STDERR: $!\n";
+    open(STDERR, '>', $path) or die "cannot redirect STDERR: $!\n";
+    my $raw = system(@cmd);
+    open(STDERR, '>&', $saved_stderr) or die "cannot restore STDERR: $!\n";
+    close $saved_stderr;
+    return ($raw, $path);
+}
+
+sub _tail_lines {
+    my ($path, $n) = @_;
+    open my $fh, '<', $path or return ();
+    local $/;
+    my $content = <$fh>;
+    close $fh;
+    return () unless defined $content && length $content;
+    my @lines = split /\n/, $content;
+    return @lines if @lines <= $n;
+    return @lines[ -$n .. -1 ];
+}
