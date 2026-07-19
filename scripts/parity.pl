@@ -113,6 +113,7 @@ my $effects = meta()->{effects};
 my @ids = grep { !$only || $only->{$_} } sort keys %$effects;
 
 my (@ok, @diffs, %errors, @oracle_err);
+my $exact = 0;
 for my $eid (@ids) {
     my $kind = $effects->{$eid}{kind};
     my $ext  = $effects->{$eid}{externalTexture};
@@ -134,7 +135,8 @@ for my $eid (@ids) {
         my $x = abs($ja[$i] - $pa[$i]);
         $d = $x if $x > $d;
     }
-    if ($d <= 2) { push @ok, $eid } else { push @diffs, [$eid, $d] }
+    if ($d <= 2) { push @ok, $eid; if ($d == 0) { $exact++ } else { print "NEARMISS $d $eid
+" } } else { push @diffs, [$eid, $d] }
 }
 
 my $err_count = 0;
@@ -157,4 +159,4 @@ if (@oracle_err) {
     print "\nORACLE ERRORS (JS effect CLI failed): " . scalar(@oracle_err)
         . "  e.g. @oracle_err[0 .. (@oracle_err > 5 ? 4 : $#oracle_err)]\n";
 }
-print "\nPASS: " . scalar(@ok) . "\n";
+print "\nPASS: " . scalar(@ok) . "  (byte-exact: $exact)\n";
