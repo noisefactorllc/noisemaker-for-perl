@@ -1,0 +1,8 @@
+{
+  "hashes": {
+    "filter/invert:inv": "4fe48ede46e557c77668c2393428a38d0cfb1884bea97f2d5716079c2b8ae08e",
+    "synth/solid:solid": "1ad5094ee24be64efc809666858121a0e6a8f4b7b2f5c75830d47f19cbc88ad6"
+  },
+  "source": "https://shaders.noisedeck.app",
+  "version": "1.0"
+}

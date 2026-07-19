@@ -1,0 +1,89 @@
+{
+  "effects": {
+    "filter/invert": {
+      "func": "invert",
+      "kind": "filter",
+      "namespace": "filter",
+      "params": {
+        "mode": {
+          "choices": {
+            "full": 0,
+            "solarize": 1
+          },
+          "default": 0,
+          "type": "int",
+          "ui": {
+            "control": "dropdown",
+            "label": "mode"
+          },
+          "uniform": "mode"
+        }
+      },
+      "passes": [
+        {
+          "inputs": {
+            "inputTex": "inputTex"
+          },
+          "key": "filter/invert:inv",
+          "name": "render",
+          "outputs": {
+            "fragColor": "outputTex"
+          },
+          "program": "inv",
+          "uniforms": {}
+        }
+      ],
+      "textures": {}
+    },
+    "synth/solid": {
+      "func": "solid",
+      "kind": "generator",
+      "namespace": "synth",
+      "params": {
+        "alpha": {
+          "default": 1,
+          "max": 1,
+          "min": 0,
+          "randMin": 0.5,
+          "type": "float",
+          "ui": {
+            "control": "slider",
+            "label": "opacity"
+          },
+          "uniform": "alpha"
+        },
+        "color": {
+          "default": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "type": "color",
+          "ui": {
+            "control": "color",
+            "label": "color"
+          },
+          "uniform": "color"
+        }
+      },
+      "passes": [
+        {
+          "inputs": {},
+          "key": "synth/solid:solid",
+          "name": "main",
+          "outputs": {
+            "color": "outputTex"
+          },
+          "program": "solid",
+          "uniforms": {}
+        }
+      ],
+      "textures": {}
+    }
+  },
+  "provenance": {
+    "base": "https://shaders.noisedeck.app",
+    "source": "shaders.noisedeck.app CDN",
+    "version": "1.0"
+  }
+}
