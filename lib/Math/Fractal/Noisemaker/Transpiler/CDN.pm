@@ -324,12 +324,58 @@ sub _parse_field {
     return defined $value ? $value : $default;
 }
 
+# Top-level key order of a JSON object's text — JSON::PP hashes lose insertion
+# order, but the ORACLE binds mixer surface params by definition order, so the
+# bundle must record it. Walks the raw text, skipping strings/nested values.
+sub ordered_object_keys {
+    my ($text) = @_;
+    my @keys;
+    my $i = index($text, '{');
+    return \@keys if $i < 0;
+    my $n     = length $text;
+    my $depth = 0;
+    while ($i < $n) {
+        my $c = substr($text, $i, 1);
+        if ($c eq '"' || $c eq "'") {
+            my $end = _skip_string(\$text, $i);
+            if ($depth == 1) {
+                my $body = substr($text, $i + 1, $end - $i - 2);
+                my $k    = $end;
+                $k++ while $k < $n && substr($text, $k, 1) =~ /\s/;
+                push @keys, $body if $k < $n && substr($text, $k, 1) eq ':';
+            }
+            $i = $end;
+            next;
+        }
+        if    ($c eq '{' || $c eq '[') { $depth++ }
+        elsif ($c eq '}' || $c eq ']') { $depth--; return \@keys if $depth == 0 }
+        $i++;
+    }
+    return \@keys;
+}
+
+# Key order of the "params" object inside a cached-effect JSON document.
+sub params_key_order {
+    my ($doc_text) = @_;
+    if ($doc_text =~ /"params"\s*:\s*/) {
+        my $start = $+[0];
+        return ordered_object_keys(_extract_balanced(\$doc_text, $start));
+    }
+    return [];
+}
+
 sub fetch_effect {
     my ($effect_id, $version) = @_;
     $version = $CDN_VERSION unless defined $version;
     # Cache the EXTRACTED data as JSON (no raw CDN .js ever hits disk).
     my $cache = File::Spec->catfile(_cache_dir($version), 'effects', "$effect_id.json");
-    return $_JSON->decode(_read_file($cache)) if -e $cache;
+    if (-e $cache) {
+        my $text   = _read_file($cache);
+        my $result = $_JSON->decode($text);
+        $result->{paramOrder} = params_key_order($text)
+            unless $result->{paramOrder} && @{ $result->{paramOrder} };
+        return $result;
+    }
 
     my $bundle = _fetch_text("$CDN_BASE/$version/effects/$effect_id.js");
     my $region = _definition_region(\$bundle);
@@ -340,6 +386,7 @@ sub fetch_effect {
             namespace       => $override->{namespace},
             func            => $override->{func},
             params          => $override->{params},
+            paramOrder      => $override->{paramOrder},
             passes          => $override->{passes},
             textures        => ($override->{textures} || {}),
             externalTexture => $override->{externalTexture},
@@ -347,17 +394,27 @@ sub fetch_effect {
         };
     }
     else {
+        my $param_order = [];
+        if (my $gstart = _find_value_start(\$region, 'globals')) {
+            if (substr($region, $gstart, 1) eq '{') {
+                $param_order = ordered_object_keys(_extract_balanced(\$region, $gstart));
+            }
+        }
         $result = {
             id              => $effect_id,
             namespace       => _parse_field(\$region, $effect_id, 'namespace', undef),
             func            => _parse_field(\$region, $effect_id, 'func', undef),
             params          => _parse_field(\$region, $effect_id, 'globals', {}),
+            paramOrder      => $param_order,
             passes          => _parse_field(\$region, $effect_id, 'passes', []),
             textures        => _parse_field(\$region, $effect_id, 'textures', {}),
             externalTexture => _parse_field(\$region, $effect_id, 'externalTexture', undef),
             programs        => _extract_programs(\$bundle),
         };
     }
+    # The cache is written with canonical (sorted) JSON, so paramOrder is
+    # stored explicitly — the raw-text key scan on re-read would see sorted
+    # keys, not definition order.
     _write_file($cache, $_JSON->encode($result));
     return $result;
 }

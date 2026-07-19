@@ -685,9 +685,16 @@ sub _e_assign {
             $rhs = $v_code;
         }
         # In-place vector reassignment preserves JS pooled-array aliasing
-        # (`prevUV = rayUV` must track later updates) — see module header.
+        # (`prevUV = rayUV` must track later updates). Float stores snap each
+        # element to f32 — JS stores into a Float32Array, and accumulator
+        # loops (e.g. stamp's gaussian `sum`) feed the stored value straight
+        # back into arithmetic, so an unsnapped store drifts. Int vectors
+        # store exact.
         if ($target->{k} eq 'id' && width_of($tt) > 1) {
-            return ("\@{$tcode} = \@{($rhs)}", $tt);
+            if (base_of($tt) eq 'int' || base_of($tt) eq 'uint') {
+                return ("\@{$tcode} = \@{($rhs)}", $tt);
+            }
+            return ("\@{$tcode} = map { \$rt->f32(\$_) } \@{($rhs)}", $tt);
         }
         return ("$tcode = $rhs", $tt);
     }

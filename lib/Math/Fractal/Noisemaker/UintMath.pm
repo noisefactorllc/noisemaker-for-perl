@@ -44,12 +44,18 @@ sub fdiv {
 
 # Coerce a scalar to a plain integer for bitwise work. Floats truncate toward
 # zero (JS ToInt32/ToUint32); NaN/Infinity coerce to 0 (JS `NaN >>> 0 === 0`).
+#
+# Above 2^53 the value lives in an NV, and Perl's NV->IV conversion can
+# corrupt low bits — so reduce mod 2^32 with fmod (exact in float64) BEFORE
+# converting. fmod keeps the dividend's sign; the caller's `& MASK` restores
+# two's-complement semantics for negatives.
 sub _int_operand {
     my ($x) = @_;
     return 0 if $x != $x;                       # NaN
     return 0 if $x == $INF || $x == -$INF;      # +-Inf
-    if ($x >= 9.2e18 || $x <= -9.2e18) {        # beyond IV range: reduce mod 2^32 first
-        my $m = POSIX::fmod($x, 4294967296.0);
+    if ($x >= 9007199254740992.0 || $x <= -9007199254740992.0) {    # beyond 2^53
+        my $m = POSIX::fmod(POSIX::trunc($x), 4294967296.0);
+        $m += 4294967296.0 if $m < 0;
         return int($m);
     }
     return int($x);                             # truncates toward zero

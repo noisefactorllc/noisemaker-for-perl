@@ -22,7 +22,7 @@ my $run_pixel = sub {
         } else {
             $color = $rt->assign_swizzle($color, 'rgb', $rt->binary('-', $rt->f(1), $rt->swizzle($color, 'rgb'), 3, 'float'));
         }
-        @{$g->{fragColor}} = @{($color)};
+        @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
     };
     $main__void->();
     my $_c = $g->{fragColor};

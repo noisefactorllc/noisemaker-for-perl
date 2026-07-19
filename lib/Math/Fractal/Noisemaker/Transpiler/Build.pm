@@ -165,8 +165,11 @@ sub build {
             func      => $eff->{func},
             kind      => infer_kind($eff->{passes}),
             params    => $eff->{params},
-            textures  => ($eff->{textures} || {}),
-            passes    => \@passes,
+            # Definition order of params — the oracle binds positional DSL args
+            # and mixer surface feeds by this order; JSON hashes don't keep it.
+            paramOrder => ($eff->{paramOrder} || [sort keys %{ $eff->{params} }]),
+            textures   => ($eff->{textures} || {}),
+            passes     => \@passes,
         };
         $bundle->{effects}{$eid}{externalTexture} = $eff->{externalTexture}
             if $eff->{externalTexture};

@@ -26,17 +26,20 @@ sub _mashup {
         layers     => { type => 'int',   default => 4,   uniform => 'layers' },
         smoothness => { type => 'float', default => 0.1, uniform => 'smoothness' },
     );
+    my @order  = qw(source layers smoothness);
     my %inputs = (source => 'source');
     for my $e (0 .. _MASHUP_LAYERS - 1) {
-        $params{"layer${e}_tex"} =
-            { type => 'surface', default => 'none', colorModeUniform => "layer${e}_active" };
-        $inputs{"layer${e}_tex"} = "layer${e}_tex";
+        my $name = 'layer' . $e . '_tex';
+        $params{$name} = { type => 'surface', default => 'none', colorModeUniform => 'layer' . $e . '_active' };
+        $inputs{$name} = $name;
+        push @order, $name;
     }
     return {
-        namespace => 'mixer',
-        func      => 'mashup',
-        params    => \%params,
-        passes    => [
+        namespace  => 'mixer',
+        func       => 'mashup',
+        params     => \%params,
+        paramOrder => \@order,
+        passes     => [
             { name => 'render', program => 'mashup', inputs => \%inputs, outputs => { fragColor => 'outputTex' } }
         ],
         textures        => {},
@@ -46,22 +49,25 @@ sub _mashup {
 
 sub _remap {
     my %params = (
-        zoneCount  => { type => 'int',   default => 0,        uniform => 'zoneCount' },
+        zoneCount  => { type => 'int',   default => 0,         uniform => 'zoneCount' },
         bgColor    => { type => 'color', default => [0, 0, 0], uniform => 'bgColor' },
-        bgAlpha    => { type => 'float', default => 1,        uniform => 'bgAlpha' },
-        smoothEdge => { type => 'float', default => 0.04,     uniform => 'smoothEdge' },
+        bgAlpha    => { type => 'float', default => 1,         uniform => 'bgAlpha' },
+        smoothEdge => { type => 'float', default => 0.04,      uniform => 'smoothEdge' },
     );
+    my @order = qw(zoneCount bgColor bgAlpha smoothEdge);
     my %inputs;
     for my $z (0 .. _REMAP_ZONES - 1) {
-        $params{"zone${z}_tex"} =
-            { type => 'surface', default => 'none', colorModeUniform => "zone${z}_active" };
-        $inputs{"zone${z}_tex"} = "zone${z}_tex";
+        my $name = 'zone' . $z . '_tex';
+        $params{$name} = { type => 'surface', default => 'none', colorModeUniform => 'zone' . $z . '_active' };
+        $inputs{$name} = $name;
+        push @order, $name;
     }
     return {
-        namespace => 'synth',
-        func      => 'remap',
-        params    => \%params,
-        passes    => [
+        namespace  => 'synth',
+        func       => 'remap',
+        params     => \%params,
+        paramOrder => \@order,
+        passes     => [
             { name => 'render', program => 'remap', inputs => \%inputs, outputs => { fragColor => 'outputTex' } }
         ],
         textures        => {},
