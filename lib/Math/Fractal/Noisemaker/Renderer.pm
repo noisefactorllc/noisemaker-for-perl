@@ -18,7 +18,13 @@ use Exporter 'import';
 
 use Math::Fractal::Noisemaker::DSL qw(compile_dsl);
 use Math::Fractal::Noisemaker::KernelCache;
-use Math::Fractal::Noisemaker::PassRunner qw(run_pass run_pass_deriv);
+use Math::Fractal::Noisemaker::Iteration qw(
+    compute_iteration_groups
+    is_particle_state_name
+    iteration_delta_time
+    wrap01
+);
+use Math::Fractal::Noisemaker::PassRunner qw(run_pass run_pass_deriv run_pass_mrt);
 use Math::Fractal::Noisemaker::Runtime;
 use Math::Fractal::Noisemaker::Surface;
 use Math::Fractal::Noisemaker::TextureFormat qw(quantize_texture);
@@ -137,8 +143,13 @@ sub _remap_uniform_data {
 
 # Match the reference engine's createCanonicalBindings.
 sub _canonical_uniforms {
-    my ($width, $height, $time, $seed, $effect_uniforms) = @_;
+    my ($width, $height, $time, $seed, $effect_uniforms, $frame, $delta_time, $full_width, $full_height) = @_;
+    $frame = 0 unless defined $frame;
+    $delta_time = 0 unless defined $delta_time;
+    $full_width = $width unless defined $full_width;
+    $full_height = $height unless defined $full_height;
     my $res    = [0.0 + $width, 0.0 + $height];
+    my $full   = [0.0 + $full_width, 0.0 + $full_height];
     my $aspect = f32($width / $height);
     my %u = (
         renderScale => f32(1.0),
@@ -153,195 +164,445 @@ sub _canonical_uniforms {
     %u = (
         %u,
         resolution     => $res,      # canonical values always win
-        fullResolution => $res,
+        fullResolution => $full,
         tileOffset     => [0.0, 0.0],
         aspectRatio    => $aspect,
         aspect         => $aspect,
         time           => f32($time),
         globalTime     => f32($time),
-        deltaTime      => 0,
+        deltaTime      => f32($delta_time),
+        frame          => int($frame),
     );
     return \%u;
 }
 
+sub _normalized_params {
+    my ($eff, $params, $seed) = @_;
+    my %normalized;
+    for my $name (sort keys %{ $eff->{params} || {} }) {
+        my $spec = $eff->{params}{$name};
+        next unless ref $spec eq 'HASH';
+        next if ($spec->{type} || '') eq 'surface';
+        my $value = ($name eq 'seed' && !exists $params->{seed}) ? $seed : $params->{$name};
+        $normalized{$name} = _coerce($spec, $value);
+    }
+    return \%normalized;
+}
+
+sub _effect_bindings {
+    my ($eff, $normalized, $inputs, $blank) = @_;
+    my (%uniforms, %surfaces);
+    for my $name (sort keys %{ $eff->{params} || {} }) {
+        my $spec = $eff->{params}{$name};
+        next unless ref $spec eq 'HASH';
+        if (($spec->{type} || '') eq 'surface') {
+            my $sampler = $spec->{uniform} || $spec->{texture} || $name;
+            my $provided = defined $inputs->{$sampler} ? $inputs->{$sampler} : $inputs->{$name};
+            $surfaces{$sampler} = defined $provided ? $provided : $blank;
+            $uniforms{ $spec->{colorModeUniform} } = defined $provided ? 1 : 0
+                if defined $spec->{colorModeUniform};
+            next;
+        }
+        my $value = $normalized->{$name};
+        $uniforms{ $spec->{uniform} } = $value if defined $spec->{uniform};
+        $uniforms{ $spec->{define} }  = $value if defined $spec->{define};
+    }
+
+    if (($eff->{namespace} || '') eq 'classicNoisedeck') {
+        my ($palette_name) = grep {
+            ref $eff->{params}{$_} eq 'HASH' && ($eff->{params}{$_}{type} || '') eq 'palette'
+        } sort keys %{ $eff->{params} || {} };
+        if (defined $palette_name) {
+            my $index = $normalized->{$palette_name};
+            my $table = \@Math::Fractal::Noisemaker::PaletteData::PALETTE_DATA;
+            if (defined $index && $index =~ /^\d+$/ && $index > 0 && $index <= @$table) {
+                my $entry = $table->[ $index - 1 ];
+                $uniforms{paletteAmp}    = [@{$entry}[0 .. 2]];
+                $uniforms{paletteFreq}   = [@{$entry}[4 .. 6]];
+                $uniforms{paletteOffset} = [@{$entry}[8 .. 10]];
+                $uniforms{palettePhase}  = [@{$entry}[12 .. 14]];
+                $uniforms{paletteMode}   = $entry->[3] == 0 ? 3 : int($entry->[3]);
+            }
+        }
+    }
+    return (\%uniforms, \%surfaces);
+}
+
+sub _texture_dimension {
+    my ($spec, $axis, $params, $width, $height) = @_;
+    my $fallback = $axis eq 'width' ? $width : $height;
+    return $fallback if !defined $spec || (!ref $spec && $spec =~ /\A(?:input|screen|100%)\z/);
+    if (!ref $spec && $spec =~ /\A\d+(?:\.\d+)?%\z/) {
+        (my $percent = $spec) =~ s/%\z//;
+        my $value = int($fallback * $percent / 100 + 0.5);
+        return $value > 0 ? $value : 1;
+    }
+    if (!ref $spec) {
+        my $value = int($spec + 0.5);
+        return $value > 0 ? $value : 1;
+    }
+    if (ref $spec eq 'HASH' && exists $spec->{param}) {
+        my $value = defined $params->{ $spec->{param} }
+            ? $params->{ $spec->{param} }
+            : defined $spec->{paramDefault} ? $spec->{paramDefault} : $spec->{default};
+        $value = 1 unless defined $value;
+        $value = int($value + 0.5);
+        return $value > 0 ? $value : 1;
+    }
+    if (ref $spec eq 'HASH' && exists $spec->{screenDivide}) {
+        my $divisor = defined $params->{ $spec->{screenDivide} }
+            ? $params->{ $spec->{screenDivide} } : $spec->{default};
+        $divisor = 1 unless defined $divisor && $divisor > 0;
+        my $value = int(($fallback + $divisor - 1) / $divisor);
+        return $value > 0 ? $value : 1;
+    }
+    die "Unsupported canonical texture dimension\n";
+}
+
+sub _destination {
+    my ($eff, $name, $params, $width, $height) = @_;
+    my $spec = ($eff->{textures} || {})->{$name} || {};
+    my $dest_width  = _texture_dimension($spec->{width},  'width',  $params, $width, $height);
+    my $dest_height = _texture_dimension($spec->{height}, 'height', $params, $width, $height);
+    return Math::Fractal::Noisemaker::Surface->new($dest_width, $dest_height);
+}
+
+sub _format_for {
+    my ($eff, $name) = @_;
+    return (($eff->{textures} || {})->{$name} || {})->{format} || 'rgba16f';
+}
+
+sub _prepare_state {
+    my ($step, $width, $height, $seed, $owner_state_size) = @_;
+    my $eff = meta()->{effects}{ $step->{effect_id} }
+        or die "unknown effect '$step->{effect_id}' (not in bundle)\n";
+    my %raw = %{ $step->{params} || {} };
+    $raw{stateSize} = $owner_state_size
+        if defined $owner_state_size && exists(($eff->{params} || {})->{stateSize});
+    my $normalized = _normalized_params($eff, \%raw, $seed);
+    my $state = {
+        step        => $step,
+        effect_id   => $step->{effect_id},
+        eff         => $eff,
+        params      => $normalized,
+        attachments => {},
+        overlay_initialized => 0,
+    };
+    my $uses_self = grep {
+        my $pass = $_;
+        scalar grep { defined $_ && ($_ eq 'selfTex' || $_ eq 'feedback') }
+            values %{ $pass->{inputs} || {} };
+    } @{ $eff->{passes} || [] };
+    if ($uses_self) {
+        $state->{self_tex} = _destination($eff, 'outputTex', $normalized, $width, $height);
+        $state->{self_tex}->clear;
+    }
+    return $state;
+}
+
+sub _particle_definition_state {
+    my ($name, $states) = @_;
+    for my $state (@$states) {
+        return $state if exists(($state->{eff}{textures} || {})->{$name});
+    }
+    return undef;
+}
+
+sub _particle_destination {
+    my ($name, $referencing_state, $states, $width, $height) = @_;
+    my $owner = _particle_definition_state($name, $states);
+    return _destination($owner->{eff}, $name, $owner->{params}, $width, $height) if $owner;
+    my %format = (
+        global_xyz       => 'rgba32f',
+        global_vel       => 'rgba32f',
+        global_rgba      => 'rgba8',
+        global_life_data => 'rgba16f',
+    );
+    my $fallback = {
+        textures => {
+            $name => {
+                width  => { param => 'stateSize', default => 256 },
+                height => { param => 'stateSize', default => 256 },
+                format => $format{$name} || 'rgba16f',
+            },
+        },
+    };
+    return _destination($fallback, $name, $referencing_state->{params}, $width, $height);
+}
+
+sub _output_destination {
+    my ($name, $state, $states, $width, $height) = @_;
+    return is_particle_state_name($name)
+        ? _particle_destination($name, $state, $states, $width, $height)
+        : _destination($state->{eff}, $name, $state->{params}, $width, $height);
+}
+
+sub _output_format {
+    my ($name, $state, $states) = @_;
+    if (is_particle_state_name($name)) {
+        my $owner = _particle_definition_state($name, $states);
+        return _format_for($owner->{eff}, $name) if $owner;
+        return 'rgba32f' if $name eq 'global_xyz' || $name eq 'global_vel';
+        return 'rgba8' if $name eq 'global_rgba';
+        return 'rgba16f';
+    }
+    return _format_for($state->{eff}, $name);
+}
+
+sub _resolve_particle_input {
+    my ($name, $state, $states, $group_resources, $width, $height) = @_;
+    if (!defined $group_resources->{$name}) {
+        $group_resources->{$name} = _particle_destination($name, $state, $states, $width, $height);
+        $group_resources->{$name}->clear;
+    }
+    return $group_resources->{$name};
+}
+
+sub _store_output {
+    my ($name, $surface, $state, $group_resources) = @_;
+    if (is_particle_state_name($name)) { $group_resources->{$name} = $surface }
+    else                               { $state->{attachments}{$name} = $surface }
+}
+
+sub _pass_is_active {
+    my ($pass, $uniforms) = @_;
+    my $conditions = $pass->{conditions} || return 1;
+    for my $entry (@{ $conditions->{runIf} || [] }) {
+        return 0 if 0 + ($uniforms->{ $entry->{uniform} } || 0) != 0 + $entry->{equals};
+    }
+    for my $entry (@{ $conditions->{skipIf} || [] }) {
+        return 0 if 0 + ($uniforms->{ $entry->{uniform} } || 0) == 0 + $entry->{equals};
+    }
+    return 1;
+}
+
+sub _repeat_count {
+    my ($pass, $uniforms) = @_;
+    my $repeat = $pass->{repeat};
+    $repeat = defined $repeat && !ref $repeat && $repeat !~ /^-?\d+(?:\.\d+)?$/
+        ? (defined $uniforms->{$repeat} ? $uniforms->{$repeat} : 1)
+        : (defined $repeat ? $repeat : 1);
+    $repeat = int($repeat);
+    return $repeat > 0 ? $repeat : 0;
+}
+
+sub _pass_uniforms {
+    my ($pass, $base, $params) = @_;
+    my %uniforms = %$base;
+    for my $name (sort keys %{ $pass->{uniforms} || {} }) {
+        my $source = $pass->{uniforms}{$name};
+        if (!ref $source && exists $params->{$source}) {
+            $uniforms{$name} = $params->{$source};
+        }
+        elsif (!ref $source && exists $base->{$source}) {
+            $uniforms{$name} = $base->{$source};
+        }
+        elsif (!(defined $source && !ref $source && $source eq $name && exists $uniforms{$name})) {
+            $uniforms{$name} = $source;
+        }
+    }
+    return \%uniforms;
+}
+
+sub _initialize_overlay {
+    my ($state, $inputs, $width, $height) = @_;
+    return if $state->{overlay_initialized}++;
+    my $effect_id = $state->{effect_id};
+    return unless Math::Fractal::Noisemaker::OverlayGen::is_overlay_effect($effect_id);
+    my %produced;
+    $produced{$_} = 1 for map { values %{ $_->{outputs} || {} } } @{ $state->{eff}{passes} || [] };
+    return if $produced{overlayTex} || exists $inputs->{overlayTex};
+    my %gen = map { $_ => $state->{params}{$_} } grep { exists $state->{params}{$_} } qw(seed density);
+    $state->{attachments}{overlayTex} =
+        Math::Fractal::Noisemaker::OverlayGen::render_worm_overlay($effect_id, $width, $height, \%gen);
+}
+
+sub _ensure_iteration_scratch {
+    my ($state, $inputs, $width, $height) = @_;
+    for my $name (sort keys %{ $state->{eff}{textures} || {} }) {
+        next if is_particle_state_name($name);
+        next if defined $state->{attachments}{$name} || defined $inputs->{$name};
+        $state->{attachments}{$name} = _destination($state->{eff}, $name, $state->{params}, $width, $height);
+        $state->{attachments}{$name}->clear;
+    }
+}
+
+sub _run_state_once {
+    my ($state, $inputs, $states, $group_resources, %opt) = @_;
+    my ($width, $height, $seed, $time) = @opt{qw(width height seed time)};
+    my $blank = Math::Fractal::Noisemaker::Surface->new(1, 1);
+    my ($effect_uniforms, $surface_params) =
+        _effect_bindings($state->{eff}, $state->{params}, $inputs, $blank);
+    my %effective_inputs = (%$inputs, %$surface_params);
+    _initialize_overlay($state, \%effective_inputs, $width, $height);
+    _ensure_iteration_scratch($state, \%effective_inputs, $width, $height) if $opt{iterated};
+    my $uniforms = _canonical_uniforms(
+        $width, $height, $time, $seed, $effect_uniforms,
+        $opt{frame}, $opt{delta_time}, $width, $height,
+    );
+    $uniforms->{data} = _remap_uniform_data($uniforms, $width, $height)
+        if $state->{effect_id} eq 'synth/remap';
+    my $runtime = Math::Fractal::Noisemaker::Runtime->new;
+    my $result;
+    my $last_output;
+    my $external_tex = $state->{eff}{externalTexture};
+
+    for my $pass (@{ $state->{eff}{passes} || [] }) {
+        next unless _pass_is_active($pass, $uniforms);
+        my $repeat = _repeat_count($pass, $uniforms);
+        next unless $repeat;
+        for (1 .. $repeat) {
+            my %textures;
+            for my $sampler (sort keys %$surface_params) {
+                my $surface = $surface_params->{$sampler};
+                $surface->filter((defined $external_tex && $sampler eq $external_tex) ? 'linear' : 'nearest');
+                $textures{$sampler} = $surface;
+            }
+            for my $sampler (sort keys %{ $pass->{inputs} || {} }) {
+                my $source = $pass->{inputs}{$sampler};
+                my $surface;
+                if (is_particle_state_name($source)) {
+                    $surface = _resolve_particle_input($source, $state, $states, $group_resources, $width, $height);
+                }
+                elsif (defined $source && ($source eq 'selfTex' || $source eq 'feedback')) {
+                    $surface = $state->{self_tex} || $blank;
+                }
+                else {
+                    $surface = $state->{attachments}{$source}
+                        || $effective_inputs{$source}
+                        || $effective_inputs{$sampler};
+                }
+                die "$state->{effect_id} pass '$pass->{name}' requires texture \"$source\"\n"
+                    unless defined $surface;
+                $surface->filter((defined $external_tex && $sampler eq $external_tex) ? 'linear' : 'nearest');
+                $textures{$sampler} = $surface;
+            }
+
+            my $compiled = $pass->{drawMode} ? undef : _kernel_for($pass->{key});
+            my @output_variables =
+                $compiled && ($pass->{drawBuffers} || 0) >= 2 && ref $compiled->{output_names} eq 'ARRAY'
+                ? @{ $compiled->{output_names} }
+                : (sort keys %{ $pass->{outputs} || {} });
+            die "$state->{effect_id} pass '$pass->{name}' has no fragment output\n"
+                unless @output_variables;
+            my @output_names = map {
+                defined $pass->{outputs}{$_}
+                    ? $pass->{outputs}{$_}
+                    : die "$state->{effect_id} pass '$pass->{name}' has no destination for output '$_'\n"
+            } @output_variables;
+            my @destinations = map {
+                _output_destination($_, $state, $states, $width, $height)
+            } @output_names;
+            my ($dest_width, $dest_height) = ($destinations[0]->width, $destinations[0]->height);
+            for my $destination (@destinations) {
+                die "$state->{effect_id} pass '$pass->{name}' MRT destinations must share dimensions\n"
+                    if $destination->width != $dest_width || $destination->height != $dest_height;
+            }
+            my $pass_uniforms = _pass_uniforms($pass, $uniforms, $state->{params});
+            $pass_uniforms->{resolution} = [0.0 + $dest_width, 0.0 + $dest_height];
+            $pass_uniforms->{aspectRatio} = f32($dest_width / $dest_height);
+            $pass_uniforms->{aspect} = $pass_uniforms->{aspectRatio};
+
+            if ($pass->{drawMode}) {
+                my $draw_op = Math::Fractal::Noisemaker::DrawOps::get_draw_op(
+                    $state->{effect_id}, $pass->{program});
+                die "Missing CPU scatter adapter '$state->{effect_id}:$pass->{program}'\n"
+                    unless ref $draw_op eq 'CODE';
+                my $previous = is_particle_state_name($output_names[0])
+                    ? $group_resources->{ $output_names[0] }
+                    : $state->{attachments}{ $output_names[0] };
+                @{ $destinations[0]->data } = @{ $previous->data }
+                    if defined $previous && @{ $previous->data } == @{ $destinations[0]->data };
+                $draw_op->({
+                    pass        => $pass,
+                    uniforms    => $pass_uniforms,
+                    inputs      => \%textures,
+                    destination => $destinations[0],
+                    params      => $state->{params},
+                });
+            }
+            else {
+                my $kernel = $compiled->{kernel};
+                my $adapter = Math::Fractal::Noisemaker::Adapters::get_adapter(
+                    $state->{effect_id}, $pass->{program});
+                $kernel = $adapter->($runtime, $compiled) if $adapter;
+                my $ctx = Math::Fractal::Noisemaker::Ctx->new(
+                    rt         => $runtime,
+                    uniforms   => $pass_uniforms,
+                    textures   => \%textures,
+                    resolution => [0.0 + $dest_width, 0.0 + $dest_height],
+                    time       => $time,
+                    seed       => $seed,
+                    blank      => $blank,
+                );
+                if (@destinations > 1) {
+                    run_pass_mrt($kernel, $ctx, \@destinations);
+                }
+                else {
+                    $destinations[0] = $compiled->{uses_derivatives}
+                        ? run_pass_deriv($kernel, $ctx, $dest_width, $dest_height)
+                        : run_pass($kernel, $ctx, $dest_width, $dest_height);
+                }
+            }
+            for my $index (0 .. $#destinations) {
+                quantize_texture($destinations[$index], _output_format($output_names[$index], $state, $states));
+                _store_output($output_names[$index], $destinations[$index], $state, $group_resources);
+            }
+            $result = $destinations[-1];
+            $last_output = $result;
+        }
+    }
+
+    $result = $state->{attachments}{outputTex} || $last_output;
+    die "$state->{effect_id} did not produce outputTex\n" unless defined $result;
+    if ($state->{self_tex}) {
+        unless (@{ $state->{self_tex}->data } == @{ $result->data }) {
+            my $self_size = $state->{self_tex}->width . 'x' . $state->{self_tex}->height;
+            my $output_size = $result->width . 'x' . $result->height;
+            die "$state->{effect_id} selfTex ($self_size) must match the step's output ($output_size)\n";
+        }
+        @{ $state->{self_tex}->data } = @{ $result->data };
+    }
+    return $result;
+}
+
+sub _zero_iteration_output {
+    my ($input, $width, $height) = @_;
+    return $input->clone if defined $input;
+    return Math::Fractal::Noisemaker::Surface->new($width, $height);
+}
+
 sub render_effect {
     my ($effect_id, $params, $inputs, %opt) = @_;
-    $params = {} unless defined $params;
-    $inputs = {} unless defined $inputs;
+    $params ||= {};
+    $inputs ||= {};
     my $width  = defined $opt{width}  ? $opt{width}  : 256;
     my $height = defined $opt{height} ? $opt{height} : 256;
     my $seed   = defined $opt{seed}   ? $opt{seed}   : 1;
     my $time   = defined $opt{time}   ? $opt{time}   : 0.0;
-    my $eff    = meta()->{effects}{$effect_id}
-        or die "unknown effect '$effect_id' (not in bundle)\n";
-
-    my %effect_uniforms;
-    my %surface_params;    # sampler-name -> provided Surface (or undef)
-    for my $pname (sort keys %{ $eff->{params} }) {
-        my $spec = $eff->{params}{$pname};
-        next unless ref $spec eq 'HASH';
-        if (($spec->{type} || '') eq 'surface') {
-            my $sampler = $spec->{uniform} || $spec->{texture} || $pname;
-            my $surf = defined $inputs->{$sampler} ? $inputs->{$sampler} : $inputs->{$pname};
-            $surface_params{$sampler} = $surf;
-            # colorModeUniform (e.g. mashup's layerN_active): 1 when the
-            # surface is wired, 0 when unbound.
-            if ($spec->{colorModeUniform}) {
-                $effect_uniforms{ $spec->{colorModeUniform} } = defined $surf ? 1 : 0;
-            }
-            next;
-        }
-        my $val;
-        if ($pname eq 'seed' && !exists $params->{seed}) {
-            # An effect's own `seed` param shares the GLSL uniform name with
-            # the canonical render seed: thread the render seed into it so
-            # `seed=` actually changes the generator's look (the big parity
-            # unlock in the Python port).
-            $val = _coerce($spec, $seed);
-        }
-        else {
-            $val = _coerce($spec, $params->{$pname});
-        }
-        $effect_uniforms{ $spec->{uniform} } = $val if defined $spec->{uniform};
-        $effect_uniforms{ $spec->{define} }  = $val if defined $spec->{define};
+    my $step = { kind => 'effect', effect_id => $effect_id, params => $params, surfaces => {} };
+    my $state = _prepare_state($step, $width, $height, $seed, undef);
+    my @states = ($state);
+    my %group_resources;
+    if (!$state->{eff}{iterated}) {
+        return _run_state_once(
+            $state, $inputs, \@states, \%group_resources,
+            width => $width, height => $height, seed => $seed, time => $time,
+            frame => (defined $opt{frame} ? $opt{frame} : 0),
+            delta_time => (defined $opt{delta_time} ? $opt{delta_time} : 0),
+            iterated => 0,
+        );
     }
-
-    # classicNoisedeck palette presets: a palette-type param > 0 selects
-    # cosine-palette coefficients from the shared table.
-    if (($eff->{namespace} || '') eq 'classicNoisedeck') {
-        my ($pal) = grep {
-            ref $eff->{params}{$_} eq 'HASH' && ($eff->{params}{$_}{type} || '') eq 'palette'
-        } sort keys %{ $eff->{params} };
-        if (defined $pal) {
-            my $idx = _coerce($eff->{params}{$pal}, $params->{$pal});
-            my $table = \@Math::Fractal::Noisemaker::PaletteData::PALETTE_DATA;
-            if ($idx =~ /^\d+$/ && $idx > 0 && $idx <= @$table) {
-                my $e = $table->[ $idx - 1 ];
-                $effect_uniforms{paletteAmp}    = [@{$e}[0 .. 2]];
-                $effect_uniforms{paletteFreq}   = [@{$e}[4 .. 6]];
-                $effect_uniforms{paletteOffset} = [@{$e}[8 .. 10]];
-                $effect_uniforms{palettePhase}  = [@{$e}[12 .. 14]];
-                $effect_uniforms{paletteMode}   = $e->[3] == 0 ? 3 : int($e->[3]);
-            }
-        }
-    }
-
-    my $uniforms = _canonical_uniforms($width, $height, $time, $seed, \%effect_uniforms);
-    $uniforms->{data} = _remap_uniform_data($uniforms, $width, $height)
-        if $effect_id eq 'synth/remap';
-    my $blank = Math::Fractal::Noisemaker::Surface->new(1, 1);
-
-    my $rt = Math::Fractal::Noisemaker::Runtime->new;
+    my $count = defined $state->{params}{iterationCount} ? $state->{params}{iterationCount} : 60;
+    return _zero_iteration_output($inputs->{inputTex}, $width, $height) unless $count > 0;
     my $result;
-    my %attachments;    # attach-name -> Surface produced by an earlier pass
-
-    # One-shot CPU-generated textures declared but not produced by any pass
-    # (fibers/scratches/strayHair overlayTex): generate and bind up front.
-    if (Math::Fractal::Noisemaker::OverlayGen::is_overlay_effect($effect_id)) {
-        my %produced;
-        for my $pp (@{ $eff->{passes} }) {
-            $produced{$_} = 1 for values %{ $pp->{outputs} || {} };
-        }
-        for my $tname (sort keys %{ $eff->{textures} || {} }) {
-            next unless $tname eq 'overlayTex' && !$produced{$tname} && !exists $surface_params{$tname};
-            my %gen;
-            for my $pn ('seed', 'density') {
-                next unless exists $eff->{params}{$pn};
-                my $gp = $eff->{params}{$pn};
-                $gen{$pn} =
-                    ($pn eq 'seed' && !exists $params->{seed})
-                    ? _coerce($gp, $seed)
-                    : _coerce($gp, $params->{$pn});
-            }
-            $attachments{$tname} =
-                Math::Fractal::Noisemaker::OverlayGen::render_worm_overlay($effect_id, $width, $height, \%gen);
-        }
-    }
-
-    # Texture filtering must match the oracle: only the declared external
-    # texture is 'linear'; every pooled surface stays 'nearest' (decisive for
-    # warp effects sampling at fractional coordinates).
-    my $external_tex = $eff->{externalTexture};
-
-    for my $p (@{ $eff->{passes} }) {
-        my %textures;
-        for my $sampler (sort keys %surface_params) {
-            my $surf = $surface_params{$sampler};
-            next unless defined $surf;
-            $surf->filter((defined $external_tex && $sampler eq $external_tex) ? 'linear' : 'nearest');
-            $textures{$sampler} = $surf;
-        }
-        for my $sampler_name (sort keys %{ $p->{inputs} || {} }) {
-            my $source = $p->{inputs}{$sampler_name};
-            # An earlier pass's named attachment wins over a same-named
-            # external input.
-            my $surf =
-                   $attachments{$source}
-                || $inputs->{$source}
-                || $inputs->{$sampler_name}
-                || $result;
-            next unless defined $surf;
-            $surf->filter((defined $external_tex && $sampler_name eq $external_tex) ? 'linear' : 'nearest');
-            $textures{$sampler_name} = $surf;
-        }
-        # Pass-level uniform aliases: the definition may expose a param under
-        # one name while this pass's GLSL declares another.
-        my %pass_uniforms = %$uniforms;
-        for my $glsl_name (sort keys %{ $p->{uniforms} || {} }) {
-            my $param_name = $p->{uniforms}{$glsl_name};
-            if (exists $effect_uniforms{$param_name}) {
-                $pass_uniforms{$glsl_name} = $effect_uniforms{$param_name};
-            }
-            elsif (exists $uniforms->{$param_name}) {
-                $pass_uniforms{$glsl_name} = $uniforms->{$param_name};
-            }
-        }
-        # Sorted for determinism: every current pass has at most one output,
-        # but hash order must never pick the format-defining attachment.
-        my @out_names = map { $p->{outputs}{$_} } sort keys %{ $p->{outputs} || {} };
-        my $fmt = 'rgba16f';
-        if (@out_names && $eff->{textures} && $eff->{textures}{ $out_names[0] }) {
-            $fmt = $eff->{textures}{ $out_names[0] }{format} || 'rgba16f';
-        }
-        my $draw_op =
-            $p->{drawMode}
-            ? Math::Fractal::Noisemaker::DrawOps::get_draw_op($effect_id, $p->{program})
-            : undef;
-        if ($draw_op) {
-            # CPU-only draw op (e.g. point-scatter): fresh destination seeds
-            # from the prior same-name attachment (accumulator) or clears.
-            my ($src_name) = map { $p->{inputs}{$_} } sort keys %{ $p->{inputs} || {} };
-            $src_name = 'inputTex' unless defined $src_name;
-            my $src = $textures{$src_name} || $textures{inputTex} || $blank;
-            $result = Math::Fractal::Noisemaker::Surface->new($width, $height);
-            my $prev = @out_names ? $attachments{ $out_names[0] } : undef;
-            if (defined $prev && @{ $prev->data } == @{ $result->data }) {
-                @{ $result->data } = @{ $prev->data };
-            }
-            $draw_op->($src, $result, \%pass_uniforms);
-        }
-        else {
-            my $ctx = Math::Fractal::Noisemaker::Ctx->new(
-                rt         => $rt,
-                uniforms   => \%pass_uniforms,
-                textures   => \%textures,
-                resolution => [0.0 + $width, 0.0 + $height],
-                time       => $time,
-                seed       => $seed,
-                blank      => $blank,
-            );
-            my $compiled = _kernel_for($p->{key});
-            my $kernel   = $compiled->{kernel};
-            my $adapter  = Math::Fractal::Noisemaker::Adapters::get_adapter($effect_id, $p->{program});
-            $kernel = $adapter->($rt, $compiled) if $adapter;
-            $result =
-                $compiled->{uses_derivatives}
-                ? run_pass_deriv($kernel, $ctx, $width, $height)
-                : run_pass($kernel, $ctx, $width, $height);
-        }
-        # Quantize the pass output to its declared texture format.
-        quantize_texture($result, $fmt);
-        $attachments{$_} = $result for @out_names;
+    for my $index (0 .. $count - 1) {
+        $result = _run_state_once(
+            $state, $inputs, \@states, \%group_resources,
+            width => $width, height => $height, seed => $seed,
+            time => wrap01($time - ($count - 1 - $index) * iteration_delta_time()),
+            frame => $index, delta_time => iteration_delta_time(), iterated => 1,
+        );
     }
     return $result;
 }
@@ -365,18 +626,62 @@ sub _resolve_surface_marker {
 # render_effect resolves), and external textures (imageTex/textTex/named)
 # pass straight through. Explicit surface args and inputTex-defaults win over
 # them.
-sub _run_effect_step {
-    my ($step, $current, $surfaces, $external_textures, $width, $height, $seed, $time) = @_;
+sub _inputs_for_step {
+    my ($step, $current, $surfaces, $external_textures) = @_;
     my %inputs = %{ $external_textures || {} };
     $inputs{inputTex} = $current if defined $current;
     for my $pname (sort keys %{ $step->{surfaces} }) {
         my $surf = _resolve_surface_marker($step->{surfaces}{$pname}, $current, $surfaces);
         $inputs{$pname} = $surf if defined $surf;
     }
+    return \%inputs;
+}
+
+sub _run_effect_step {
+    my ($step, $current, $surfaces, $external_textures, $width, $height, $seed, $time) = @_;
+    my $inputs = _inputs_for_step($step, $current, $surfaces, $external_textures);
     return render_effect(
-        $step->{effect_id}, $step->{params}, \%inputs,
+        $step->{effect_id}, $step->{params}, $inputs,
         width => $width, height => $height, seed => $seed, time => $time,
     );
+}
+
+sub _run_iteration_group {
+    my ($group, $group_input, $surfaces, $external_textures, $width, $height, $seed, $time) = @_;
+    my @states;
+    my $owner_state_size;
+    for my $index (0 .. $#{ $group->{steps} }) {
+        my $state = _prepare_state(
+            $group->{steps}[$index], $width, $height, $seed,
+            $index == 0 ? undef : $owner_state_size,
+        );
+        push @states, $state;
+        if ($index == 0 && @{ $group->{steps} } > 1
+            && exists(($state->{eff}{params} || {})->{stateSize})) {
+            $owner_state_size = $state->{params}{stateSize};
+        }
+    }
+    my $count = defined $states[0]{params}{iterationCount}
+        ? $states[0]{params}{iterationCount} : 60;
+    return _zero_iteration_output($group_input, $width, $height) unless $count > 0;
+
+    my %group_resources;
+    my $last;
+    for my $iteration (0 .. $count - 1) {
+        my $step_input = $group_input;
+        for my $state (@states) {
+            my $inputs = _inputs_for_step(
+                $state->{step}, $step_input, $surfaces, $external_textures);
+            $step_input = _run_state_once(
+                $state, $inputs, \@states, \%group_resources,
+                width => $width, height => $height, seed => $seed,
+                time => wrap01($time - ($count - 1 - $iteration) * iteration_delta_time()),
+                frame => $iteration, delta_time => iteration_delta_time(), iterated => 1,
+            );
+        }
+        $last = $step_input;
+    }
+    return $last;
 }
 
 # Render a Polymorphic DSL program on the CPU — the Perl counterpart of
@@ -394,14 +699,20 @@ sub render_dsl {
     my $plan = compile_dsl($source, meta()->{effects});
     for my $chain (@{ $plan->{chains} }) {
         my $current;
-        for my $step (@{ $chain->{steps} }) {
-            my $kind = $step->{kind};
-            if ($kind eq 'read') {
+        for my $group (@{ compute_iteration_groups($chain->{steps}, meta()->{effects}) }) {
+            my $step = @{ $group->{steps} } == 1 ? $group->{steps}[0] : undef;
+            if ($step && $step->{kind} eq 'read') {
                 $current = $surfaces{ $step->{surface} };
                 die "Surface $step->{surface} has not been written\n" unless defined $current;
             }
-            elsif ($kind eq 'write') {
+            elsif ($step && $step->{kind} eq 'write') {
                 $surfaces{ $step->{surface} } = $current;
+            }
+            elsif ($group->{iterated}) {
+                $current = _run_iteration_group(
+                    $group, $current, \%surfaces, $external_textures,
+                    $width, $height, $seed, $time,
+                );
             }
             else {
                 $current = _run_effect_step($step, $current, \%surfaces, $external_textures,

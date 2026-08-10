@@ -218,6 +218,10 @@ my $solid_png = File::Spec->catfile($TMPDIR, 'solid.png');
     ok(exists $meta->{effects}{$echoed_id}, "echoed id '$echoed_id' is a known catalog effect");
     is($meta->{effects}{$echoed_id}{kind}, 'generator',
         "random generate picked an effect of kind 'generator' ('$echoed_id')");
+    ok(!$meta->{effects}{$echoed_id}{iterated},
+        "random generate excluded stateful effects ('$echoed_id')");
+    ok(!$meta->{effects}{$echoed_id}{externalTexture},
+        "random generate excluded effects requiring an external texture ('$echoed_id')");
 }
 
 # --- animate: ffmpeg absent -------------------------------------------------

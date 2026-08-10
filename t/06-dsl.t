@@ -54,6 +54,11 @@ sub err_str {
     is($ast->{render}{name}, 'o0', 'parse: render surface');
 }
 
+{
+    my $ast = parse_dsl("search render\nrender(o0)");
+    is_deeply($ast->{search}, ['render'], 'parse: reserved render token is valid in search namespace list');
+}
+
 # --- compiler: resolution + surface split ------------------------------------
 
 {

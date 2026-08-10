@@ -280,6 +280,20 @@ sub identifier {
     return $token;
 }
 
+# `render` is both a top-level directive keyword and the real namespace that
+# owns the particle emitter/render effects. Accept that keyword token only in
+# a search list; it remains reserved everywhere else in the grammar.
+sub search_namespace {
+    my ($self) = @_;
+    my $token = $self->peek;
+    if ($token->{type} eq 'identifier'
+        || ($token->{type} eq 'keyword' && $token->{lexeme} eq 'render')) {
+        $self->{current}++;
+        return $token;
+    }
+    _throw('Expected namespace after search', _location($token));
+}
+
 sub parse_program {
     my ($self) = @_;
     my $ast = {
@@ -292,7 +306,7 @@ sub parse_program {
     };
     if ($self->match('search')) {
         while (1) {
-            push @{ $ast->{search} }, $self->identifier('Expected namespace after search')->{lexeme};
+            push @{ $ast->{search} }, $self->search_namespace->{lexeme};
             last unless $self->match(',');
         }
         $self->match(';');

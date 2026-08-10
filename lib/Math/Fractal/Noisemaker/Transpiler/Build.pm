@@ -24,6 +24,7 @@ use Math::Fractal::Noisemaker::Transpiler::Codegen     qw(emit_perl);
 use Math::Fractal::Noisemaker::Transpiler::SharedEnums qw(%SHARED_ENUMS);
 
 our @EXPORT_OK = qw(build run bundle_dir);
+our $STATEFUL_REVISION = 'a024dc3a960cc44af454abc7aebce50456c194e6';
 
 my $_JSON        = JSON::PP->new->utf8->canonical;
 my $_JSON_PRETTY = JSON::PP->new->utf8->canonical->indent->indent_length(2)->space_after;
@@ -80,14 +81,32 @@ sub _write_raw {
     print {$fh} $text;
 }
 
+sub _preserve_stateful {
+    my ($bundle, $old_bundle) = @_;
+    my @ids = sort grep {
+        $old_bundle->{effects}{$_}{iterated}
+    } keys %{ $old_bundle->{effects} || {} };
+    return undef unless @ids;
+
+    my $revision = $old_bundle->{provenance}{statefulRevision};
+    die "stateful bundle revision is missing or stale; expected $STATEFUL_REVISION\n"
+        unless defined $revision && $revision eq $STATEFUL_REVISION;
+
+    $bundle->{effects}{$_} = $old_bundle->{effects}{$_} for @ids;
+    $bundle->{provenance}{statefulRevision} = $STATEFUL_REVISION;
+    return $STATEFUL_REVISION;
+}
+
 sub build {
     my ($ids, %opt) = @_;
     my $out_dir     = defined $opt{out_dir} ? $opt{out_dir} : bundle_dir();
     my $update_lock = $opt{update_lock} ? 1 : 0;
     my $kdir        = File::Spec->catdir($out_dir, 'kernels', 'perl');
     File::Path::make_path($kdir);
-    my $lock_path = File::Spec->catfile($out_dir, 'bundle-lock.json');
-    my $old       = _read_json($lock_path) || { hashes => {} };
+    my $lock_path   = File::Spec->catfile($out_dir, 'bundle-lock.json');
+    my $metadata_path = File::Spec->catfile($out_dir, 'metadata.json');
+    my $old         = _read_json($lock_path) || { hashes => {} };
+    my $old_bundle  = _read_json($metadata_path) || { effects => {}, provenance => {} };
     my %hashes    = %{ $old->{hashes} || {} };
     my @drift;
     my $bundle = {
@@ -117,16 +136,12 @@ sub build {
                 # point-scatter deposit). Keep it so the renderer can run its
                 # native adapter; it has no transpiled kernel key.
                 if ($p->{drawMode}) {
-                    push @passes,
-                        {
-                        name     => $p->{name},
-                        program  => $p->{program},
-                        key      => undef,
-                        drawMode => $p->{drawMode},
-                        inputs   => ($p->{inputs}   || {}),
-                        outputs  => ($p->{outputs}  || {}),
-                        uniforms => ($p->{uniforms} || {}),
-                        };
+                    my %pass = %$p;
+                    $pass{key}      = undef;
+                    $pass{inputs}   ||= {};
+                    $pass{outputs}  ||= {};
+                    $pass{uniforms} ||= {};
+                    push @passes, \%pass;
                 }
                 next;
             }
@@ -134,7 +149,7 @@ sub build {
             (my $stripped = $glsl) =~ s/^\s+|\s+$//g;
             my $h = Digest::SHA::sha256_hex($stripped);
             my $perl = eval {
-                my $norm = normalize($glsl, $defines);
+                my $norm = normalize($glsl, $defines, $key);
                 my $ast  = parse($norm->{source});
                 emit_perl($ast, $norm->{outputs}, $norm->{varyings});
             };
@@ -149,15 +164,12 @@ sub build {
                 if $old->{hashes} && $old->{hashes}{$key} && $old->{hashes}{$key} ne $h;
             $hashes{$key} = $h;
             $n_ok++;
-            push @passes,
-                {
-                name     => $p->{name},
-                program  => $p->{program},
-                key      => $key,
-                inputs   => ($p->{inputs}   || {}),
-                outputs  => ($p->{outputs}  || {}),
-                uniforms => ($p->{uniforms} || {}),
-                };
+            my %pass = %$p;
+            $pass{key}      = $key;
+            $pass{inputs}   ||= {};
+            $pass{outputs}  ||= {};
+            $pass{uniforms} ||= {};
+            push @passes, \%pass;
         }
         next unless @passes;
         $bundle->{effects}{$eid} = {
@@ -173,6 +185,8 @@ sub build {
         };
         $bundle->{effects}{$eid}{externalTexture} = $eff->{externalTexture}
             if $eff->{externalTexture};
+        $bundle->{effects}{$eid}{iterated} = $eff->{iterated} ? JSON::PP::true : JSON::PP::false
+            if exists $eff->{iterated};
     }
     if (@drift && !$update_lock) {
         print STDERR "\nSHADER DRIFT vs bundle-lock.json (" . scalar(@drift) . "): "
@@ -180,17 +194,15 @@ sub build {
             . "\nRe-run with --update-lock to accept.\n";
         exit 1;
     }
-    _write_raw(File::Spec->catfile($out_dir, 'metadata.json'), $_JSON_PRETTY->encode($bundle));
-    _write_raw(
-        $lock_path,
-        $_JSON_PRETTY->encode(
-            {
-                source  => $Math::Fractal::Noisemaker::Transpiler::CDN::CDN_BASE,
-                version => $Math::Fractal::Noisemaker::Transpiler::CDN::CDN_VERSION,
-                hashes  => \%hashes,
-            }
-        )
-    );
+    my $stateful_revision = _preserve_stateful($bundle, $old_bundle);
+    my $new_lock = {
+        source  => $Math::Fractal::Noisemaker::Transpiler::CDN::CDN_BASE,
+        version => $Math::Fractal::Noisemaker::Transpiler::CDN::CDN_VERSION,
+        hashes  => \%hashes,
+    };
+    $new_lock->{statefulRevision} = $stateful_revision if defined $stateful_revision;
+    _write_raw($metadata_path, $_JSON_PRETTY->encode($bundle));
+    _write_raw($lock_path, $_JSON_PRETTY->encode($new_lock));
     printf "wrote %d effect(s) (%d programs, %d skipped) from CDN %s\n",
         scalar(keys %{ $bundle->{effects} }), $n_ok, $n_skip,
         $Math::Fractal::Noisemaker::Transpiler::CDN::CDN_VERSION;

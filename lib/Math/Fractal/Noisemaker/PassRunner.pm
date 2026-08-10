@@ -15,7 +15,7 @@ use Exporter 'import';
 use Math::Fractal::Noisemaker::Surface;
 use Math::Fractal::Noisemaker::Runtime;
 
-our @EXPORT_OK = qw(run_pass run_pass_deriv);
+our @EXPORT_OK = qw(run_pass run_pass_deriv run_pass_mrt);
 
 sub _f32 { unpack('f', pack('f', $_[0])) }
 
@@ -80,6 +80,38 @@ sub run_pass {
         }
     }
     return $surf;
+}
+
+# Multiple-render-target pass runner. The kernel writes four consecutive
+# components per output into one scratch array; every destination shares the
+# same pixel loop and therefore must have identical dimensions.
+sub run_pass_mrt {
+    my ($kernel, $ctx, $destinations) = @_;
+    die "MRT pass requires at least one destination\n" unless @$destinations;
+    my ($width, $height) = ($destinations->[0]->width, $destinations->[0]->height);
+    for my $surface (@$destinations) {
+        die "MRT destinations must share dimensions\n"
+            if $surface->width != $width || $surface->height != $height;
+    }
+    my $out = [(0.0) x (4 * @$destinations)];
+    my $fw = 0.0 + $width;
+    my $fh = 0.0 + $height;
+    $ctx->{resolution} = [$fw, $fh];
+    for my $y (0 .. $height - 1) {
+        my $fy = $height - $y - 0.5;
+        for my $x (0 .. $width - 1) {
+            my $fx = $x + 0.5;
+            $ctx->{frag_coord} = [$fx, $fy, 0.0, 1.0];
+            $ctx->{uv} = [_f32($fx / $fw), _f32($fy / $fh)];
+            $kernel->($ctx, $out);
+            my $offset = ($y * $width + $x) * 4;
+            for my $index (0 .. $#$destinations) {
+                @{ $destinations->[$index]->data }[$offset .. $offset + 3]
+                    = @$out[$index * 4 .. $index * 4 + 3];
+            }
+        }
+    }
+    return $destinations;
 }
 
 # Pass runner for kernels using dFdx/dFdy/fwidth. Mirrors the reference

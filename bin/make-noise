@@ -400,8 +400,12 @@ sub _resolve_effect {
     my ($effect, $kind) = @_;
     my $effects = meta()->{effects};
     if ($effect eq 'random') {
-        my @pool = sort grep { !defined $kind || (($effects->{$_}{kind} || '') eq $kind) } keys %$effects;
-        @pool = sort keys %$effects unless @pool;
+        my @pool = sort grep {
+            (!defined $kind || (($effects->{$_}{kind} || '') eq $kind))
+                && !$effects->{$_}{iterated}
+                && !$effects->{$_}{externalTexture}
+        } keys %$effects;
+        die "usage: No $kind effects available.\n" unless @pool;
         return $pool[ int(rand(scalar @pool)) ];
     }
     die "usage: Unknown effect: $effect. Pass 'random' or a catalog id like 'synth/curl'.\n"

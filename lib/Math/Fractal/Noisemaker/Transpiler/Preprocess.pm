@@ -27,15 +27,56 @@ sub _strip_comments {
     return $source;
 }
 
+sub _canonical_compatibility {
+    my ($source, $canonical_key) = @_;
+    if (defined $canonical_key
+        && $canonical_key eq 'filter/temporalAberration:temporalAberration') {
+        # The pinned CPU oracle's glsl-transpiler lowering evaluates `cur` on
+        # an empty history slot but assigns only the false branch. Preserve
+        # that observable behavior rather than the source GLSL's intended
+        # empty-slot fallback, because render parity is defined by the pinned
+        # generated CPU kernel.
+        my $rewritten = ($source =~ s{
+            slots\[(\d)\]\s*=\s*\(s\.a\s*<\s*0\.5\)\s*\?\s*cur\s*:\s*s\s*;
+        }{if (!(s.a < 0.5)) { slots[$1] = s; }}gx);
+        die "temporalAberration canonical compatibility pattern changed\n"
+            unless $rewritten == 8;
+    }
+    elsif (defined $canonical_key && $canonical_key eq 'synth/navierStokes:nsSplat') {
+        # The pinned CPU artifact lowers this vector assignment as two
+        # left-to-right component stores, so the second dot product observes
+        # the newly assigned p.x. Preserve that generated-kernel behavior.
+        my $rewritten = ($source =~ s{
+            p\s*=\s*vec2\s*\(
+            \s*dot\s*\(\s*p\s*,\s*vec2\s*\(\s*127\.1\s*,\s*311\.7\s*\)\s*\)\s*,
+            \s*dot\s*\(\s*p\s*,\s*vec2\s*\(\s*269\.5\s*,\s*183\.3\s*\)\s*\)\s*
+            \)\s*;
+        }{p.x = dot(p, vec2(127.1, 311.7)); p.y = dot(p, vec2(269.5, 183.3));}gx);
+        die "navierStokes canonical compatibility pattern changed\n"
+            unless $rewritten == 1;
+    }
+    return $source;
+}
+
 sub normalize {
-    my ($source, $runtime_defines) = @_;
+    my ($source, $runtime_defines, $canonical_key) = @_;
     $runtime_defines = {} unless defined $runtime_defines;
+    $source = _canonical_compatibility($source, $canonical_key);
     my $body = _preprocess(_strip_comments($source), $runtime_defines);
 
-    my (@out_lines, @outputs, @varyings);
+    my (@out_lines, @outputs, @output_locations, @varyings);
     for my $line (split /\n/, $body, -1) {
+        if ($line =~ /^\s*layout\s*\(([^)]*)\)\s*out\s+(\w+)\s+(\w+)\s*;\s*$/) {
+            my ($layout, $type, $name) = ($1, $2, $3);
+            my ($location) = $layout =~ /\blocation\s*=\s*(\d+)/;
+            $location = scalar @output_locations unless defined $location;
+            push @output_locations, { name => $name, location => 0 + $location, order => scalar @output_locations };
+            push @out_lines, "$type $name;";
+            next;
+        }
         if ($line =~ /^\s*out\s+(\w+)\s+(\w+)\s*;\s*$/) {
             push @outputs, $2;
+            push @output_locations, { name => $2, location => scalar @output_locations, order => scalar @output_locations };
             push @out_lines, "$1 $2;";
             next;
         }
@@ -52,6 +93,9 @@ sub normalize {
         my $t = $runtime_defines->{$name} eq 'float' ? 'float' : 'int';
         $decls .= "uniform $t $name;\n";
     }
+    @outputs = map { $_->{name} }
+        sort { $a->{location} <=> $b->{location} || $a->{order} <=> $b->{order} }
+        @output_locations;
     return {
         source   => $decls . join("\n", @out_lines),
         outputs  => (@outputs ? \@outputs : ['fragColor']),

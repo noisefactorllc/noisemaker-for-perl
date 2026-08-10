@@ -447,6 +447,7 @@ sub _glsl_modf {
 
 my %COMPONENT = (
     abs         => sub { abs $_[0] },
+    isnan       => sub { $_[0] != $_[0] ? 1.0 : 0.0 },
     floor       => sub { POSIX::floor($_[0]) },
     ceil        => sub { POSIX::ceil($_[0]) },
     fract       => sub { $_[0] - POSIX::floor($_[0]) },

@@ -1,7 +1,8 @@
 #!/usr/bin/env perl
 
-# Cross-language parity harness: render every bundled effect in Perl vs the
-# JS oracle (noisemaker-cpu `effect` CLI) at parity settings, and categorize.
+# Cross-language parity harness: render every non-iterated bundled effect in
+# Perl vs the JS oracle (noisemaker-cpu `effect` CLI) and categorize. Stateful
+# effects have render-loop semantics rather than a one-frame image oracle.
 #
 # Usage: perl scripts/parity.pl [--only id,id] [--size N]
 
@@ -111,6 +112,8 @@ sub perl_render {
 
 my $effects = meta()->{effects};
 my @ids = grep { !$only || $only->{$_} } sort keys %$effects;
+my @iterated = grep { $effects->{$_}{iterated} } @ids;
+@ids = grep { !$effects->{$_}{iterated} } @ids;
 
 my (@ok, @diffs, %errors, @oracle_err);
 my $exact = 0;
@@ -160,3 +163,4 @@ if (@oracle_err) {
         . "  e.g. @oracle_err[0 .. (@oracle_err > 5 ? 4 : $#oracle_err)]\n";
 }
 print "\nPASS: " . scalar(@ok) . "  (byte-exact: $exact)\n";
+print "SKIPPED ITERATED: " . scalar(@iterated) . "\n" if @iterated;

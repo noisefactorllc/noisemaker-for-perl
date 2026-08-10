@@ -93,4 +93,13 @@ is($qn->data->[1], 0.0, 'rgba8 quantize clamps negative to 0');
 feq($qn->data->[2], 0.501960813999176, 'rgba8 quantize rounds 0.5 (f32 of 128/255)');
 is($qn->data->[3], 1.0, 'rgba8 quantize clamps >1 to 1');
 
+# Stateful particle buffers use full float32 attachments. Quantization is an
+# explicit no-op for both WebGL spellings of that format.
+for my $fmt (qw(rgba32f rgba32float)) {
+    my $full = Math::Fractal::Noisemaker::Surface->new(1, 1, [0.1, -2.5, 3.25, 1.0]);
+    my @before = @{ $full->data };
+    quantize_texture($full, $fmt);
+    is_deeply($full->data, \@before, "$fmt quantization preserves float32 data");
+}
+
 done_testing();

@@ -9,7 +9,7 @@ use File::Temp ();
 # Cross-language parity: Perl renders must match the JS oracle byte-for-byte
 # on a fast subset (the full 167-effect sweep lives in scripts/parity.pl).
 
-use Math::Fractal::Noisemaker::PNG qw(decode_png);
+use Math::Fractal::Noisemaker::PNG qw(decode_png encode_png);
 use Math::Fractal::Noisemaker::Renderer qw(render_effect);
 
 my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
@@ -33,6 +33,24 @@ sub js_effect {
     open my $fh, '<:raw', $out or die $!;
     local $/;
     return decode_png(scalar <$fh>);
+}
+
+sub js_apply {
+    my ($effect_id, $input, @extra) = @_;
+    my $in  = File::Spec->catfile($TMP, 'input.png');
+    my $out = File::Spec->catfile($TMP, 'js-apply.png');
+    open my $input_fh, '>:raw', $in or die $!;
+    print {$input_fh} encode_png($input);
+    close $input_fh;
+    my @cmd = (
+        'node', $CLI, 'apply', $effect_id, $in,
+        '--width', 8, '--height', 8, '--seed', 1, '--time', 0.25,
+        '--output', $out, @extra,
+    );
+    system(join(' ', map { quotemeta } @cmd) . ' >/dev/null 2>&1') == 0 or die "oracle failed\n";
+    open my $output_fh, '<:raw', $out or die $!;
+    local $/;
+    return decode_png(scalar <$output_fh>);
 }
 
 sub max_diff {
@@ -61,5 +79,33 @@ is(max_diff($js, $pl), 0, 'filter/invert byte-exact');
 $js = js_effect('synth/noise');
 $pl = render_effect('synth/noise', {}, undef, width => 8, height => 8, seed => 1, time => 0.25);
 is(max_diff($js, $pl), 0, 'synth/noise byte-exact');
+
+# Stateful generator with an omitted nullable surface. The CPU runtime binds
+# the canonical zero surface rather than inheriting a prior pass result.
+$js = js_effect(
+    'synth/navierStokes',
+    '--param', 'iterationCount=1', '--param', 'iterations=4', '--param', 'zoom=1',
+);
+$pl = render_effect(
+    'synth/navierStokes', { iterationCount => 1, iterations => 4, zoom => 1 }, {},
+    width => 8, height => 8, seed => 1, time => 0.25,
+);
+cmp_ok(max_diff($js, $pl), '<=', 2, 'synth/navierStokes nullable input matches CPU');
+
+# The pinned generated CPU kernel intentionally leaves empty history slots at
+# zero; this is a source-compatibility check for the canonical artifact.
+my $temporal_input = render_effect(
+    'synth/solid', { color => '#336699' }, undef,
+    width => 8, height => 8, seed => 1, time => 0.25,
+);
+$js = js_apply(
+    'filter/temporalAberration', $temporal_input,
+    '--param', 'iterationCount=2',
+);
+$pl = render_effect(
+    'filter/temporalAberration', { iterationCount => 2 }, { inputTex => $temporal_input },
+    width => 8, height => 8, seed => 1, time => 0.25,
+);
+is(max_diff($js, $pl), 0, 'filter/temporalAberration history is CPU byte-exact');
 
 done_testing();

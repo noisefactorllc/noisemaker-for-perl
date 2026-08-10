@@ -116,6 +116,8 @@ my $mn = $rt->component_wise('min', $rt->f(1.0), $qnan);
 ok($mn != $mn, 'min(1, NaN) is NaN');
 my $sg = $rt->component_wise('sign', $qnan);
 ok($sg != $sg, 'sign(NaN) is NaN');
+is($rt->component_wise('isnan', $qnan), 1.0, 'isnan(NaN) is true');
+is($rt->component_wise('isnan', $rt->f(1.0)), 0.0, 'isnan(finite) is false');
 
 # deriv record snaps raw deferred-f64 vectors to f32 (Float32Array semantics)
 $rt->deriv_reset('record');
