@@ -3,7 +3,7 @@
 **Math::Fractal::Noisemaker v1.000** — a software runtime for shaders, in pure Perl.
 
 This is the Perl home of the [Noisemaker](https://noisemaker.app) rendering
-engine: the 167-effect shader catalog behind [Noisedeck](https://noisedeck.app),
+engine: the 205-effect shader catalog behind [Noisedeck](https://noisedeck.app),
 rendered entirely on the CPU with byte-parity against the reference engine.
 GLSL is fetched from the Noisemaker shader CDN, transpiled to Perl by a
 pure-Perl GLSL ES 3.00 front end, and executed per-pixel by a float32-faithful

@@ -59,6 +59,7 @@ sub compute_iteration_groups {
     $effects ||= {};
     my @groups;
     my $open;
+    my $open_loop;
     my $close = sub {
         return unless $open;
         push @groups, $open;
@@ -67,9 +68,27 @@ sub compute_iteration_groups {
 
     for my $step (@$steps) {
         my $kind = $step->{kind} || '';
+        my $role = _definition($step, $effects)->{loopRole} || '';
+        if ($open_loop) {
+            die "Loop iteration group cannot cross a read/write boundary\n"
+                if $kind eq 'read' || $kind eq 'write';
+            die "Nested loop iteration groups are not supported\n" if $role eq 'begin';
+            push @{ $open_loop->{steps} }, $step;
+            if ($role eq 'end') {
+                push @groups, { steps => $open_loop->{steps}, iterated => 1, loop => 1 };
+                $open_loop = undef;
+            }
+            next;
+        }
         if ($kind eq 'read' || $kind eq 'write') {
             $close->();
             push @groups, { steps => [$step], iterated => 0 };
+            next;
+        }
+        die "loopEnd has no matching loopBegin\n" if $role eq 'end';
+        if ($role eq 'begin') {
+            $close->();
+            $open_loop = { steps => [$step] };
             next;
         }
         if (_declares_xyz($step, $effects)) {
@@ -84,6 +103,7 @@ sub compute_iteration_groups {
         $close->();
         push @groups, { steps => [$step], iterated => _iterated($step, $effects) };
     }
+    die "loopBegin has no matching loopEnd\n" if $open_loop;
     $close->();
     return \@groups;
 }

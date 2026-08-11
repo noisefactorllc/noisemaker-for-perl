@@ -28,6 +28,14 @@ our $STATEFUL_REVISION = 'a024dc3a960cc44af454abc7aebce50456c194e6';
 
 my $_JSON        = JSON::PP->new->utf8->canonical;
 my $_JSON_PRETTY = JSON::PP->new->utf8->canonical->indent->indent_length(2)->space_after;
+my %_AUTHORED_STATEFUL = map { $_ => 1 } qw(
+    filter/convolutionFeedback filter/feedback filter/motionBlur
+    filter/temporalAberration points/attractor points/buddhabrot points/dla
+    points/flock points/flow points/hydraulic points/lenia points/life
+    points/physarum points/physical render/pointsBillboardRender
+    render/pointsEmit render/pointsRender synth/cellularAutomata synth/mnca
+    synth/navierStokes synth/reactionDiffusion
+);
 
 sub bundle_dir {
     my $here = File::Basename::dirname(__FILE__);    # .../Noisemaker/Transpiler
@@ -57,11 +65,33 @@ sub runtime_defines {
 }
 
 sub infer_kind {
-    my ($passes) = @_;
-    for my $p (@$passes) {
-        return 'filter' if $p->{inputs} && %{ $p->{inputs} };
+    my ($effect) = @_;
+    my $namespace = $effect->{namespace} || '';
+    return 'generator' if $namespace eq 'synth' || $namespace eq 'synth3d';
+    return 'filter'    if $namespace eq 'filter3d';
+    return 'mixer'     if $namespace eq 'mixer';
+    return 'filter'    if $namespace eq 'points' || $namespace eq 'render';
+
+    my $has_inputs = 0;
+    my $external   = 0;
+    for my $pass (@{ $effect->{passes} || [] }) {
+        for my $value (values %{ $pass->{inputs} || {} }) {
+            $has_inputs = 1;
+            next if ref $value || !defined $value;
+            next if $value eq 'inputTex' || $value eq 'outputTex';
+            next if $value =~ /^_/ || $value =~ /^global_/;
+            next if $value eq 'selfTex' || $value eq 'feedback';
+            my $texture = $effect->{textures}{$value};
+            next if $texture
+                && defined $texture->{width} && ref($texture->{width}) eq ''
+                && $texture->{width} =~ /^\d+(?:\.\d+)?$/
+                && defined $texture->{height} && ref($texture->{height}) eq ''
+                && $texture->{height} =~ /^\d+(?:\.\d+)?$/;
+            $external = 1;
+        }
     }
-    return 'generator';
+    return 'generator' unless $has_inputs;
+    return $external ? 'mixer' : 'filter';
 }
 
 sub _key  { my ($eid, $program) = @_; "$eid:$program" }
@@ -84,7 +114,7 @@ sub _write_raw {
 sub _preserve_stateful {
     my ($bundle, $old_bundle) = @_;
     my @ids = sort grep {
-        $old_bundle->{effects}{$_}{iterated}
+        $_AUTHORED_STATEFUL{$_} && $old_bundle->{effects}{$_}{iterated}
     } keys %{ $old_bundle->{effects} || {} };
     return undef unless @ids;
 
@@ -92,7 +122,12 @@ sub _preserve_stateful {
     die "stateful bundle revision is missing or stale; expected $STATEFUL_REVISION\n"
         unless defined $revision && $revision eq $STATEFUL_REVISION;
 
-    $bundle->{effects}{$_} = $old_bundle->{effects}{$_} for @ids;
+    for my $id (@ids) {
+        $bundle->{effects}{$id} = {
+            %{ $old_bundle->{effects}{$id} },
+            domain => $old_bundle->{effects}{$id}{domain} || 'image',
+        };
+    }
     $bundle->{provenance}{statefulRevision} = $STATEFUL_REVISION;
     return $STATEFUL_REVISION;
 }
@@ -175,7 +210,7 @@ sub build {
         $bundle->{effects}{$eid} = {
             namespace => $eff->{namespace},
             func      => $eff->{func},
-            kind      => infer_kind($eff->{passes}),
+            kind      => infer_kind($eff),
             params    => $eff->{params},
             # Definition order of params — the oracle binds positional DSL args
             # and mixer surface feeds by this order; JSON hashes don't keep it.
@@ -185,6 +220,10 @@ sub build {
         };
         $bundle->{effects}{$eid}{externalTexture} = $eff->{externalTexture}
             if $eff->{externalTexture};
+        for my $field (qw(domain outputTex outputTex3d outputGeo loopRole)) {
+            $bundle->{effects}{$eid}{$field} = $eff->{$field}
+                if defined $eff->{$field};
+        }
         $bundle->{effects}{$eid}{iterated} = $eff->{iterated} ? JSON::PP::true : JSON::PP::false
             if exists $eff->{iterated};
     }

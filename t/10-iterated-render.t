@@ -107,6 +107,33 @@ write_kernel('synth/optionalSurface:sample', q{
 });
 write_kernel('synth/missingResource:first', q{ @$out = (0.75, 0.5, 0.25, 1); });
 write_kernel('synth/missingResource:sample', q{ @$out = (1, 1, 1, 1); });
+write_kernel('synth3d/volumeSeed:seed', q{
+    @$out = (0.25, 0, 0, 1, 0.75, 0, 0, 1);
+}, ['fragColor', 'geoOut']);
+write_kernel('synth3d/badVolume:seed', q{ @$out = (0.25, 0, 0, 1); });
+write_kernel('filter3d/volumeFilter:filter', q{
+    my $surface = $ctx->texture_binding('volumeTex');
+    @$out = ($surface->data->[0] + 0.25, 0, 0, 1);
+});
+write_kernel('render/volumeRender:render', q{
+    my $u = $ctx->uniforms;
+    my $volume = $ctx->texture_binding('volumeTex');
+    my $geometry = $ctx->texture_binding('geometryTex');
+    @$out = ($u->{volumeSize} / 10, $volume->data->[0], $geometry->data->[0], 1);
+});
+write_kernel('render/loopBegin:begin', q{
+    my $input = $ctx->texture_binding('inputTex');
+    my $accum = $ctx->texture_binding('accumTex');
+    @$out = ($input->data->[0] + $accum->data->[0], 0, 0, 1);
+});
+write_kernel('filter/loopAdd:add', q{
+    my $input = $ctx->texture_binding('inputTex');
+    @$out = ($input->data->[0] + 0.1, 0, 0, 1);
+});
+write_kernel('render/loopEnd:copy', q{
+    my $input = $ctx->texture_binding('inputTex');
+    @$out = @{ $input->data }[0 .. 3];
+});
 
 sub int_param {
     my ($default, $uniform) = @_;
@@ -119,6 +146,11 @@ my $state_texture = {
     format => 'rgba32f',
 };
 my $screen_texture = { width => 'screen', height => 'screen', format => 'rgba32f' };
+my $volume_texture = {
+    width => { param => 'volumeSize', default => 2 },
+    height => { param => 'volumeSize', power => 2, default => 4 },
+    format => 'rgba32f',
+};
 my $metadata = {
     effects => {
         'synth/fill' => {
@@ -192,6 +224,79 @@ my $metadata = {
                   inputs => { tex => 'missingTex' }, outputs => { fragColor => 'outputTex' } },
             ],
         },
+        'synth3d/volumeSeed' => {
+            namespace => 'synth3d', func => 'volumeSeed', kind => 'generator',
+            domain => 'volume-generator', outputTex3d => 'volumeCache', outputGeo => 'geoBuffer',
+            params => { volumeSize => int_param(2, 'volumeSize') }, paramOrder => ['volumeSize'],
+            textures => { volumeCache => $volume_texture, geoBuffer => $volume_texture },
+            passes => [{ name => 'seed', program => 'seed', key => 'synth3d/volumeSeed:seed', drawBuffers => 2,
+                viewport => { width => { param => 'volumeSize', default => 2 },
+                    height => { param => 'volumeSize', power => 2, default => 4 } },
+                inputs => {}, outputs => { fragColor => 'volumeCache', geoOut => 'geoBuffer' } }],
+        },
+        'synth3d/badVolume' => {
+            namespace => 'synth3d', func => 'badVolume', kind => 'generator',
+            domain => 'volume-generator', outputTex3d => 'volumeCache', outputGeo => 'geoBuffer',
+            params => { volumeSize => int_param(2, 'volumeSize') }, paramOrder => ['volumeSize'],
+            textures => {
+                volumeCache => { width => 2, height => 2, format => 'rgba32f' },
+                geoBuffer => $volume_texture,
+            },
+            passes => [{ name => 'seed', program => 'seed', key => 'synth3d/badVolume:seed',
+                inputs => {}, outputs => { fragColor => 'volumeCache' } }],
+        },
+        'filter3d/volumeFilter' => {
+            namespace => 'filter3d', func => 'volumeFilter', kind => 'filter',
+            domain => 'volume-filter', outputTex3d => 'volumeCache', outputGeo => 'inputGeo',
+            params => {
+                volumeSize => int_param(4, 'volumeSize'),
+                source => { type => 'volume', default => 'vol0' },
+                geoSource => { type => 'geometry', default => 'geo0' },
+            },
+            paramOrder => [qw(volumeSize source geoSource)],
+            textures => { volumeCache => $volume_texture },
+            passes => [{ name => 'filter', program => 'filter', key => 'filter3d/volumeFilter:filter',
+                viewport => {
+                    width => { param => 'volumeSize', default => 4, inputOverride => 'inputTex3d' },
+                    height => { param => 'volumeSize', power => 2, default => 16, inputOverride => 'inputTex3d' },
+                },
+                inputs => { volumeTex => 'source', geometryTex => 'geoSource' },
+                outputs => { fragColor => 'volumeCache' } }],
+        },
+        'render/volumeRender' => {
+            namespace => 'render', func => 'volumeRender', kind => 'filter',
+            domain => 'volume-renderer', outputTex3d => 'inputTex3d', outputGeo => 'inputGeo',
+            params => { volumeSize => int_param(4, 'volumeSize') }, paramOrder => ['volumeSize'],
+            textures => { outputTex => $screen_texture },
+            passes => [{ name => 'render', program => 'render', key => 'render/volumeRender:render',
+                inputs => { volumeTex => 'inputTex3d', geometryTex => 'inputGeo' },
+                outputs => { fragColor => 'outputTex' } }],
+        },
+        'render/loopBegin' => {
+            namespace => 'render', func => 'loopBegin', kind => 'filter', domain => 'loop-begin',
+            loopRole => 'begin', iterated => 1,
+            params => { iterationCount => int_param(60) }, paramOrder => ['iterationCount'],
+            textures => { outputTex => $screen_texture },
+            passes => [{ name => 'begin', program => 'begin', key => 'render/loopBegin:begin',
+                inputs => { inputTex => 'inputTex', accumTex => 'global_accum' },
+                outputs => { fragColor => 'outputTex' } }],
+        },
+        'filter/loopAdd' => {
+            namespace => 'filter', func => 'loopAdd', kind => 'filter',
+            params => {}, paramOrder => [], textures => { outputTex => $screen_texture },
+            passes => [{ name => 'add', program => 'add', key => 'filter/loopAdd:add',
+                inputs => { inputTex => 'inputTex' }, outputs => { fragColor => 'outputTex' } }],
+        },
+        'render/loopEnd' => {
+            namespace => 'render', func => 'loopEnd', kind => 'filter', domain => 'loop-end',
+            loopRole => 'end', params => {}, paramOrder => [], textures => { outputTex => $screen_texture },
+            passes => [
+                { name => 'feedback', program => 'copy', key => 'render/loopEnd:copy',
+                    inputs => { inputTex => 'inputTex' }, outputs => { fragColor => 'global_accum' } },
+                { name => 'output', program => 'copy', key => 'render/loopEnd:copy',
+                    inputs => { inputTex => 'inputTex' }, outputs => { fragColor => 'outputTex' } },
+            ],
+        },
     },
 };
 write_raw(File::Spec->catfile($bundle, 'metadata.json'), JSON::PP->new->canonical->encode($metadata));
@@ -258,6 +363,42 @@ sub close_to {
     };
     ok(!$ok, 'an undeclared named pass resource is rejected');
     like($@, qr/requires texture "missingTex"/, 'missing-resource error names the required texture');
+}
+
+{
+    my $surface = render_dsl(
+        "search synth3d, filter3d, render\n"
+            . "volumeSeed(volumeSize: 2).volumeFilter().volumeRender().write(o0)\nrender(o0)",
+        width => 1, height => 1,
+    );
+    close_to($surface->data->[0], 0.2, 'volumeSize is inherited from the upstream atlas');
+    close_to($surface->data->[1], 0.5, 'volume channel survives generator and filter');
+    close_to($surface->data->[2], 0.75, 'geometry channel survives into the renderer');
+}
+
+{
+    my $ok = eval {
+        render_dsl(
+            "search synth3d, render\nbadVolume(volumeSize: 2).volumeRender().write(o0)\nrender(o0)",
+            width => 1, height => 1,
+        );
+        1;
+    };
+    ok(!$ok, 'invalid flattened-volume atlas dimensions are rejected');
+    like($@, qr/volume atlas expected 2x4, received 2x2/,
+        'volume atlas diagnostic includes expected and actual dimensions');
+}
+
+{
+    my $surface = render_dsl(
+        "search synth, filter, render\n"
+            . "fill(value: 0.2).loopBegin(iterationCount: 3).loopAdd().loopEnd().write(o0)\nrender(o0)",
+        width => 1, height => 1,
+    );
+    cmp_ok(
+        abs($surface->data->[0] - 0.9), '<=', 0.002,
+        'loop iterations freeze the pre-loop input and advance only global_accum',
+    );
 }
 
 done_testing();

@@ -676,7 +676,10 @@ sub _compile_chain {
     my ($chain, $bindings, $search, $effects) = @_;
     my @steps;
     my $has_input             = 0;
+    my $has_image             = 0;
+    my $has_volume            = 0;
     my $starts_with_generator = 0;
+    my $open_loop;
     my $calls = $chain->{calls};
     for my $index (0 .. $#$calls) {
         my $call = $calls->[$index];
@@ -693,10 +696,12 @@ sub _compile_chain {
             }
             push @steps, { kind => 'read', surface => $args->[0]{value}{name}, loc => $call->{loc} };
             $has_input = 1;
+            $has_image = 1;
             next;
         }
         if ($call->{name} eq 'write') {
-            if (!$has_input || @$args != 1 || !_is_surface($args->[0]{value})) {
+            _throw('loopBegin must be closed by loopEnd before write', $call->{loc}) if $open_loop;
+            if (!$has_image || @$args != 1 || !_is_surface($args->[0]{value})) {
                 _throw('write(surface) requires a current image', $call->{loc});
             }
             push @steps, { kind => 'write', surface => $args->[0]{value}{name}, loc => $call->{loc} };
@@ -708,12 +713,41 @@ sub _compile_chain {
                 $call->{loc});
         }
         my $spec = $effects->{$effect_id};
-        if ($spec->{kind} eq 'generator') {
+        my $domain = $spec->{domain} || 'image';
+        if ($domain eq 'volume-generator') {
+            if ($index != 0 && !($spec->{iterated} && $has_volume)) {
+                _throw("Generator $effect_id must begin a chain", $call->{loc});
+            }
+            $starts_with_generator = 1 if $index == 0;
+            $has_input  = 1;
+            $has_volume = 1;
+        }
+        elsif ($domain eq 'volume-filter') {
+            _throw("volume filter $effect_id requires a volume input", $call->{loc}) unless $has_volume;
+            $has_input = 1;
+        }
+        elsif ($domain eq 'volume-renderer') {
+            _throw("volume renderer $effect_id requires a volume input", $call->{loc}) unless $has_volume;
+            $has_input = 1;
+            $has_image = 1;
+        }
+        elsif ($domain eq 'loop-begin') {
+            _throw("$effect_id requires a current image", $call->{loc}) unless $has_image;
+            _throw('nested loopBegin regions are not supported', $call->{loc}) if $open_loop;
+            $open_loop = $call->{loc};
+        }
+        elsif ($domain eq 'loop-end') {
+            _throw('loopEnd has no matching loopBegin', $call->{loc}) unless $open_loop;
+            _throw("$effect_id requires a current image", $call->{loc}) unless $has_image;
+            $open_loop = undef;
+        }
+        elsif ($spec->{kind} eq 'generator') {
             _throw("Generator $effect_id must begin a chain", $call->{loc}) if $index != 0;
             $starts_with_generator = 1;
             $has_input             = 1;
+            $has_image             = 1;
         }
-        elsif (!$has_input) {
+        elsif (!$has_image) {
             my $requires_input_tex = 0;
             for my $p (@{ $spec->{passes} }) {
                 my @sources = values %{ $p->{inputs} || {} };
@@ -724,6 +758,7 @@ sub _compile_chain {
                     $call->{loc});
             }
             $has_input = 1;
+            $has_image = 1;
         }
         my ($params, $surfaces) = _normalize_effect($effect_id, $spec, $args);
         push @steps, {
@@ -734,6 +769,7 @@ sub _compile_chain {
             loc       => $call->{loc},
         };
     }
+    _throw('loopBegin must be closed by loopEnd before the chain ends', $open_loop) if $open_loop;
     if ($starts_with_generator && (!@steps || $steps[-1]{kind} ne 'write')) {
         _throw('Generator chain must end with write(oN)', $chain->{loc});
     }

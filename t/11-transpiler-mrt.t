@@ -78,6 +78,40 @@ is_deeply(
     'nested scalar and vector inout calls yield their return values and update their arguments',
 );
 
+my $void_out_glsl = <<'GLSL';
+#version 300 es
+precision highp float;
+out vec4 fragColor;
+void setValues(out vec3 first, out vec3 second) {
+    first = vec3(1.0);
+    second = vec3(2.0);
+}
+void main() {
+    vec3 first = vec3(0.0);
+    vec3 second = vec3(0.0);
+    setValues(first, second);
+    fragColor = vec4(first.x, second.x, 0.0, 1.0);
+}
+GLSL
+my $void_out_normalized = normalize($void_out_glsl, {});
+my $void_out_source = emit_perl(
+    parse($void_out_normalized->{source}),
+    $void_out_normalized->{outputs},
+    $void_out_normalized->{varyings},
+);
+my (@void_out_warnings, $void_out_kernel);
+{
+    local $SIG{__WARN__} = sub { push @void_out_warnings, @_ };
+    $void_out_kernel = Math::Fractal::Noisemaker::KernelCache::load_kernel(
+        $void_out_source,
+        'void-out-statement-test',
+    );
+}
+is_deeply(\@void_out_warnings, [], 'void out-parameter statement compiles without warnings');
+my $void_out = [(0) x 4];
+$void_out_kernel->{kernel}->($ctx, $void_out);
+is_deeply($void_out, [1, 2, 0, 1], 'void out-parameter statement updates each argument');
+
 my $navier_normalized = normalize(<<'GLSL', {}, 'synth/navierStokes:nsSplat');
 vec2 hash22(vec2 p) {
     p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));

@@ -35,14 +35,30 @@ our $CDN_VERSION = $ENV{NM_SHADER_VERSION} || '1.0';
 
 my $_JSON = JSON::PP->new->utf8->canonical;
 
-# Effects the transpiler does not target (3D, points, mesh/cubemap, stateful
-# and reactive effects) — mirrors the Python port's exclusion sets.
-my %NAMESPACE_EXCLUSIONS = map { $_ => 1 } qw(filter3d synth3d points render);
+# Effects whose authored CPU implementations remain pinned in the bundle.
+# Volume effects are generated from the CDN alongside ordinary image effects.
+my %NAMESPACE_EXCLUSIONS = map { $_ => 1 } qw(points);
 my %ID_EXCLUSIONS        = map { $_ => 1 } qw(
     filter/convolutionFeedback filter/feedback filter/motionBlur
     filter/temporalAberration synth/cellularAutomata synth/mnca
     synth/navierStokes synth/reactionDiffusion synth/roll synth/scope
-    synth/spectrum classicNoisedeck/noise3d classicNoisedeck/shapes3d
+    synth/spectrum render/pointsBillboardRender render/pointsEmit
+    render/pointsRender
+);
+my %ITERATED_VOLUME = map { $_ => 1 } qw(
+    filter3d/flow3d render/loopBegin synth3d/cellularAutomata3d
+    synth3d/reactionDiffusion3d
+);
+my %VOLUME_OUTPUTS = (
+    'filter3d/flow3d'                 => ['global_flow3d_blended', 'geoBuffer'],
+    'filter3d/palette3d'              => ['volumeCache', 'inputGeo'],
+    'synth3d/cell3d'                  => ['volumeCache', 'geoBuffer'],
+    'synth3d/cellularAutomata3d'      => ['global_ca_state', 'geoBuffer'],
+    'synth3d/flythrough3d'            => ['volumeCache', 'geoBuffer'],
+    'synth3d/fractal3d'               => ['volumeCache', 'geoBuffer'],
+    'synth3d/noise3d'                 => ['volumeCache', 'geoBuffer'],
+    'synth3d/reactionDiffusion3d'     => ['global_rd_state', 'geoBuffer'],
+    'synth3d/shape3d'                 => ['volumeCache', 'geoBuffer'],
 );
 
 sub cache_root {
@@ -193,6 +209,13 @@ sub _sanitize_bare_identifiers {
             push @out, substr($text, $start, $i - $start);
             next;
         }
+        if (($c eq 'e' || $c eq 'E') && $i > 0
+            && substr($text, $i - 1, 1) =~ /\d/
+            && substr($text, $i + 1) =~ /\A[+-]?\d/) {
+            push @out, $c;
+            $i++;
+            next;
+        }
         if ($c =~ /[A-Za-z_\$]/) {
             my $j = $i;
             $j++ while $j < $n && substr($text, $j, 1) =~ /[A-Za-z0-9_\$]/;
@@ -248,6 +271,13 @@ sub _json5_decode {
             $i = $end;
             next;
         }
+        if (($c eq 'e' || $c eq 'E') && $i > 0
+            && substr($text, $i - 1, 1) =~ /\d/
+            && substr($text, $i + 1) =~ /\A[+-]?\d/) {
+            push @out, $c;
+            $i++;
+            next;
+        }
         if ($c =~ /[A-Za-z_\$]/) {       # bare identifier: quote keys, keep literals
             my $j = $i;
             $j++ while $j < $n && substr($text, $j, 1) =~ /[A-Za-z0-9_\$]/;
@@ -277,6 +307,10 @@ sub _json5_decode {
         if ($c eq '+' && $i + 1 < $n && substr($text, $i + 1, 1) =~ /\d/) {
             $i++;           # explicit plus sign on a number — drop it
             next;
+        }
+        if ($c eq '.' && $i + 1 < $n && substr($text, $i + 1, 1) =~ /\d/) {
+            my $prev = $i > 0 ? substr($text, $i - 1, 1) : '';
+            push @out, '0' if $prev !~ /\d/;
         }
         push @out, $c;
         $i++;
@@ -358,6 +392,16 @@ sub ordered_object_keys {
             $i = $end;
             next;
         }
+        if ($depth == 1 && $c =~ /[A-Za-z_\$]/) {
+            my $end = $i + 1;
+            $end++ while $end < $n && substr($text, $end, 1) =~ /[A-Za-z0-9_\$]/;
+            my $after = $end;
+            $after++ while $after < $n && substr($text, $after, 1) =~ /\s/;
+            push @keys, substr($text, $i, $end - $i)
+                if $after < $n && substr($text, $after, 1) eq ':';
+            $i = $end;
+            next;
+        }
         if    ($c eq '{' || $c eq '[') { $depth++ }
         elsif ($c eq '}' || $c eq ']') { $depth--; return \@keys if $depth == 0 }
         $i++;
@@ -365,14 +409,44 @@ sub ordered_object_keys {
     return \@keys;
 }
 
-# Key order of the "params" object inside a cached-effect JSON document.
-sub params_key_order {
-    my ($doc_text) = @_;
-    if ($doc_text =~ /"params"\s*:\s*/) {
-        my $start = $+[0];
-        return ordered_object_keys(_extract_balanced(\$doc_text, $start));
+sub _project_effect {
+    my ($result, $effect_id) = @_;
+    my $namespace = $result->{namespace} || '';
+
+    $result->{domain} =
+          $effect_id eq 'render/loopBegin' ? 'loop-begin'
+        : $effect_id eq 'render/loopEnd'   ? 'loop-end'
+        : $namespace eq 'synth3d'          ? 'volume-generator'
+        : $namespace eq 'filter3d'         ? 'volume-filter'
+        : $effect_id =~ m{^render/render}  ? 'volume-renderer'
+        :                                    'image';
+
+    if (my $outputs = $VOLUME_OUTPUTS{$effect_id}) {
+        ($result->{outputTex3d}, $result->{outputGeo}) = @$outputs;
     }
-    return [];
+    elsif ($result->{domain} eq 'volume-renderer') {
+        $result->{outputTex3d} = 'inputTex3d';
+        $result->{outputGeo}   = 'screenGeoBuffer';
+    }
+
+    if ($effect_id eq 'render/loopBegin' || $effect_id eq 'render/loopEnd') {
+        $result->{loopRole} = $effect_id eq 'render/loopBegin' ? 'begin' : 'end';
+    }
+    if ($ITERATED_VOLUME{$effect_id}) {
+        $result->{iterated} = JSON::PP::true;
+        $result->{params}{iterationCount} = {
+            type => 'int', default => 60, min => 0, max => 10_000,
+            cpuOnly => JSON::PP::true,
+        };
+        push @{ $result->{paramOrder} }, 'iterationCount'
+            unless grep { $_ eq 'iterationCount' } @{ $result->{paramOrder} || [] };
+    }
+
+    for my $pass (@{ $result->{passes} || [] }) {
+        next unless ($pass->{drawBuffers} || 0) >= 2 && exists $pass->{outputs}{color};
+        $pass->{outputs}{fragColor} = delete $pass->{outputs}{color};
+    }
+    return $result;
 }
 
 sub fetch_effect {
@@ -383,9 +457,12 @@ sub fetch_effect {
     if (-e $cache) {
         my $text   = _read_file($cache);
         my $result = $_JSON->decode($text);
-        $result->{paramOrder} = params_key_order($text)
-            unless $result->{paramOrder} && @{ $result->{paramOrder} };
-        return $result;
+        # Older caches were canonical JSON without paramOrder. Hash key order
+        # cannot reconstruct source positional order, so refresh those records
+        # from the authoritative module instead of silently alphabetizing them.
+        return _project_effect($result, $effect_id)
+            if ($result->{paramOrder} && @{ $result->{paramOrder} })
+                || !keys %{ $result->{params} || {} };
     }
 
     my $bundle = _fetch_text("$CDN_BASE/$version/effects/$effect_id.js");
@@ -426,6 +503,7 @@ sub fetch_effect {
     # The cache is written with canonical (sorted) JSON, so paramOrder is
     # stored explicitly — the raw-text key scan on re-read would see sorted
     # keys, not definition order.
+    _project_effect($result, $effect_id);
     _write_file($cache, $_JSON->encode($result));
     return $result;
 }
@@ -437,7 +515,7 @@ sub eligible_ids {
     for my $effect_id (sort keys %$manifest) {
         my ($namespace) = split m{/}, $effect_id, 2;
         next if $NAMESPACE_EXCLUSIONS{$namespace};
-        next if index($effect_id, '3d') >= 0 || index($effect_id, 'cubemap') >= 0 || index($effect_id, 'mesh') >= 0;
+        next if index($effect_id, 'mesh') >= 0;
         next if $ID_EXCLUSIONS{$effect_id};
         push @result, $effect_id;
     }

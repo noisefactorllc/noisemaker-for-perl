@@ -33,6 +33,11 @@ feq($rt->length($chain), 2.805586576461792, 'chain length (double-rounded)');
 
 veq($rt->normalize($rt->construct(3, 0.5, 0.5, 1.0)),
     [0.40824827551841736, 0.40824827551841736, 0.8164965510368347], 'normalize');
+veq(
+    $rt->cross($rt->construct(3, 1.0, 2.0, 3.0), $rt->construct(3, 4.0, 5.0, 6.0)),
+    [-3.0, 6.0, -3.0],
+    'cross product',
+);
 
 veq($rt->component_wise('mix', $a, $b, $rt->f(0.3)),
     [0.1600000113248825, 0.3499999940395355], 'mix');

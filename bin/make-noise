@@ -22,6 +22,7 @@ use Getopt::Long qw(GetOptionsFromArray Configure);
 use File::Temp ();
 use File::Path qw(make_path);
 use File::Spec ();
+use JSON::PP   ();
 use POSIX      qw(WIFSIGNALED WTERMSIG WEXITSTATUS);
 
 use Math::Fractal::Noisemaker;
@@ -175,8 +176,8 @@ sub cmd_generate {
     _no_extra_args(@argv);
 
     ($effect, $seed) = _prologue($effect, $seed, 'generator');
-    my $surface = render_effect(
-        $effect, _parse_params(\@params), undef,
+    my $surface = _render_cli_effect(
+        $effect, _parse_params(\@params),
         width => $width, height => $height, seed => $seed, time => $time_value,
     );
     _write_png($surface, $filename);
@@ -212,6 +213,9 @@ sub cmd_apply {
         unless -e $input_filename && !-d _;
 
     ($effect, $seed) = _prologue($effect, $seed, 'filter');
+    die "apply only supports image-domain effects; use run with a typed DSL chain for "
+        . (meta()->{effects}{$effect}{domain} || 'image') . " effects\n"
+        if (meta()->{effects}{$effect}{domain} || 'image') ne 'image';
     my $source  = _load_png($input_filename);
     my $surface = render_effect(
         $effect, _parse_params(\@params), _bind_input($effect, $source),
@@ -276,8 +280,8 @@ sub cmd_animate {
 
     for my $i (0 .. $frame_count - 1) {
         my $time_value = ($i / $frame_count) * $speed;    # sweep [0,1) phase, `speed` loops
-        my $surface = render_effect(
-            $effect, $parsed, undef,
+        my $surface = _render_cli_effect(
+            $effect, $parsed,
             width => $width, height => $height, seed => $seed, time => $time_value,
         );
         _write_png($surface, File::Spec->catfile($frames_dir, sprintf('frame_%04d.png', $i)));
@@ -402,6 +406,7 @@ sub _resolve_effect {
     if ($effect eq 'random') {
         my @pool = sort grep {
             (!defined $kind || (($effects->{$_}{kind} || '') eq $kind))
+                && (($effects->{$_}{domain} || 'image') eq 'image')
                 && !$effects->{$_}{iterated}
                 && !$effects->{$_}{externalTexture}
         } keys %$effects;
@@ -431,6 +436,53 @@ sub _parse_params {
         $params{ substr($kv, 0, $idx) } = substr($kv, $idx + 1);
     }
     return \%params;
+}
+
+sub _dsl_value {
+    my ($value) = @_;
+    return $value if defined $value && $value =~ /\A(?:
+        -?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?
+        |true|false|\#[0-9A-Fa-f]{3,8}
+        |[A-Za-z_][A-Za-z0-9_.]*
+        |\[.*\]
+    )\z/x;
+    return JSON::PP->new->allow_nonref->encode(defined $value ? "$value" : '');
+}
+
+sub _typed_effect_program {
+    my ($effect_id, $params) = @_;
+    my $effect = meta()->{effects}{$effect_id};
+    my $args = join ', ', map { "$_: " . _dsl_value($params->{$_}) } sort keys %$params;
+    my $call = "$effect->{func}($args)";
+    my $domain = $effect->{domain} || 'image';
+    if ($domain eq 'loop-begin' || $domain eq 'loop-end') {
+        my $begin = $domain eq 'loop-begin' ? $call : 'loopBegin(iterationCount: 1)';
+        my $end   = $domain eq 'loop-end' ? $call : 'loopEnd()';
+        return "search render, synth\nsolid().$begin.$end.write(o0)\nrender(o0)";
+    }
+
+    my $supplied_size = $params->{volumeSize};
+    my $size_spec = ($effect->{params} || {})->{volumeSize} || {};
+    my $volume_size = defined $supplied_size ? $supplied_size : ($size_spec->{default} // 16);
+    if (defined $volume_size && $volume_size !~ /^\d+(?:\.\d+)?$/) {
+        (my $choice = $volume_size) =~ s/^.*\.//;
+        $volume_size = $size_spec->{choices}{$choice} // $size_spec->{default} // 16;
+    }
+    my $search = 'search synth3d, filter3d, render';
+    return "$search\n$call.render3d().write(o0)\nrender(o0)"
+        if $domain eq 'volume-generator';
+    return "$search\nnoise3d(volumeSize: $volume_size).$call.render3d().write(o0)\nrender(o0)"
+        if $domain eq 'volume-filter';
+    return "$search\nnoise3d(volumeSize: $volume_size).$call.write(o0)\nrender(o0)";
+}
+
+sub _render_cli_effect {
+    my ($effect_id, $params, %opt) = @_;
+    my $domain = meta()->{effects}{$effect_id}{domain} || 'image';
+    return render_effect($effect_id, $params, undef, %opt) if $domain eq 'image';
+    return Math::Fractal::Noisemaker::Renderer::render_dsl(
+        _typed_effect_program($effect_id, $params), %opt,
+    );
 }
 
 # An effect that reads a host texture (filter/text, synth/media) binds the

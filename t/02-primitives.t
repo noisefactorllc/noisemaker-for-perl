@@ -35,6 +35,19 @@ is_deeply([unpack('C*', $s->to_rgba8)],
           [0,128,255,255, 0,0,0,64, 64,255,0,254, 128,64,191,255],
           'to_rgba8 edge cases match python');
 
+eval { Math::Fractal::Noisemaker::Surface->new(4097, 4097, []) };
+like(
+    $@,
+    qr/Surface exceeds the 16,777,216 pixel limit/,
+    'surface allocation rejects dimensions above the canonical pixel cap',
+);
+eval { Math::Fractal::Noisemaker::Surface->from_rgba8(4097, 4097, '') };
+like(
+    $@,
+    qr/Surface exceeds the 16,777,216 pixel limit/,
+    'RGBA8 import enforces the same pixel cap before reading data',
+);
+
 # --- from_rgba8 f32 scaling ---
 my $s8 = Math::Fractal::Noisemaker::Surface->from_rgba8(1, 1, pack('C4', 0, 127, 128, 255));
 my @from8 = ([0,0.0],[127,0.49803921580314636],[128,0.501960813999176],[255,1.0]);

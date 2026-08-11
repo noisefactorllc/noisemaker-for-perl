@@ -129,8 +129,8 @@ my $run_pixel = sub {
         $alo = $rt->f(0.0);
         $bhi = $rt->f(0.0);
         $blo = $rt->f(0.0);
-        ($_retc, $ahi, $alo) = $df64_split__float_float_float->($rt->swizzle($a, 'x'), $ahi, $alo);
-        ($_retc, $bhi, $blo) = $df64_split__float_float_float->($rt->swizzle($b, 'x'), $bhi, $blo);
+        do { ($_retc, $ahi, $alo) = $df64_split__float_float_float->($rt->swizzle($a, 'x'), $ahi, $alo); };
+        do { ($_retc, $bhi, $blo) = $df64_split__float_float_float->($rt->swizzle($b, 'x'), $bhi, $blo); };
         $e = $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('-', $rt->binary('*', $ahi, $bhi, 1, 'float'), $p, 1, 'float'), $rt->binary('*', $ahi, $blo, 1, 'float'), 1, 'float'), $rt->binary('*', $alo, $bhi, 1, 'float'), 1, 'float'), $rt->binary('*', $alo, $blo, 1, 'float'), 1, 'float');
         $e = $rt->binary('+', $e, $rt->binary('+', $rt->binary('*', $rt->swizzle($a, 'x'), $rt->swizzle($b, 'y'), 1, 'float'), $rt->binary('*', $rt->swizzle($a, 'y'), $rt->swizzle($b, 'x'), 1, 'float'), 1, 'float'), 1, 'float');
         return $rt->construct(2, $p, $e);
@@ -144,8 +144,8 @@ my $run_pixel = sub {
         $alo = $rt->f(0.0);
         $bhi = $rt->f(0.0);
         $blo = $rt->f(0.0);
-        ($_retc, $ahi, $alo) = $df64_split__float_float_float->($rt->swizzle($a, 'x'), $ahi, $alo);
-        ($_retc, $bhi, $blo) = $df64_split__float_float_float->($b, $bhi, $blo);
+        do { ($_retc, $ahi, $alo) = $df64_split__float_float_float->($rt->swizzle($a, 'x'), $ahi, $alo); };
+        do { ($_retc, $bhi, $blo) = $df64_split__float_float_float->($b, $bhi, $blo); };
         $e = $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('-', $rt->binary('*', $ahi, $bhi, 1, 'float'), $p, 1, 'float'), $rt->binary('*', $ahi, $blo, 1, 'float'), 1, 'float'), $rt->binary('*', $alo, $bhi, 1, 'float'), 1, 'float'), $rt->binary('*', $alo, $blo, 1, 'float'), 1, 'float');
         $e = $rt->binary('+', $e, $rt->binary('*', $rt->swizzle($a, 'y'), $b, 1, 'float'), 1, 'float');
         return $rt->construct(2, $p, $e);
@@ -309,7 +309,7 @@ my $run_pixel = sub {
         my ($_for1_first, $bail2, $i, $imDF, $log_zn, $n, $nu, $reDF, $zIm, $zIm2, $zMag2, $zRe, $zRe2, $zReIm);
         $reDF = $rt->construct(2, 0.0);
         $imDF = $rt->construct(2, 0.0);
-        ($_retc, $reDF, $imDF) = $transformCoords__vec2_float_vec2_vec2->($fragCoord, $zm, $reDF, $imDF);
+        do { ($_retc, $reDF, $imDF) = $transformCoords__vec2_float_vec2_vec2->($fragCoord, $zm, $reDF, $imDF); };
         $zRe = $reDF;
         $zIm = $imDF;
         $i = $rt->f(0);
@@ -380,7 +380,7 @@ my $run_pixel = sub {
         } else {
             $reDF = $rt->construct(2, 0.0);
             $imDF = $rt->construct(2, 0.0);
-            ($_retc, $reDF, $imDF) = $transformCoords__vec2_float_vec2_vec2->($globalCoord, $effectiveZoom, $reDF, $imDF);
+            do { ($_retc, $reDF, $imDF) = $transformCoords__vec2_float_vec2_vec2->($globalCoord, $effectiveZoom, $reDF, $imDF); };
             $r = $juliaIterate__vec2_vec2_vec2_int_float_int->($reDF, $imDF, $c, $_u_iterations, $_u_stripeFreq, $_u_trapShape);
             if ($rt->binary('==', $_u_outputMode, $rt->i(0))) {
                 $value = $outputSmoothIteration__struct1_float->($r, $rt->construct(1, $_u_iterations));
@@ -406,7 +406,7 @@ my $run_pixel = sub {
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $value), $rt->f(1)))};
     };
     $main__void->();
-    my $_c = $g->{fragColor};
-    $out->[0] = $rt->f32($_c->[0]); $out->[1] = $rt->f32($_c->[1]); $out->[2] = $rt->f32($_c->[2]); $out->[3] = $rt->f32($_c->[3]);
+    my $_c0 = $g->{fragColor};
+    $out->[0] = $rt->f32($_c0->[0]); $out->[1] = $rt->f32($_c0->[1]); $out->[2] = $rt->f32($_c0->[2]); $out->[3] = $rt->f32($_c0->[3]);
 };
-{ kernel => $run_pixel, uses_derivatives => 0 };
+{ kernel => $run_pixel, uses_derivatives => 0, output_names => ['fragColor'] };

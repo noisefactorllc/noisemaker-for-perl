@@ -379,7 +379,9 @@ sub stmt {
         }
     }
     elsif ($k eq 'expr') {
-        my ($code) = $self->expr($s->{expr}, $scope);
+        my ($code) = $s->{expr}{k} eq 'call'
+            ? $self->_e_call($s->{expr}, $scope, 1)
+            : $self->expr($s->{expr}, $scope);
         push @$out, "$pad$code;";
     }
     elsif ($k eq 'if') {
@@ -783,7 +785,7 @@ my %ROUTED = (
 );
 
 sub _e_call {
-    my ($self, $node, $scope) = @_;
+    my ($self, $node, $scope, $discard) = @_;
     my $name = $node->{name};
     my @args = map { [$self->expr($_, $scope)] } @{ $node->{args} };
     my @codes = map { $_->[0] } @args;
@@ -798,9 +800,10 @@ sub _e_call {
         my $fn = $self->_resolve_overload($name, [map { $_->[1] } @args]);
         if (@{ $fn->{out_idxs} || [] }) {    # out/inout: unpack outputs
             my @targets = map { ($self->expr($node->{args}[$_], $scope))[0] } @{ $fn->{out_idxs} };
+            my $result = $discard ? q{} : ' $_retc';
             return (
                 'do { ($_retc, ' . join(', ', @targets) . ") = \$$fn->{mangled}->("
-                    . join(', ', @codes) . '); $_retc }',
+                    . join(', ', @codes) . ");$result }",
                 $fn->{ret}
             );
         }

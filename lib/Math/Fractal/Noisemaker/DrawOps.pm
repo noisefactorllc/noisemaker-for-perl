@@ -149,6 +149,44 @@ sub _physarum_deposit {
     return { pixels => $pixels };
 }
 
+sub _flow3d_deposit {
+    my ($ctx) = @_;
+    my ($state1, $state2) = @{$ctx->{inputs}}{qw(stateTex1 stateTex2)};
+    my $dest = $ctx->{destination};
+    my ($state_width, $state_height) = ($state1->width, $state1->height);
+    my $capacity = $state_width * $state_height;
+    my $max_dimension = $state_width > $state_height ? $state_width : $state_height;
+    my $max_agents = int($max_dimension * ($ctx->{uniforms}{density} // 0) * 0.2);
+    my $draw_count = defined $ctx->{pass}{count} ? $ctx->{pass}{count} : $capacity;
+    my $count = $draw_count < $capacity ? $draw_count : $capacity;
+    $count = $max_agents if $count > $max_agents;
+    $count = 0 if $count < 0;
+    my $volume_size = $ctx->{uniforms}{volumeSize};
+    my $atlas_height = $volume_size * $volume_size;
+    my $pixels = 0;
+
+    for my $agent_index (0 .. $count - 1) {
+        my $state_x = $agent_index % $state_width;
+        my $state_y = POSIX::floor($agent_index / $state_width);
+        my $position = texel_fetch_agent($state1, $state_x, $state_y);
+        my $color = texel_fetch_agent($state2, $state_x, $state_y);
+        my $atlas_x = $position->[0];
+        my $atlas_y = $position->[1] + POSIX::floor($position->[2]) * $volume_size;
+        my $offset = scatter_point_pixel(
+            ($atlas_x / $volume_size) * 2 - 1,
+            ($atlas_y / $atlas_height) * 2 - 1,
+            1, $dest->width, $dest->height,
+        );
+        next unless defined $offset;
+        $dest->data->[$offset]     += $color->[0];
+        $dest->data->[$offset + 1] += $color->[1];
+        $dest->data->[$offset + 2] += $color->[2];
+        $dest->data->[$offset + 3] += 1;
+        $pixels++;
+    }
+    return { pixels => $pixels };
+}
+
 sub _points_render_deposit {
     my ($ctx) = @_;
     my ($xyz, $rgba) = @{$ctx->{inputs}}{qw(xyzTex rgbaTex)};
@@ -419,6 +457,7 @@ register('filter/wormhole', 'deposit', sub {
 register('points/lenia', 'deposit', \&_lenia_deposit);
 register('points/dla', 'depositGrid', \&_dla_deposit);
 register('points/physarum', 'deposit', \&_physarum_deposit);
+register('filter3d/flow3d', 'deposit', \&_flow3d_deposit);
 register('render/pointsRender', 'deposit', \&_points_render_deposit);
 register('render/pointsBillboardRender', 'deposit', \&_billboard_deposit);
 

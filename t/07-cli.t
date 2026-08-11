@@ -168,6 +168,33 @@ my $solid_png = File::Spec->catfile($TMPDIR, 'solid.png');
 # --- error paths -----------------------------------------------------------
 
 {
+    my $filename = File::Spec->catfile($TMPDIR, 'volume.png');
+    my ($rc, $out, $err) = run_cli([
+        'generate', 'synth3d/noise3d',
+        '--width', 2, '--height', 2,
+        '--param', 'volumeSize=2',
+        '--filename', $filename,
+    ]);
+    is($rc, 0, 'generate auto-wires a volume generator into render3d')
+        or diag("stdout=[$out] stderr=[$err]");
+    my $surface = decode_png(_slurp_bytes($filename));
+    is_deeply([$surface->width, $surface->height], [2, 2],
+        'volume generator CLI output uses the requested image dimensions');
+}
+
+{
+    my $filename = File::Spec->catfile($TMPDIR, 'typed-apply.png');
+    my ($rc, $out, $err) = run_cli([
+        'apply', 'filter3d/palette3d', $solid_png,
+        '--filename', $filename,
+    ]);
+    isnt($rc, 0, 'apply rejects volume-domain effects');
+    like($err, qr/apply only supports image-domain effects/,
+        'apply explains that typed effects need a typed chain');
+    ok(!-f $filename, 'rejected typed apply writes no output');
+}
+
+{
     my $filename = File::Spec->catfile($TMPDIR, 'unknown-effect.png');
     my ($rc, $out, $err) = run_cli([
         'generate', 'bogus/nope',
@@ -222,6 +249,8 @@ my $solid_png = File::Spec->catfile($TMPDIR, 'solid.png');
         "random generate excluded stateful effects ('$echoed_id')");
     ok(!$meta->{effects}{$echoed_id}{externalTexture},
         "random generate excluded effects requiring an external texture ('$echoed_id')");
+    is($meta->{effects}{$echoed_id}{domain} || 'image', 'image',
+        "random generate excluded non-image effects ('$echoed_id')");
 }
 
 # --- animate: ffmpeg absent -------------------------------------------------

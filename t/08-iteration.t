@@ -46,6 +46,23 @@ my $effects = {
             outputs => { fragColor => 'global_rd_state' },
         }],
     },
+    'render/loopBegin' => {
+        iterated => 1,
+        loopRole => 'begin',
+        textures => {},
+        passes => [{
+            inputs  => { inputTex => 'inputTex', accumTex => 'global_accum' },
+            outputs => { fragColor => 'outputTex' },
+        }],
+    },
+    'render/loopEnd' => {
+        loopRole => 'end',
+        textures => {},
+        passes => [{
+            inputs  => { inputTex => 'inputTex' },
+            outputs => { fragColor => 'global_accum' },
+        }],
+    },
 };
 
 ok(is_particle_state_name('global_xyz'), 'global_xyz is shared particle state');
@@ -88,6 +105,41 @@ is_deeply(
     [[1, 1], [0, 1], [0, 1], [1, 1]],
     'read and write steps close particle groups',
 );
+
+$groups = compute_iteration_groups([
+    effect_step('filter/blur'),
+    effect_step('render/loopBegin', { iterationCount => 3 }),
+    effect_step('filter/blur'),
+    effect_step('render/loopEnd'),
+    effect_step('filter/blur'),
+], $effects);
+is_deeply(
+    [map { [$_->{iterated} ? 1 : 0, $_->{loop} ? 1 : 0, scalar @{ $_->{steps} }] } @$groups],
+    [[0, 0, 1], [1, 1, 3], [0, 0, 1]],
+    'balanced loop region becomes one iteration-owned group',
+);
+
+eval { compute_iteration_groups([effect_step('render/loopEnd')], $effects) };
+like($@, qr/loopEnd has no matching loopBegin/, 'iteration grouping rejects unmatched loopEnd');
+eval {
+    compute_iteration_groups([
+        effect_step('render/loopBegin'),
+        { kind => 'write', surface => 'o0' },
+    ], $effects);
+};
+like($@, qr/Loop iteration group cannot cross a read\/write boundary/,
+    'iteration grouping rejects read/write inside a loop');
+eval {
+    compute_iteration_groups([
+        effect_step('render/loopBegin'),
+        effect_step('render/loopBegin'),
+        effect_step('render/loopEnd'),
+    ], $effects);
+};
+like($@, qr/Nested loop iteration groups are not supported/,
+    'iteration grouping rejects nested loops');
+eval { compute_iteration_groups([effect_step('render/loopBegin')], $effects) };
+like($@, qr/loopBegin has no matching loopEnd/, 'iteration grouping rejects unmatched loopBegin');
 
 cmp_ok(abs(iteration_delta_time() - 1 / 600), '<', 1e-15, 'fixed iteration delta is 1/600');
 cmp_ok(abs(wrap01(-0.25) - 0.75), '<', 1e-15, 'wrap01 wraps negative values');

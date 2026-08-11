@@ -331,14 +331,14 @@ my $run_pixel = sub {
         my ($dzf, $im_df, $rI, $re_df, $sI, $sa, $tm, $zf);
         $re_df = $rt->construct(2, 0.0);
         $im_df = $rt->construct(2, 0.0);
-        ($_retc, $re_df, $im_df) = $transformCoords_df64__vec2_vec2_vec2_float_float_vec2_vec2->($fragCoord, $cX_df, $cY_df, $z_zoom, $rot, $re_df, $im_df);
+        do { ($_retc, $re_df, $im_df) = $transformCoords_df64__vec2_vec2_vec2_float_float_vec2_vec2->($fragCoord, $cX_df, $cY_df, $z_zoom, $rot, $re_df, $im_df); };
         $sI = $rt->f(0.0);
         $rI = $rt->f(0.0);
         $zf = $rt->construct(2, 0.0);
         $dzf = $rt->construct(2, 0.0);
         $sa = $rt->f(0.0);
         $tm = $rt->f(0.0);
-        ($_retc, $sI, $rI, $zf, $dzf, $sa, $tm) = $mandelbrot_df64__vec2_vec2_int_float_float_vec2_vec2_float_float->($re_df, $im_df, $maxIter, $sI, $rI, $zf, $dzf, $sa, $tm);
+        do { ($_retc, $sI, $rI, $zf, $dzf, $sa, $tm) = $mandelbrot_df64__vec2_vec2_int_float_float_vec2_vec2_float_float->($re_df, $im_df, $maxIter, $sI, $rI, $zf, $dzf, $sa, $tm); };
         return $outputDistance__vec2_vec2_float_int->($zf, $dzf, $rI, $maxIter);
     };
     $outputNormalMap__vec2_vec2_vec2_float_float_int_float = sub {
@@ -377,7 +377,7 @@ my $run_pixel = sub {
         $rot = (($rt->binary('>', $_u_poi, $rt->i(0))) ? ($rt->f(0)) : ($_u_rotation));
         $cX_df = $rt->construct(2, 0.0);
         $cY_df = $rt->construct(2, 0.0);
-        ($_retc, $cX_df, $cY_df) = $getPOI__int_vec2_vec2->($_u_poi, $cX_df, $cY_df);
+        do { ($_retc, $cX_df, $cY_df) = $getPOI__int_vec2_vec2->($_u_poi, $cX_df, $cY_df); };
         $value = $rt->f(0.0);
         $dz_final = $rt->construct(2, 0.0);
         $im_df = $rt->construct(2, 0.0);
@@ -398,8 +398,8 @@ my $run_pixel = sub {
             $trapMin = $rt->f(0.0);
             $re_df = $rt->construct(2, 0.0);
             $im_df = $rt->construct(2, 0.0);
-            ($_retc, $re_df, $im_df) = $transformCoords_df64__vec2_vec2_vec2_float_float_vec2_vec2->($globalCoord, $cX_df, $cY_df, $effZoom, $rot, $re_df, $im_df);
-            ($_retc, $smoothI, $rawI, $z_final, $dz_final, $stripeAcc, $trapMin) = $mandelbrot_df64__vec2_vec2_int_float_float_vec2_vec2_float_float->($re_df, $im_df, $maxIter, $smoothI, $rawI, $z_final, $dz_final, $stripeAcc, $trapMin);
+            do { ($_retc, $re_df, $im_df) = $transformCoords_df64__vec2_vec2_vec2_float_float_vec2_vec2->($globalCoord, $cX_df, $cY_df, $effZoom, $rot, $re_df, $im_df); };
+            do { ($_retc, $smoothI, $rawI, $z_final, $dz_final, $stripeAcc, $trapMin) = $mandelbrot_df64__vec2_vec2_int_float_float_vec2_vec2_float_float->($re_df, $im_df, $maxIter, $smoothI, $rawI, $z_final, $dz_final, $stripeAcc, $trapMin); };
             if ($rt->binary('==', $_u_outputMode, $rt->i(0))) {
                 $value = $outputSmoothIteration__float_float_int->($smoothI, $rawI, $maxIter);
             } else {
@@ -424,7 +424,7 @@ my $run_pixel = sub {
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $value), $rt->f(1)))};
     };
     $main__void->();
-    my $_c = $g->{fragColor};
-    $out->[0] = $rt->f32($_c->[0]); $out->[1] = $rt->f32($_c->[1]); $out->[2] = $rt->f32($_c->[2]); $out->[3] = $rt->f32($_c->[3]);
+    my $_c0 = $g->{fragColor};
+    $out->[0] = $rt->f32($_c0->[0]); $out->[1] = $rt->f32($_c0->[1]); $out->[2] = $rt->f32($_c0->[2]); $out->[3] = $rt->f32($_c0->[3]);
 };
-{ kernel => $run_pixel, uses_derivatives => 0 };
+{ kernel => $run_pixel, uses_derivatives => 0, output_names => ['fragColor'] };

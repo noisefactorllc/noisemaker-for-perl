@@ -114,14 +114,14 @@ my $run_pixel = sub {
         $t = $rt->binary('*', $_u_time, $_u_speed, 1, 'float');
         $base_cell = $rt->construct(3, 0.0);
         $base_dist = $rt->f(0.0);
-        ($_retc, $base_cell, $base_dist) = $voronoiCell__vec2_float_float_vec3_float->($uv, $seed_f, $t, $base_cell, $base_dist);
+        do { ($_retc, $base_cell, $base_dist) = $voronoiCell__vec2_float_float_vec3_float->($uv, $seed_f, $t, $base_cell, $base_dist); };
         $luma = $luminance__vec3->($base_cell);
         $angle = $rt->binary('+', $rt->binary('*', $luma, $g->{TAU}, 1, 'float'), $rt->binary('*', $rt->binary('*', $t, $_u_speed, 1, 'float'), $rt->f(0.5), 1, 'float'), 1, 'float');
         $warp = $rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $rt->f(0.25), 2, 'float');
         $warped_uv = $rt->component_wise('fract', $rt->binary('+', $uv, $warp, 2, 'float'));
         $warp_cell = $rt->construct(3, 0.0);
         $warp_dist = $rt->f(0.0);
-        ($_retc, $warp_cell, $warp_dist) = $voronoiCell__vec2_float_float_vec3_float->($warped_uv, $seed_f, $t, $warp_cell, $warp_dist);
+        do { ($_retc, $warp_cell, $warp_dist) = $voronoiCell__vec2_float_float_vec3_float->($warped_uv, $seed_f, $t, $warp_cell, $warp_dist); };
         $glow = $rt->component_wise('exp', $rt->binary('*', $rt->unary('-', $warp_dist), $rt->f(12), 1, 'float'));
         $bloom_color = $rt->component_wise('mix', $warp_cell, $rt->binary('*', $warp_cell, $rt->f(1.3), 3, 'float'), $glow);
         $leak = $rt->component_wise('clamp', $rt->component_wise('mix', $rt->component_wise('sqrt', $rt->component_wise('clamp', $warp_cell, $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1)))), $bloom_color, $rt->f(0.55000000000000004)), $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1)));
@@ -144,7 +144,7 @@ my $run_pixel = sub {
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $final_color, $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1))), $rt->swizzle($base, 'a')))};
     };
     $main__void->();
-    my $_c = $g->{fragColor};
-    $out->[0] = $rt->f32($_c->[0]); $out->[1] = $rt->f32($_c->[1]); $out->[2] = $rt->f32($_c->[2]); $out->[3] = $rt->f32($_c->[3]);
+    my $_c0 = $g->{fragColor};
+    $out->[0] = $rt->f32($_c0->[0]); $out->[1] = $rt->f32($_c0->[1]); $out->[2] = $rt->f32($_c0->[2]); $out->[3] = $rt->f32($_c0->[3]);
 };
-{ kernel => $run_pixel, uses_derivatives => 0 };
+{ kernel => $run_pixel, uses_derivatives => 0, output_names => ['fragColor'] };

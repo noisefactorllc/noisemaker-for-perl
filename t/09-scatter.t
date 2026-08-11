@@ -45,6 +45,24 @@ $lenia->({
 });
 is_deeply($dest->data, [0.25, 0, 0, 1], 'lenia deposits one additive point');
 
+my $flow3d = Math::Fractal::Noisemaker::DrawOps::get_draw_op('filter3d/flow3d', 'deposit');
+ok(ref $flow3d eq 'CODE', 'flow3d scatter adapter is registered');
+my $flow_state1 = Math::Fractal::Noisemaker::Surface->new(1, 1, [1, 1, 0, 1]);
+my $flow_state2 = Math::Fractal::Noisemaker::Surface->new(1, 1, [0.2, 0.3, 0.4, 1]);
+my $flow_dest = Math::Fractal::Noisemaker::Surface->new(2, 4);
+my $flow_stats = $flow3d->({
+    pass        => { count => 262_144, blend => 1 },
+    uniforms    => { density => 10, volumeSize => 2 },
+    inputs      => { stateTex1 => $flow_state1, stateTex2 => $flow_state2 },
+    destination => $flow_dest,
+});
+is($flow_stats->{pixels}, 1, 'flow3d deposits the eligible agent');
+is_deeply(
+    [@{ $flow_dest->data }[20 .. 23]],
+    [0.2, 0.3, 0.4, 1],
+    'flow3d flattens voxel xyz into the canonical volume atlas pixel',
+);
+
 cmp_ok(
     abs(Math::Fractal::Noisemaker::DrawOps::billboard_shape_alpha(1, 0.5, 0.5) - 1),
     '<=',

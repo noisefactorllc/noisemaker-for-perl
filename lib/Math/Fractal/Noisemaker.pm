@@ -30,7 +30,7 @@ Or from the shell:
 
 =head1 DESCRIPTION
 
-Math::Fractal::Noisemaker renders the Noisemaker shader catalog - 167
+Math::Fractal::Noisemaker renders the Noisemaker shader catalog - 205
 generators, filters, and mixers written in GLSL - entirely on the CPU, in
 pure Perl, with byte-parity against the reference Noisemaker engine.
 

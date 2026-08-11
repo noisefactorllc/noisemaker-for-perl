@@ -15,6 +15,7 @@ my @stateful = qw(
     filter/feedback
     filter/motionBlur
     filter/temporalAberration
+    filter3d/flow3d
     points/attractor
     points/buddhabrot
     points/dla
@@ -25,6 +26,7 @@ my @stateful = qw(
     points/life
     points/physarum
     points/physical
+    render/loopBegin
     render/pointsBillboardRender
     render/pointsEmit
     render/pointsRender
@@ -32,14 +34,21 @@ my @stateful = qw(
     synth/mnca
     synth/navierStokes
     synth/reactionDiffusion
+    synth3d/cellularAutomata3d
+    synth3d/reactionDiffusion3d
 );
 
 my $effects = meta()->{effects};
-is(scalar(keys %$effects), 188, 'bundle exposes the 188-effect canonical catalog');
+is(scalar(keys %$effects), 205, 'bundle exposes the 205-effect canonical catalog');
+is_deeply(
+    [sort grep { !defined $effects->{$_}{domain} } keys %$effects],
+    [],
+    'every catalog definition declares its typed domain',
+);
 is_deeply(
     [sort grep { $effects->{$_}{iterated} } keys %$effects],
     \@stateful,
-    'the exact 21 new definitions are marked iterated',
+    'the exact 25 stateful definitions are marked iterated',
 );
 
 for my $effect_id (@stateful) {
@@ -84,8 +93,9 @@ my $old_bundle = {
         statefulRevision => $Math::Fractal::Noisemaker::Transpiler::Build::STATEFUL_REVISION,
     },
     effects => {
-        'synth/statefulFixture' => { iterated => JSON::PP::true, passes => [] },
-        'synth/legacyFixture'   => { passes => [] },
+        'synth/navierStokes' => { iterated => JSON::PP::true, passes => [] },
+        'synth3d/cellularAutomata3d' => { iterated => JSON::PP::true, passes => [] },
+        'synth/legacyFixture' => { passes => [] },
     },
 };
 my $rebuilt = { provenance => {}, effects => {} };
@@ -96,8 +106,13 @@ is(
 );
 is_deeply(
     [sort keys %{ $rebuilt->{effects} }],
-    ['synth/statefulFixture'],
-    'bundle rebuild carries only pinned stateful definitions forward',
+    ['synth/navierStokes'],
+    'bundle rebuild carries only authored stateful definitions forward',
+);
+is(
+    $rebuilt->{effects}{'synth/navierStokes'}{domain},
+    'image',
+    'preserved stateful definitions receive the canonical image domain',
 );
 is(
     $rebuilt->{provenance}{statefulRevision},
@@ -107,7 +122,7 @@ is(
 
 my $stale = {
     provenance => { statefulRevision => 'stale' },
-    effects    => { 'synth/statefulFixture' => { iterated => JSON::PP::true } },
+    effects    => { 'synth/navierStokes' => { iterated => JSON::PP::true } },
 };
 eval {
     Math::Fractal::Noisemaker::Transpiler::Build::_preserve_stateful(

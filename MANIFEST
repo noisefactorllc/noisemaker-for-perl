@@ -16,9 +16,11 @@ lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__kaleido__kalei
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__lensDistortion__lensDistortion.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__moodscape__moodscape.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__noise__noise.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__noise3d__noise3d.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__refract__refract.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__shapeMixer__shapeMixer.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__shapes__shapes.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__shapes3d__shapes3d.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__splat__splat.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__adjust__adjust.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__bc__bc.pl
@@ -176,6 +178,11 @@ lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__wobble__wobble.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__wormhole__blend.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__wormhole__clear.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__zoomBlur__zoomBlur.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter3d__flow3d__agent.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter3d__flow3d__blend.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter3d__flow3d__copy.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter3d__flow3d__diffuse.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter3d__palette3d__palette3d.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/mixer__alphaMask__alphaMask.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/mixer__applyMode__applyMode.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/mixer__blendMode__blendMode.pl
@@ -191,6 +198,12 @@ lib/Math/Fractal/Noisemaker/bundle/kernels/perl/mixer__shapeMask__shapeMask.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/mixer__split__split.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/mixer__thresholdMix__thresholdMix.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/mixer__uvRemap__uvRemap.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__loopBegin__loopBegin.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__loopEnd__copy.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__render3d__render3d.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__renderCubemap3d__renderCubemap3d.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__renderCubemapSurface__renderCubemapSurface.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__renderLit3d__renderLit3d.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__bitwise__bitwise.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__cell__cell.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__curl__curl.pl
@@ -213,6 +226,13 @@ lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__shape__shape.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__solid__solid.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__subdivide__subdivide.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__testPattern__testPattern.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth3d__cell3d__precompute.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth3d__cellularAutomata3d__simulate.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth3d__flythrough3d__precompute.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth3d__fractal3d__precompute.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth3d__noise3d__precompute.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth3d__reactionDiffusion3d__simulate.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth3d__shape3d__precompute.pl
 lib/Math/Fractal/Noisemaker/bundle/metadata.json
 lib/Math/Fractal/Noisemaker/DrawOps.pm
 lib/Math/Fractal/Noisemaker/DSL.pm
@@ -249,3 +269,5 @@ t/04-kernel-smoke.t
 t/05-parity.t
 t/06-dsl.t
 t/07-cli.t
+t/14-volume-catalog.t
+t/15-volume-smoke.t

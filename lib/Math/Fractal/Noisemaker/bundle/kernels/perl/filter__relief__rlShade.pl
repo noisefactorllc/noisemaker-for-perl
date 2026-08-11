@@ -105,7 +105,7 @@ my $run_pixel = sub {
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outColor, $rt->swizzle($src, 'a')))};
     };
     $main__void->();
-    my $_c = $g->{fragColor};
-    $out->[0] = $rt->f32($_c->[0]); $out->[1] = $rt->f32($_c->[1]); $out->[2] = $rt->f32($_c->[2]); $out->[3] = $rt->f32($_c->[3]);
+    my $_c0 = $g->{fragColor};
+    $out->[0] = $rt->f32($_c0->[0]); $out->[1] = $rt->f32($_c0->[1]); $out->[2] = $rt->f32($_c0->[2]); $out->[3] = $rt->f32($_c0->[3]);
 };
-{ kernel => $run_pixel, uses_derivatives => 0 };
+{ kernel => $run_pixel, uses_derivatives => 0, output_names => ['fragColor'] };

@@ -41,6 +41,24 @@ my $CACHE = Math::Fractal::Noisemaker::KernelCache->new;
 
 sub f32 { unpack('f', pack('f', $_[0])) }
 
+sub _is_chain_bundle {
+    my ($value) = @_;
+    return ref $value eq 'HASH' && exists $value->{image};
+}
+
+sub _chain_bundle {
+    my ($value) = @_;
+    return $value if _is_chain_bundle($value);
+    return { image => $value, volume => undef, geometry => undef, volumeSize => undef };
+}
+
+sub _bundle_output {
+    my ($name, $input, $resources) = @_;
+    return $input unless defined $name;
+    return $input if $name eq 'inputTex' || $name eq 'inputTex3d' || $name eq 'inputGeo';
+    return $resources->{$name};
+}
+
 sub bundle_dir {
     return $ENV{NOISEMAKER_BUNDLE}
         || File::Spec->catdir(File::Basename::dirname(__FILE__), 'bundle');
@@ -229,9 +247,9 @@ sub _effect_bindings {
 }
 
 sub _texture_dimension {
-    my ($spec, $axis, $params, $width, $height) = @_;
+    my ($spec, $axis, $params, $width, $height, $resources) = @_;
     my $fallback = $axis eq 'width' ? $width : $height;
-    return $fallback if !defined $spec || (!ref $spec && $spec =~ /\A(?:input|screen|100%)\z/);
+    return $fallback if !defined $spec || (!ref $spec && $spec =~ /\A(?:input|screen|resolution|100%)\z/);
     if (!ref $spec && $spec =~ /\A\d+(?:\.\d+)?%\z/) {
         (my $percent = $spec) =~ s/%\z//;
         my $value = int($fallback * $percent / 100 + 0.5);
@@ -241,11 +259,16 @@ sub _texture_dimension {
         my $value = int($spec + 0.5);
         return $value > 0 ? $value : 1;
     }
+    if (ref $spec eq 'HASH' && exists $spec->{inputOverride}) {
+        my $input = ($resources || {})->{ $spec->{inputOverride} };
+        return $axis eq 'width' ? $input->width : $input->height if defined $input;
+    }
     if (ref $spec eq 'HASH' && exists $spec->{param}) {
         my $value = defined $params->{ $spec->{param} }
             ? $params->{ $spec->{param} }
             : defined $spec->{paramDefault} ? $spec->{paramDefault} : $spec->{default};
         $value = 1 unless defined $value;
+        $value = $value ** $spec->{power} if defined $spec->{power};
         $value = int($value + 0.5);
         return $value > 0 ? $value : 1;
     }
@@ -260,10 +283,17 @@ sub _texture_dimension {
 }
 
 sub _destination {
-    my ($eff, $name, $params, $width, $height) = @_;
+    my ($eff, $name, $params, $width, $height, $pass, $resources) = @_;
     my $spec = ($eff->{textures} || {})->{$name} || {};
-    my $dest_width  = _texture_dimension($spec->{width},  'width',  $params, $width, $height);
-    my $dest_height = _texture_dimension($spec->{height}, 'height', $params, $width, $height);
+    my $viewport = ($pass || {})->{viewport} || {};
+    my $dest_width  = _texture_dimension(
+        $viewport->{width} // $spec->{width},
+        'width', $params, $width, $height, $resources,
+    );
+    my $dest_height = _texture_dimension(
+        $viewport->{height} // $spec->{height},
+        'height', $params, $width, $height, $resources,
+    );
     return Math::Fractal::Noisemaker::Surface->new($dest_width, $dest_height);
 }
 
@@ -273,13 +303,24 @@ sub _format_for {
 }
 
 sub _prepare_state {
-    my ($step, $width, $height, $seed, $owner_state_size) = @_;
+    my ($step, $width, $height, $seed, $owner_state_size, $input_bundle) = @_;
     my $eff = meta()->{effects}{ $step->{effect_id} }
         or die "unknown effect '$step->{effect_id}' (not in bundle)\n";
     my %raw = %{ $step->{params} || {} };
     $raw{stateSize} = $owner_state_size
         if defined $owner_state_size && exists(($eff->{params} || {})->{stateSize});
     my $normalized = _normalized_params($eff, \%raw, $seed);
+    my $domain = $eff->{domain} || 'image';
+    my $input_volume = ($input_bundle || {})->{volume};
+    if (defined $input_volume && exists(($eff->{params} || {})->{volumeSize})
+        && $domain =~ /\Avolume-(?:generator|filter|renderer)\z/) {
+        my $volume_size = $input_volume->width;
+        my $expected_height = $volume_size * $volume_size;
+        die "$step->{effect_id} input volume atlas expected ${volume_size}x${expected_height}, received "
+            . $input_volume->width . 'x' . $input_volume->height . "\n"
+            if $input_volume->height != $expected_height;
+        $normalized->{volumeSize} = $volume_size;
+    }
     my $state = {
         step        => $step,
         effect_id   => $step->{effect_id},
@@ -331,10 +372,10 @@ sub _particle_destination {
 }
 
 sub _output_destination {
-    my ($name, $state, $states, $width, $height) = @_;
+    my ($name, $state, $states, $width, $height, $pass, $resources) = @_;
     return is_particle_state_name($name)
         ? _particle_destination($name, $state, $states, $width, $height)
-        : _destination($state->{eff}, $name, $state->{params}, $width, $height);
+        : _destination($state->{eff}, $name, $state->{params}, $width, $height, $pass, $resources);
 }
 
 sub _output_format {
@@ -360,8 +401,12 @@ sub _resolve_particle_input {
 
 sub _store_output {
     my ($name, $surface, $state, $group_resources) = @_;
-    if (is_particle_state_name($name)) { $group_resources->{$name} = $surface }
-    else                               { $state->{attachments}{$name} = $surface }
+    if (is_particle_state_name($name) || $name eq 'global_accum') {
+        $group_resources->{$name} = $surface;
+    }
+    else {
+        $state->{attachments}{$name} = $surface;
+    }
 }
 
 sub _pass_is_active {
@@ -427,13 +472,47 @@ sub _ensure_iteration_scratch {
     }
 }
 
+sub _seed_typed_inputs {
+    my ($state, $input_bundle, $effective_inputs, $width, $height) = @_;
+    for my $name (sort keys %{ $state->{eff}{params} || {} }) {
+        my $spec = $state->{eff}{params}{$name};
+        next unless ref $spec eq 'HASH';
+        my $type = $spec->{type} || '';
+        next unless $type eq 'volume' || $type eq 'geometry';
+        my $input = $type eq 'volume' ? $input_bundle->{volume} : $input_bundle->{geometry};
+        if (defined $input) {
+            $effective_inputs->{$name} = $input;
+            next;
+        }
+        if (defined $state->{attachments}{$name}) {
+            $effective_inputs->{$name} = $state->{attachments}{$name};
+            next;
+        }
+        my $output_name = $type eq 'volume'
+            ? $state->{eff}{outputTex3d} : $state->{eff}{outputGeo};
+        die "$state->{effect_id} parameter \"$name\" requires a $type input\n"
+            unless defined $output_name
+                && exists(($state->{eff}{textures} || {})->{$output_name});
+        my $surface = _destination(
+            $state->{eff}, $output_name, $state->{params}, $width, $height,
+        );
+        $surface->clear;
+        $state->{attachments}{$name} = $surface;
+        $effective_inputs->{$name} = $surface;
+    }
+}
+
 sub _run_state_once {
     my ($state, $inputs, $states, $group_resources, %opt) = @_;
     my ($width, $height, $seed, $time) = @opt{qw(width height seed time)};
+    my $input_bundle = $opt{input_bundle} || _chain_bundle($inputs->{inputTex});
     my $blank = Math::Fractal::Noisemaker::Surface->new(1, 1);
     my ($effect_uniforms, $surface_params) =
         _effect_bindings($state->{eff}, $state->{params}, $inputs, $blank);
     my %effective_inputs = (%$inputs, %$surface_params);
+    $effective_inputs{inputTex3d} = $input_bundle->{volume} if defined $input_bundle->{volume};
+    $effective_inputs{inputGeo}   = $input_bundle->{geometry} if defined $input_bundle->{geometry};
+    _seed_typed_inputs($state, $input_bundle, \%effective_inputs, $width, $height);
     _initialize_overlay($state, \%effective_inputs, $width, $height);
     _ensure_iteration_scratch($state, \%effective_inputs, $width, $height) if $opt{iterated};
     my $uniforms = _canonical_uniforms(
@@ -453,6 +532,7 @@ sub _run_state_once {
         next unless $repeat;
         for (1 .. $repeat) {
             my %textures;
+            my %resources = (%effective_inputs, %{ $state->{attachments} }, %$group_resources);
             for my $sampler (sort keys %$surface_params) {
                 my $surface = $surface_params->{$sampler};
                 $surface->filter((defined $external_tex && $sampler eq $external_tex) ? 'linear' : 'nearest');
@@ -463,6 +543,9 @@ sub _run_state_once {
                 my $surface;
                 if (is_particle_state_name($source)) {
                     $surface = _resolve_particle_input($source, $state, $states, $group_resources, $width, $height);
+                }
+                elsif (defined $source && $source eq 'global_accum') {
+                    $surface = $group_resources->{$source};
                 }
                 elsif (defined $source && ($source eq 'selfTex' || $source eq 'feedback')) {
                     $surface = $state->{self_tex} || $blank;
@@ -491,7 +574,7 @@ sub _run_state_once {
                     : die "$state->{effect_id} pass '$pass->{name}' has no destination for output '$_'\n"
             } @output_variables;
             my @destinations = map {
-                _output_destination($_, $state, $states, $width, $height)
+                _output_destination($_, $state, $states, $width, $height, $pass, \%resources)
             } @output_names;
             my ($dest_width, $dest_height) = ($destinations[0]->width, $destinations[0]->height);
             for my $destination (@destinations) {
@@ -508,7 +591,7 @@ sub _run_state_once {
                     $state->{effect_id}, $pass->{program});
                 die "Missing CPU scatter adapter '$state->{effect_id}:$pass->{program}'\n"
                     unless ref $draw_op eq 'CODE';
-                my $previous = is_particle_state_name($output_names[0])
+                my $previous = (is_particle_state_name($output_names[0]) || $output_names[0] eq 'global_accum')
                     ? $group_resources->{ $output_names[0] }
                     : $state->{attachments}{ $output_names[0] };
                 @{ $destinations[0]->data } = @{ $previous->data }
@@ -553,22 +636,73 @@ sub _run_state_once {
         }
     }
 
-    $result = $state->{attachments}{outputTex} || $last_output;
-    die "$state->{effect_id} did not produce outputTex\n" unless defined $result;
+    my %resources = (%{ $state->{attachments} }, %$group_resources);
+    my $domain = $state->{eff}{domain} || 'image';
+    my $is_volume_domain = $domain =~ /\Avolume-/ ? 1 : 0;
+    my $image = defined $state->{eff}{outputTex}
+        ? _bundle_output($state->{eff}{outputTex}, $input_bundle->{image}, \%resources)
+        : ($resources{outputTex} || ($is_volume_domain ? $input_bundle->{image} : $last_output));
+    my $volume = _bundle_output($state->{eff}{outputTex3d}, $input_bundle->{volume}, \%resources);
+    my $geometry = _bundle_output($state->{eff}{outputGeo}, $input_bundle->{geometry}, \%resources);
+    my $volume_size = $domain eq 'volume-generator'
+        ? ($state->{params}{volumeSize} // (defined $volume ? $volume->width : undef))
+        : ($input_bundle->{volumeSize} // $state->{params}{volumeSize}
+            // (defined $volume ? $volume->width : undef));
+    die "$state->{effect_id} did not produce outputTex3d\n"
+        if $is_volume_domain && !defined $volume && $domain ne 'volume-renderer';
+    if (defined $volume && ($domain eq 'volume-generator' || $domain eq 'volume-filter')) {
+        my $expected_height = $volume_size * $volume_size;
+        die "$state->{effect_id} volume atlas expected ${volume_size}x${expected_height}, received "
+            . $volume->width . 'x' . $volume->height . "\n"
+            if $volume->width != $volume_size || $volume->height != $expected_height;
+    }
+    $result = ($opt{input_was_bundle} || $is_volume_domain)
+        ? {
+            image => $image, volume => $volume, geometry => $geometry,
+            volumeSize => $volume_size,
+        }
+        : $image;
+    die "$state->{effect_id} did not produce outputTex\n"
+        if !defined $image && $domain ne 'volume-generator' && $domain ne 'volume-filter';
     if ($state->{self_tex}) {
-        unless (@{ $state->{self_tex}->data } == @{ $result->data }) {
+        unless (@{ $state->{self_tex}->data } == @{ $image->data }) {
             my $self_size = $state->{self_tex}->width . 'x' . $state->{self_tex}->height;
-            my $output_size = $result->width . 'x' . $result->height;
+            my $output_size = $image->width . 'x' . $image->height;
             die "$state->{effect_id} selfTex ($self_size) must match the step's output ($output_size)\n";
         }
-        @{ $state->{self_tex}->data } = @{ $result->data };
+        @{ $state->{self_tex}->data } = @{ $image->data };
     }
     return $result;
 }
 
 sub _zero_iteration_output {
-    my ($input, $width, $height) = @_;
+    my ($input, $width, $height, $state) = @_;
+    if (_is_chain_bundle($input)) {
+        return {
+            image => defined $input->{image} ? $input->{image}->clone : undef,
+            volume => defined $input->{volume} ? $input->{volume}->clone : undef,
+            geometry => defined $input->{geometry} ? $input->{geometry}->clone : undef,
+            volumeSize => $input->{volumeSize},
+        };
+    }
     return $input->clone if defined $input;
+    if ($state && ($state->{eff}{domain} || '') eq 'volume-generator') {
+        my $volume = _destination(
+            $state->{eff}, $state->{eff}{outputTex3d}, $state->{params}, $width, $height,
+        );
+        $volume->clear;
+        my $geometry;
+        if (defined $state->{eff}{outputGeo} && $state->{eff}{outputGeo} ne 'inputGeo') {
+            $geometry = _destination(
+                $state->{eff}, $state->{eff}{outputGeo}, $state->{params}, $width, $height,
+            );
+            $geometry->clear;
+        }
+        return {
+            image => undef, volume => $volume, geometry => $geometry,
+            volumeSize => ($state->{params}{volumeSize} // $volume->width),
+        };
+    }
     return Math::Fractal::Noisemaker::Surface->new($width, $height);
 }
 
@@ -581,7 +715,16 @@ sub render_effect {
     my $seed   = defined $opt{seed}   ? $opt{seed}   : 1;
     my $time   = defined $opt{time}   ? $opt{time}   : 0.0;
     my $step = { kind => 'effect', effect_id => $effect_id, params => $params, surfaces => {} };
-    my $state = _prepare_state($step, $width, $height, $seed, undef);
+    my $input_was_bundle = defined $inputs->{inputTex3d} || defined $inputs->{inputGeo};
+    my $input_value = $input_was_bundle
+        ? {
+            image => $inputs->{inputTex}, volume => $inputs->{inputTex3d},
+            geometry => $inputs->{inputGeo},
+            volumeSize => (defined $inputs->{inputTex3d} ? $inputs->{inputTex3d}->width : undef),
+        }
+        : $inputs->{inputTex};
+    my $input_bundle = _chain_bundle($input_value);
+    my $state = _prepare_state($step, $width, $height, $seed, undef, $input_bundle);
     my @states = ($state);
     my %group_resources;
     if (!$state->{eff}{iterated}) {
@@ -590,11 +733,12 @@ sub render_effect {
             width => $width, height => $height, seed => $seed, time => $time,
             frame => (defined $opt{frame} ? $opt{frame} : 0),
             delta_time => (defined $opt{delta_time} ? $opt{delta_time} : 0),
-            iterated => 0,
+            iterated => 0, input_bundle => $input_bundle,
+            input_was_bundle => $input_was_bundle,
         );
     }
     my $count = defined $state->{params}{iterationCount} ? $state->{params}{iterationCount} : 60;
-    return _zero_iteration_output($inputs->{inputTex}, $width, $height) unless $count > 0;
+    return _zero_iteration_output($input_value, $width, $height, $state) unless $count > 0;
     my $result;
     for my $index (0 .. $count - 1) {
         $result = _run_state_once(
@@ -602,6 +746,7 @@ sub render_effect {
             width => $width, height => $height, seed => $seed,
             time => wrap01($time - ($count - 1 - $index) * iteration_delta_time()),
             frame => $index, delta_time => iteration_delta_time(), iterated => 1,
+            input_bundle => $input_bundle, input_was_bundle => $input_was_bundle,
         );
     }
     return $result;
@@ -628,10 +773,13 @@ sub _resolve_surface_marker {
 # them.
 sub _inputs_for_step {
     my ($step, $current, $surfaces, $external_textures) = @_;
+    my $bundle = _chain_bundle($current);
     my %inputs = %{ $external_textures || {} };
-    $inputs{inputTex} = $current if defined $current;
+    $inputs{inputTex}   = $bundle->{image} if defined $bundle->{image};
+    $inputs{inputTex3d} = $bundle->{volume} if defined $bundle->{volume};
+    $inputs{inputGeo}   = $bundle->{geometry} if defined $bundle->{geometry};
     for my $pname (sort keys %{ $step->{surfaces} }) {
-        my $surf = _resolve_surface_marker($step->{surfaces}{$pname}, $current, $surfaces);
+        my $surf = _resolve_surface_marker($step->{surfaces}{$pname}, $bundle->{image}, $surfaces);
         $inputs{$pname} = $surf if defined $surf;
     }
     return \%inputs;
@@ -648,12 +796,13 @@ sub _run_effect_step {
 
 sub _run_iteration_group {
     my ($group, $group_input, $surfaces, $external_textures, $width, $height, $seed, $time) = @_;
+    my $group_input_bundle = _chain_bundle($group_input);
     my @states;
     my $owner_state_size;
     for my $index (0 .. $#{ $group->{steps} }) {
         my $state = _prepare_state(
             $group->{steps}[$index], $width, $height, $seed,
-            $index == 0 ? undef : $owner_state_size,
+            $index == 0 ? undef : $owner_state_size, $group_input_bundle,
         );
         push @states, $state;
         if ($index == 0 && @{ $group->{steps} } > 1
@@ -663,20 +812,31 @@ sub _run_iteration_group {
     }
     my $count = defined $states[0]{params}{iterationCount}
         ? $states[0]{params}{iterationCount} : 60;
-    return _zero_iteration_output($group_input, $width, $height) unless $count > 0;
+    return _zero_iteration_output($group_input, $width, $height, $states[0]) unless $count > 0;
 
     my %group_resources;
+    if ($group->{loop}) {
+        my $input_image = $group_input_bundle->{image}
+            or die "Loop iteration group requires a current image\n";
+        $group_resources{global_accum} = Math::Fractal::Noisemaker::Surface->new(
+            $input_image->width, $input_image->height,
+        );
+        $group_resources{global_accum}->clear;
+    }
     my $last;
     for my $iteration (0 .. $count - 1) {
         my $step_input = $group_input;
         for my $state (@states) {
             my $inputs = _inputs_for_step(
                 $state->{step}, $step_input, $surfaces, $external_textures);
+            my $step_input_bundle = _chain_bundle($step_input);
             $step_input = _run_state_once(
                 $state, $inputs, \@states, \%group_resources,
                 width => $width, height => $height, seed => $seed,
                 time => wrap01($time - ($count - 1 - $iteration) * iteration_delta_time()),
                 frame => $iteration, delta_time => iteration_delta_time(), iterated => 1,
+                input_bundle => $step_input_bundle,
+                input_was_bundle => _is_chain_bundle($step_input),
             );
         }
         $last = $step_input;
@@ -706,7 +866,9 @@ sub render_dsl {
                 die "Surface $step->{surface} has not been written\n" unless defined $current;
             }
             elsif ($step && $step->{kind} eq 'write') {
-                $surfaces{ $step->{surface} } = $current;
+                my $image = _chain_bundle($current)->{image};
+                die "write($step->{surface}) requires a current image\n" unless defined $image;
+                $surfaces{ $step->{surface} } = $image;
             }
             elsif ($group->{iterated}) {
                 $current = _run_iteration_group(

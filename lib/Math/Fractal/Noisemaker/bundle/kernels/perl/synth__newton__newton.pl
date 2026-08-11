@@ -199,7 +199,7 @@ my $run_pixel = sub {
         }
         $re_df = $rt->construct(2, 0.0);
         $im_df = $rt->construct(2, 0.0);
-        ($_retc, $re_df, $im_df) = $transformCoords_df64__vec2_vec2_vec2_float_float_vec2_vec2->($globalCoord, $rt->construct(2, $rt->swizzle($cHi, 'x'), $rt->swizzle($cLo, 'x')), $rt->construct(2, $rt->swizzle($cHi, 'y'), $rt->swizzle($cLo, 'y')), $zoom, $_u_rotation, $re_df, $im_df);
+        do { ($_retc, $re_df, $im_df) = $transformCoords_df64__vec2_vec2_vec2_float_float_vec2_vec2->($globalCoord, $rt->construct(2, $rt->swizzle($cHi, 'x'), $rt->swizzle($cLo, 'x')), $rt->construct(2, $rt->swizzle($cHi, 'y'), $rt->swizzle($cLo, 'y')), $zoom, $_u_rotation, $re_df, $im_df); };
         $intDeg = $rt->construct(1, $rt->component_wise('floor', $effDegree), 'int');
         $numRoots = $intDeg;
         $roots = $rt->new_array($rt->i(8), 2);
@@ -255,13 +255,13 @@ my $run_pixel = sub {
                 }
                 $tr = $rt->construct(2, 0.0);
                 $ti = $rt->construct(2, 0.0);
-                ($_retc, $tr, $ti) = $df64_cmul__vec2_vec2_vec2_vec2_vec2_vec2->($pwr, $pwi, $zr_df, $zi_df, $tr, $ti);
+                do { ($_retc, $tr, $ti) = $df64_cmul__vec2_vec2_vec2_vec2_vec2_vec2->($pwr, $pwi, $zr_df, $zi_df, $tr, $ti); };
                 @{$pwr} = map { $rt->f32($_) } @{($tr)};
                 @{$pwi} = map { $rt->f32($_) } @{($ti)};
             }
             $znr = $rt->construct(2, 0.0);
             $zni = $rt->construct(2, 0.0);
-            ($_retc, $znr, $zni) = $df64_cmul__vec2_vec2_vec2_vec2_vec2_vec2->($pwr, $pwi, $zr_df, $zi_df, $znr, $zni);
+            do { ($_retc, $znr, $zni) = $df64_cmul__vec2_vec2_vec2_vec2_vec2_vec2->($pwr, $pwi, $zr_df, $zi_df, $znr, $zni); };
             $fzr = $df64_sub__vec2_vec2->($znr, $df64_from__float->($rt->f(1)));
             $fzi = $zni;
             $fpzr = $df64_mul_f__vec2_float->($pwr, $rt->construct(1, $intDeg));
@@ -337,7 +337,7 @@ my $run_pixel = sub {
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $value), $rt->f(1)))};
     };
     $main__void->();
-    my $_c = $g->{fragColor};
-    $out->[0] = $rt->f32($_c->[0]); $out->[1] = $rt->f32($_c->[1]); $out->[2] = $rt->f32($_c->[2]); $out->[3] = $rt->f32($_c->[3]);
+    my $_c0 = $g->{fragColor};
+    $out->[0] = $rt->f32($_c0->[0]); $out->[1] = $rt->f32($_c0->[1]); $out->[2] = $rt->f32($_c0->[2]); $out->[3] = $rt->f32($_c0->[3]);
 };
-{ kernel => $run_pixel, uses_derivatives => 0 };
+{ kernel => $run_pixel, uses_derivatives => 0, output_names => ['fragColor'] };

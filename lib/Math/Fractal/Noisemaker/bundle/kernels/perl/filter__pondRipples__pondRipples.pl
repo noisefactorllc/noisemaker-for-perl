@@ -17,6 +17,8 @@ my $run_pixel = sub {
     my $_u_fullResolution = exists $U->{'fullResolution'} ? $U->{'fullResolution'} : $rt->construct(2, 0.0);
     my $_u_amount = exists $U->{'amount'} ? $U->{'amount'} : $rt->f(0.0);
     my $_u_ridges = exists $U->{'ridges'} ? $U->{'ridges'} : 0;
+    my $_u_speed = exists $U->{'speed'} ? $U->{'speed'} : 0;
+    my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
     my $_u_antialias = exists $U->{'antialias'} ? $U->{'antialias'} : 0;
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
@@ -27,7 +29,7 @@ my $run_pixel = sub {
         @{$uv} = map { $rt->f32($_) } @{($rt->binary('-', $uv, $rt->f(0.5), 2, 'float'))};
         $uv = $rt->assign_swizzle($uv, 'x', $rt->binary('*', $rt->swizzle($uv, 'x'), $aspectRatio, 1, 'float'));
         $r = $rt->length($uv);
-        $phase = $rt->binary('*', $rt->binary('*', $rt->binary('*', $r, $rt->construct(1, $_u_ridges), 1, 'float'), $rt->f(2), 1, 'float'), $rt->f(3.1415926535900001), 1, 'float');
+        $phase = $rt->binary('-', $rt->binary('*', $rt->binary('*', $rt->binary('*', $r, $rt->construct(1, $_u_ridges), 1, 'float'), $rt->f(2), 1, 'float'), $rt->f(3.1415926535900001), 1, 'float'), $rt->binary('*', $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(2), 1, 'float'), $rt->f(3.1415926535900001), 1, 'float'), $rt->construct(1, $_u_speed), 1, 'float'), 1, 'float');
         $damping = $rt->component_wise('max', $rt->f(0), $rt->binary('-', $rt->f(1), $r, 1, 'float'));
         $w = $rt->f(0.0);
         $amountGain = $rt->f(0.0);
@@ -86,7 +88,7 @@ my $run_pixel = sub {
         }
     };
     $main__void->();
-    my $_c = $g->{fragColor};
-    $out->[0] = $rt->f32($_c->[0]); $out->[1] = $rt->f32($_c->[1]); $out->[2] = $rt->f32($_c->[2]); $out->[3] = $rt->f32($_c->[3]);
+    my $_c0 = $g->{fragColor};
+    $out->[0] = $rt->f32($_c0->[0]); $out->[1] = $rt->f32($_c0->[1]); $out->[2] = $rt->f32($_c0->[2]); $out->[3] = $rt->f32($_c0->[3]);
 };
-{ kernel => $run_pixel, uses_derivatives => 1 };
+{ kernel => $run_pixel, uses_derivatives => 1, output_names => ['fragColor'] };

@@ -12,19 +12,29 @@ package Math::Fractal::Noisemaker::Surface;
 use strict;
 use warnings;
 
+use constant MAX_SURFACE_PIXELS => 16_777_216;
+
 sub _f32 { unpack('f', pack('f', $_[0])) }
 
 sub _assert_dim {
     my ($value, $name) = @_;
-    die "$name must be a positive integer\n"
-        unless defined $value && $value =~ /^\d+$/ && $value > 0;
+    die "$name must be a positive integer within the safe integer range\n"
+        unless defined $value && $value =~ /^\d+$/ && $value > 0
+            && $value <= 9_007_199_254_740_991;
+}
+
+sub _surface_length {
+    my ($width, $height) = @_;
+    _assert_dim($width, 'width');
+    _assert_dim($height, 'height');
+    die "Surface exceeds the 16,777,216 pixel limit\n"
+        if $height > int(MAX_SURFACE_PIXELS / $width);
+    return $width * $height * 4;
 }
 
 sub new {
     my ($class, $width, $height, $data) = @_;
-    _assert_dim($width, 'width');
-    _assert_dim($height, 'height');
-    my $length = $width * $height * 4;
+    my $length = _surface_length($width, $height);
     if (defined $data) {
         die "data must be an array of length $length\n"
             unless ref $data eq 'ARRAY' && @$data == $length;
@@ -48,9 +58,7 @@ sub filter { @_ > 1 ? ($_[0]{filter} = $_[1]) : $_[0]{filter} }
 
 sub from_rgba8 {
     my ($class, $width, $height, $bytes) = @_;
-    _assert_dim($width, 'width');
-    _assert_dim($height, 'height');
-    my $length = $width * $height * 4;
+    my $length = _surface_length($width, $height);
     my @b = unpack('C*', $bytes);
     die "bytes must have length $length\n" unless @b == $length;
     # Match JS: data[i] = fround(bytes[i] * (1/255)) — float64 product, then f32.

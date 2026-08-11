@@ -115,6 +115,117 @@ like(
     'error: malformed numeric literal is a DslError'
 );
 
+# --- typed volume and loop chains ------------------------------------------
+
+my $typed_effects = {
+    %$effects,
+    'synth3d/noise3d' => {
+        namespace => 'synth3d', func => 'noise3d', kind => 'generator',
+        domain => 'volume-generator', params => {}, paramOrder => [], passes => [],
+    },
+    'synth3d/reactionDiffusion3d' => {
+        namespace => 'synth3d', func => 'reactionDiffusion3d', kind => 'generator',
+        domain => 'volume-generator', iterated => 1,
+        params => { iterationCount => { type => 'int', default => 60 } },
+        paramOrder => ['iterationCount'], passes => [],
+    },
+    'synth3d/shape3d' => {
+        namespace => 'synth3d', func => 'shape3d', kind => 'generator',
+        domain => 'volume-generator', params => {}, paramOrder => [], passes => [],
+    },
+    'filter3d/palette3d' => {
+        namespace => 'filter3d', func => 'palette3d', kind => 'filter',
+        domain => 'volume-filter', params => {}, paramOrder => [], passes => [],
+    },
+    'render/render3d' => {
+        namespace => 'render', func => 'render3d', kind => 'filter',
+        domain => 'volume-renderer', params => {}, paramOrder => [], passes => [],
+    },
+    'render/loopBegin' => {
+        namespace => 'render', func => 'loopBegin', kind => 'filter',
+        domain => 'loop-begin', loopRole => 'begin', iterated => 1,
+        params => { iterationCount => { type => 'int', default => 60 } },
+        paramOrder => ['iterationCount'], passes => [],
+    },
+    'render/loopEnd' => {
+        namespace => 'render', func => 'loopEnd', kind => 'filter',
+        domain => 'loop-end', loopRole => 'end', params => {}, paramOrder => [], passes => [],
+    },
+};
+
+{
+    my $plan = compile_dsl(
+        "search synth3d, filter3d, render\n"
+            . "noise3d().palette3d().render3d().write(o0)\nrender(o0)",
+        $typed_effects,
+    );
+    is_deeply(
+        [map { $_->{effect_id} } grep { $_->{kind} eq 'effect' } @{ $plan->{chains}[0]{steps} }],
+        ['synth3d/noise3d', 'filter3d/palette3d', 'render/render3d'],
+        'compile: typed volume generator/filter/renderer chain',
+    );
+}
+
+{
+    my $plan = compile_dsl(
+        "search synth3d, render\n"
+            . "noise3d().reactionDiffusion3d(iterationCount: 1).render3d().write(o0)\nrender(o0)",
+        $typed_effects,
+    );
+    is($plan->{chains}[0]{steps}[1]{effect_id}, 'synth3d/reactionDiffusion3d',
+        'compile: iterated volume generator can consume an upstream volume');
+}
+
+like(
+    err_str(sub { compile_dsl("search synth3d\nnoise3d().shape3d().write(o0)", $typed_effects) }),
+    qr/Generator synth3d\/shape3d must begin a chain/,
+    'compile: ordinary volume generator cannot consume an upstream volume',
+);
+like(
+    err_str(sub { compile_dsl("search synth, filter3d\nsolid().palette3d().write(o0)", $typed_effects) }),
+    qr/volume filter filter3d\/palette3d requires a volume input/,
+    'compile: volume filter requires a volume',
+);
+like(
+    err_str(sub { compile_dsl("search synth3d\nnoise3d().write(o0)", $typed_effects) }),
+    qr/write\(surface\) requires a current image/,
+    'compile: volume-only chain cannot be written as an image',
+);
+
+{
+    my $plan = compile_dsl(
+        "search synth, filter, render\n"
+            . "solid().loopBegin(iterationCount: 3).blur().loopEnd().write(o0)\nrender(o0)",
+        $typed_effects,
+    );
+    is_deeply(
+        [map { $typed_effects->{ $_->{effect_id} }{loopRole} || '' }
+            grep { $_->{kind} eq 'effect' } @{ $plan->{chains}[0]{steps} }],
+        ['', 'begin', '', 'end'],
+        'compile: balanced loop region',
+    );
+}
+like(
+    err_str(sub { compile_dsl("search synth, render\nsolid().loopEnd().write(o0)", $typed_effects) }),
+    qr/loopEnd has no matching loopBegin/,
+    'compile: unmatched loopEnd is rejected',
+);
+like(
+    err_str(sub { compile_dsl("search synth, render\nsolid().loopBegin().write(o0)", $typed_effects) }),
+    qr/loopBegin must be closed by loopEnd before write/,
+    'compile: open loop cannot cross write',
+);
+like(
+    err_str(sub {
+        compile_dsl(
+            "search synth, render\nsolid().loopBegin().loopBegin().loopEnd().loopEnd().write(o0)",
+            $typed_effects,
+        );
+    }),
+    qr/nested loopBegin regions are not supported/,
+    'compile: nested accumulator loops are rejected',
+);
+
 # --- render_dsl integration --------------------------------------------------
 
 {
