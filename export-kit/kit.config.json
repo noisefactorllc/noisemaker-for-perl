@@ -1,0 +1,26 @@
+{
+  "configVersion": 1,
+  "id": "perl",
+  "series": "0.1",
+  "shaderSource": "kit",
+  "engineSource": "kit",
+  "pageTemplate": false,
+  "subtrees": [
+    { "from": "lib", "to": "engine/lib" },
+    { "from": "bin/make-noise", "to": "engine/bin/make-noise" }
+  ],
+  "licenses": [
+    { "from": "LICENSE", "to": "LICENSES/noisemaker-for-perl-LICENSE.txt" }
+  ],
+  "requireFiles": ["run.pl", "engine/lib/Math/Fractal/Noisemaker.pm", "engine/bin/make-noise"],
+  "forbidDirs": ["shaders"],
+  "inject": {
+    "type": "dsl-file",
+    "target": "program.dsl"
+  },
+  "compat": {
+    "mode": "list",
+    "fromBundleMetadata": "lib/Math/Fractal/Noisemaker/bundle/metadata.json"
+  },
+  "engineBytesFrom": ["engine/"]
+}
