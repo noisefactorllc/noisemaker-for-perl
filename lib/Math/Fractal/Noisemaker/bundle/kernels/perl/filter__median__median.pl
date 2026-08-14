@@ -57,7 +57,7 @@ my $run_pixel = sub {
         return $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
     };
     $main__void = sub {
-        my ($_for0_first, $_for1_first, $blueRecords, $center, $centerAlpha, $difference, $dimensions, $index, $left, $majorRecords, $maxDifference, $medianIndex, $medianRgb, $originalRgb, $pivotBlue, $pivotMajor, $replaceCenter, $right, $sampleColor, $scanLeft, $scanRight, $temporaryBlue, $temporaryMajor, $x, $y);
+        my ($_for0_first, $_for1_first, $activeCount, $blueRecords, $center, $centerAlpha, $difference, $dimensions, $index, $left, $majorRecords, $maxDifference, $medianIndex, $medianRgb, $originalRgb, $pivotBlue, $pivotMajor, $replaceCenter, $right, $sampleColor, $scanLeft, $scanRight, $temporaryBlue, $temporaryMajor, $x, $y);
         $majorRecords = $rt->new_array($rt->i(49), 2);
         $blueRecords = $rt->new_array($rt->i(49), 1);
         $dimensions = $rt->texture_size($_u_inputTex);
@@ -95,9 +95,10 @@ my $run_pixel = sub {
                 $index = $rt->binary('+', $index, $rt->i(1), 1, 'int');
             }
         }
-        $medianIndex = $rt->binary('/', $rt->i(49), $rt->i(2), 1, 'int');
+        $activeCount = $rt->binary('*', $rt->binary('+', $rt->binary('*', $_u_RADIUS, $rt->i(2), 1, 'int'), $rt->i(1), 1, 'int'), $rt->binary('+', $rt->binary('*', $_u_RADIUS, $rt->i(2), 1, 'int'), $rt->i(1), 1, 'int'), 1, 'int');
+        $medianIndex = $rt->binary('>>', $rt->binary('-', $activeCount, $rt->i(1), 1, 'int'), $rt->i(1), 1, 'int');
         $left = $rt->i(0);
-        $right = $rt->binary('-', $rt->i(49), $rt->i(1), 1, 'int');
+        $right = $rt->binary('-', $activeCount, $rt->i(1), 1, 'int');
         for my $_wh2 (0 .. 1048575) {
             if (!($rt->binary('<', $left, $right))) {
                 last;

@@ -15,8 +15,13 @@ use File::Basename ();
 use File::Spec     ();
 use JSON::PP       ();
 use Exporter 'import';
+use POSIX          ();
+use Scalar::Util qw(looks_like_number);
+use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC);
 
+use Math::Fractal::Noisemaker::CpuFrameExportAdapter;
 use Math::Fractal::Noisemaker::DSL qw(compile_dsl);
+use Math::Fractal::Noisemaker::FrameExportQueue;
 use Math::Fractal::Noisemaker::KernelCache;
 use Math::Fractal::Noisemaker::Iteration qw(
     compute_iteration_groups
@@ -27,6 +32,7 @@ use Math::Fractal::Noisemaker::Iteration qw(
 use Math::Fractal::Noisemaker::PassRunner qw(run_pass run_pass_deriv run_pass_mrt);
 use Math::Fractal::Noisemaker::Runtime;
 use Math::Fractal::Noisemaker::Surface;
+use Math::Fractal::Noisemaker::SinkManager;
 use Math::Fractal::Noisemaker::TextureFormat qw(quantize_texture);
 use Math::Fractal::Noisemaker::Adapters      ();
 use Math::Fractal::Noisemaker::DrawOps       ();
@@ -885,6 +891,87 @@ sub render_dsl {
     my $rendered = $surfaces{ $plan->{render_surface} };
     die "Surface $plan->{render_surface} has not been written\n" unless defined $rendered;
     return $rendered;
+}
+
+# Stateful renderer facade for output sinks and bounded frame export.
+sub new {
+    my ($class, %options) = @_;
+    return bless {
+        sink_manager => Math::Fractal::Noisemaker::SinkManager->new(
+            on_error => $options{on_sink_error},
+        ),
+        sink_descriptor => {
+            width => 0, height => 0, format => 'rgba8unorm',
+            colorSpace => 'srgb', alphaMode => 'straight', fps => 60,
+        },
+        sinks_configured => 0,
+    }, $class;
+}
+
+sub sink_manager { $_[0]{sink_manager} }
+
+sub add_sink {
+    my ($self, $sink) = @_;
+    return $self->{sink_manager}->add($sink);
+}
+
+sub create_frame_export_queue {
+    my ($self, %options) = @_;
+    return Math::Fractal::Noisemaker::FrameExportQueue->new(
+        Math::Fractal::Noisemaker::CpuFrameExportAdapter->new,
+        %options,
+    );
+}
+
+sub _configure_sinks {
+    my ($self, $width, $height) = @_;
+    my $descriptor = $self->{sink_descriptor};
+    return if $self->{sinks_configured}
+        && $descriptor->{width} == $width
+        && $descriptor->{height} == $height;
+    $descriptor->{width} = $width;
+    $descriptor->{height} = $height;
+    $self->{sinks_configured} = 1;
+    $self->{sink_manager}->configure($descriptor);
+}
+
+sub _validated_render_options {
+    my (%options) = @_;
+    my $width  = defined $options{width}  ? $options{width}  : 512;
+    my $height = defined $options{height} ? $options{height} : 512;
+    my $seed   = defined $options{seed}   ? $options{seed}   : 1;
+    my $time   = defined $options{time}   ? $options{time}   : 0;
+    die "width must be a positive integer\n"
+        unless $width =~ /^\d+$/ && $width > 0;
+    die "height must be a positive integer\n"
+        unless $height =~ /^\d+$/ && $height > 0;
+    die "time must be finite\n"
+        unless looks_like_number($time) && POSIX::isfinite(0 + $time);
+    die "seed must be an integer\n"
+        unless looks_like_number($seed) && POSIX::isfinite(0 + $seed) && $seed == int($seed);
+    return ($width, $height, $seed, $time);
+}
+
+sub render {
+    my ($self, $source, %options) = @_;
+    my ($width, $height, $seed, $time) = _validated_render_options(%options);
+    $self->_configure_sinks($width, $height);
+    my %render_options = (width => $width, height => $height, seed => $seed, time => $time);
+    $render_options{external_textures} = $options{external_textures}
+        if exists $options{external_textures};
+    $render_options{seed_surfaces} = $options{seed_surfaces}
+        if exists $options{seed_surfaces};
+    my $result = render_dsl($source, %render_options);
+    my $timestamp = defined $options{presentation_timestamp}
+        ? $options{presentation_timestamp}
+        : clock_gettime(CLOCK_MONOTONIC()) * 1000;
+    $self->{sink_manager}->submit($result, $timestamp);
+    return $result;
+}
+
+sub dispose {
+    my ($self) = @_;
+    $self->{sink_manager}->close;
 }
 
 1;

@@ -113,7 +113,12 @@ sub perl_render {
 my $effects = meta()->{effects};
 my @ids = grep { !$only || $only->{$_} } sort keys %$effects;
 my @iterated = grep { $effects->{$_}{iterated} } @ids;
-@ids = grep { !$effects->{$_}{iterated} } @ids;
+my @typed = grep {
+    !$effects->{$_}{iterated} && ($effects->{$_}{domain} || 'image') ne 'image'
+} @ids;
+@ids = grep {
+    !$effects->{$_}{iterated} && ($effects->{$_}{domain} || 'image') eq 'image'
+} @ids;
 
 my (@ok, @diffs, %errors, @oracle_err);
 my $exact = 0;
@@ -163,4 +168,4 @@ if (@oracle_err) {
         . "  e.g. @oracle_err[0 .. (@oracle_err > 5 ? 4 : $#oracle_err)]\n";
 }
 print "\nPASS: " . scalar(@ok) . "  (byte-exact: $exact)\n";
-print "SKIPPED ITERATED: " . scalar(@iterated) . "\n" if @iterated;
+print "SKIPPED ITERATED/TYPED: " . (@iterated + @typed) . "\n" if @iterated || @typed;

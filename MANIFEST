@@ -1,6 +1,8 @@
 bin/make-noise
 lib/Math/Fractal/Noisemaker.pm
 lib/Math/Fractal/Noisemaker/Adapters.pm
+lib/Math/Fractal/Noisemaker/CpuFrameExportAdapter.pm
+lib/Math/Fractal/Noisemaker/FrameExportQueue.pm
 lib/Math/Fractal/Noisemaker/bundle/bundle-lock.json
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__bitEffects__bitEffects.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__caustic__caustic.pl
@@ -244,6 +246,7 @@ lib/Math/Fractal/Noisemaker/PNG.pm
 lib/Math/Fractal/Noisemaker/Renderer.pm
 lib/Math/Fractal/Noisemaker/Runtime.pm
 lib/Math/Fractal/Noisemaker/Sampler.pm
+lib/Math/Fractal/Noisemaker/SinkManager.pm
 lib/Math/Fractal/Noisemaker/Surface.pm
 lib/Math/Fractal/Noisemaker/TextureFormat.pm
 lib/Math/Fractal/Noisemaker/Transpiler/Build.pm
@@ -271,3 +274,5 @@ t/06-dsl.t
 t/07-cli.t
 t/14-volume-catalog.t
 t/15-volume-smoke.t
+t/16-output-runtime.t
+t/17-generated-regressions.t
