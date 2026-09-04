@@ -18,7 +18,7 @@ use Math::Fractal::Noisemaker::Renderer qw(render_effect meta);
 use Math::Fractal::Noisemaker::Surface;
 
 my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
-    || File::Spec->rel2abs(File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-cpu'));
+    || File::Spec->rel2abs(File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-for-cpu'));
 my $CLI = File::Spec->catfile($CPU_DIR, 'bin', 'noisemaker-cpu.js');
 
 my $SIZE = 8;
@@ -111,6 +111,7 @@ sub perl_render {
 }
 
 my $effects = meta()->{effects};
+my @unknown_ids = $only ? grep { !exists $effects->{$_} } sort keys %$only : ();
 my @ids = grep { !$only || $only->{$_} } sort keys %$effects;
 my @iterated = grep { $effects->{$_}{iterated} } @ids;
 my @typed = grep {
@@ -169,3 +170,7 @@ if (@oracle_err) {
 }
 print "\nPASS: " . scalar(@ok) . "  (byte-exact: $exact)\n";
 print "SKIPPED ITERATED/TYPED: " . (@iterated + @typed) . "\n" if @iterated || @typed;
+print "UNKNOWN EFFECTS: @unknown_ids\n" if @unknown_ids;
+
+my $failed = !@ids || @ok != @ids || @diffs || $err_count || @oracle_err || @unknown_ids;
+exit 1 if $failed;

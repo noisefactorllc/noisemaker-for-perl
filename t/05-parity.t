@@ -7,19 +7,32 @@ use File::Spec;
 use File::Temp ();
 
 # Cross-language parity: Perl renders must match the JS oracle byte-for-byte
-# on a fast subset (the full 167-effect sweep lives in scripts/parity.pl).
+# on a fast subset (the full 169-image-effect sweep lives in scripts/parity.pl).
 
 use Math::Fractal::Noisemaker::PNG qw(decode_png encode_png);
 use Math::Fractal::Noisemaker::Renderer qw(render_effect);
 
 my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
-    || File::Spec->rel2abs(File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-cpu'));
+    || File::Spec->rel2abs(File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-for-cpu'));
 my $CLI = File::Spec->catfile($CPU_DIR, 'bin', 'noisemaker-cpu.js');
+my $PARITY_SCRIPT = File::Spec->catfile($FindBin::Bin, '..', 'scripts', 'parity.pl');
 
 plan skip_all => 'JS oracle (node + noisemaker-cpu) not available'
     unless -e $CLI && system('node --version >/dev/null 2>&1') == 0;
 
 my $TMP = File::Temp::tempdir(CLEANUP => 1);
+
+{
+    local $ENV{NOISEMAKER_CPU_DIR} = File::Spec->catdir($TMP, 'missing-oracle');
+    my $status = system($^X, $PARITY_SCRIPT, '--only', 'synth/solid');
+    isnt($status, 0, 'parity harness fails when the JS oracle is unavailable');
+}
+
+my $unknown_status = system($^X, $PARITY_SCRIPT, '--only', 'not/an-effect');
+isnt($unknown_status, 0, 'parity harness fails when no requested effect exists');
+
+my $mixed_status = system($^X, $PARITY_SCRIPT, '--only', 'synth/solid,not/an-effect');
+isnt($mixed_status, 0, 'parity harness fails when any requested effect is unknown');
 
 sub js_effect {
     my ($effect_id, @extra) = @_;

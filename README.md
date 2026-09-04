@@ -51,7 +51,7 @@ Or from Perl:
 ## Parity
 
 `scripts/parity.pl` renders every bundled effect in Perl and in the reference
-JS engine (a sibling `noisemaker-cpu` checkout) and compares bytes.
+JS engine (a sibling `noisemaker-for-cpu` checkout) and compares bytes.
 
 ## Regenerating the bundle
 
