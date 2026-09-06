@@ -7,14 +7,14 @@
 
 **Math::Fractal::Noisemaker v1.000** — a software runtime for shaders, in pure Perl.
 
-This is the Perl home of the [Noisemaker](https://noisemaker.app) rendering
-engine: the 205-effect shader catalog behind [Noisedeck](https://noisedeck.app),
-rendered entirely on the CPU with byte-parity against the reference engine.
-GLSL is fetched from the Noisemaker shader CDN, transpiled to Perl by a
-pure-Perl GLSL ES 3.00 front end, and executed per-pixel by a float32-faithful
-runtime that reproduces GPU arithmetic: float32 register rounding, half-float
-render-target quantization, GLSL uint32 wraparound, screen-space derivatives,
-and GL texture sampling.
+This is the Perl home of the [Noisemaker](https://noisemaker.app) rendering engine. It renders the 205-effect shader catalog behind [Noisedeck](https://noisedeck.app) entirely on the CPU, with byte-parity against the reference engine.
+GLSL comes from the Noisemaker shader CDN. A pure-Perl GLSL ES 3.00 front end transpiles it to Perl. A float32-faithful runtime executes it per pixel and reproduces GPU arithmetic:
+
+- Float32 register rounding.
+- Half-float render-target quantization.
+- GLSL uint32 wraparound.
+- Screen-space derivatives.
+- GL texture sampling.
 
 The classic `Math::Fractal::Noisemaker` made noise in a loop. It still makes
 noise — it just learned every other trick in the deck too.
@@ -57,9 +57,7 @@ JS engine (a sibling `noisemaker-for-cpu` checkout) and compares bytes.
 
     perl scripts/build-bundle.pl --all
 
-Fetches per-effect GLSL + metadata from the shader CDN (cached, sha256-locked
-in `bundle-lock.json`) and transpiles it into
-`lib/Math/Fractal/Noisemaker/bundle/`.
+This command fetches per-effect GLSL and metadata from the shader CDN and transpiles it into `lib/Math/Fractal/Noisemaker/bundle/`. The inputs are cached and sha256-locked in `bundle-lock.json`.
 
 ## License
 
