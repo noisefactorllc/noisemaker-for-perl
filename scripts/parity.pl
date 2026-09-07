@@ -144,13 +144,12 @@ for my $eid (@ids) {
         my $x = abs($ja[$i] - $pa[$i]);
         $d = $x if $x > $d;
     }
-    if ($d <= 2) { push @ok, $eid; if ($d == 0) { $exact++ } else { print "NEARMISS $d $eid
-" } } else { push @diffs, [$eid, $d] }
+    if ($d == 0) { push @ok, $eid; $exact++ } else { push @diffs, [$eid, $d] }
 }
 
 my $err_count = 0;
 $err_count += @$_ for values %errors;
-printf "\n=== PARITY: %d/%d pass (<=2)  |  %d diff  |  %d runtime-error  |  %d oracle-error ===\n\n",
+printf "\n=== PARITY: %d/%d pass (byte-exact)  |  %d diff  |  %d runtime-error  |  %d oracle-error ===\n\n",
     scalar @ok, scalar @ids, scalar @diffs, $err_count, scalar @oracle_err;
 if (%errors) {
     print "RUNTIME ERRORS (grouped):\n";

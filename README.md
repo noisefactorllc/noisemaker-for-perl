@@ -50,8 +50,10 @@ Or from Perl:
 
 ## Parity
 
-`scripts/parity.pl` renders every bundled effect in Perl and in the reference
-JS engine (a sibling `noisemaker-for-cpu` checkout) and compares bytes.
+`scripts/parity.pl` compares all 169 non-iterated image effects with the
+reference JS engine (a sibling `noisemaker-for-cpu` checkout). It requires
+exact RGBA8 bytes and fails on differences or errors. The 36 iterated and typed
+effects are reported separately and covered by the DSL tests.
 
 ## Regenerating the bundle
 

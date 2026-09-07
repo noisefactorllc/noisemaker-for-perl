@@ -121,4 +121,11 @@ $pl = render_effect(
 );
 is(max_diff($js, $pl), 0, 'filter/temporalAberration history is CPU byte-exact');
 
+for my $effect_id (qw(filter/mosaicTiles filter/stipple filter/strokes)) {
+    $js = js_effect($effect_id);
+    $pl = render_effect($effect_id, {}, { inputTex => $solid },
+        width => 8, height => 8, seed => 1, time => 0.25);
+    is(max_diff($js, $pl), 0, "$effect_id canonical rounding byte-exact");
+}
+
 done_testing();

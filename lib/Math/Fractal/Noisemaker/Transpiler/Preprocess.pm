@@ -29,6 +29,19 @@ sub _strip_comments {
 
 sub _canonical_compatibility {
     my ($source, $canonical_key) = @_;
+    # Keep the canonical CPU's float32 boundaries local to these kernels.
+    if (defined $canonical_key && $canonical_key =~ m{^filter/(?:mosaicTiles|stipple|strokes):}) {
+        $source =~ s{\Qreturn fract((p3.x + p3.y) * p3.z);\E}{return fract(float(float(p3.x + p3.y) * p3.z));}g;
+        $source =~ s{\Qreturn fract((p3.xx + p3.yz) * p3.zy);\E}{return fract(vec2(float(float(p3.x + p3.y) * p3.z), float(float(p3.x + p3.z) * p3.y)));}g;
+    }
+    if (defined $canonical_key && $canonical_key eq 'filter/strokes:stkSmear') {
+        my $pigment = ($source =~ s{\QpigmentSum += srcSample(centerUV).rgb * mark;\E}{pigmentSum += vec3(srcSample(centerUV).rgb * mark);}g);
+        die "strokes canonical pigment pattern changed\n" unless $pigment == 1;
+        # Vector declarations in the canonical kernel store binary results
+        # in Float32Array lanes before later expressions consume them.
+        my $vectors = ($source =~ s{\bvec2\s+(u|px|cell|jitter|center|delta|centerGlobal|centerUV|p|sampP|sampN|uv|gc)\s*=\s*([^;]+);}{vec2 $1 = vec2($2);}g);
+        die "strokes canonical vector declarations changed\n" unless $vectors == 15;
+    }
     if (defined $canonical_key
         && $canonical_key eq 'filter/temporalAberration:temporalAberration') {
         # The pinned CPU oracle's glsl-transpiler lowering evaluates `cur` on
