@@ -114,7 +114,7 @@ my $run_pixel = sub {
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         if ($rt->binary('<', $rt->component_wise('abs', $_u_vignetteAmount), $rt->f(0.001))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
+            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rt->swizzle($color, 'rgb'), $rt->swizzle($color, 'a'), 3, 'float'), $rt->swizzle($color, 'a')))};
             return;
         }
         $rgb = $srgbToLinear__vec3->($rt->swizzle($color, 'rgb'));
@@ -127,7 +127,7 @@ my $run_pixel = sub {
         $vignetteMask = $computeVignette__vec2_vec2_float_float_float->($globalUV, $aspectRatio, $_u_vignetteMidpoint, $_u_vignetteRoundness, $_u_vignetteFeather);
         @{$rgb} = map { $rt->f32($_) } @{($applyVignette__vec3_float_float_float->($rgb, $vignetteMask, $_u_vignetteAmount, $_u_vigHiProtect))};
         @{$rgb} = map { $rt->f32($_) } @{($linearToSrgb__vec3->($rt->component_wise('max', $rgb, $rt->construct(3, $rt->f(0)))))};
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rgb, $rt->swizzle($color, 'a')))};
+        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rgb, $rt->swizzle($color, 'a'), 3, 'float'), $rt->swizzle($color, 'a')))};
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

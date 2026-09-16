@@ -75,9 +75,31 @@ is_deeply(
         0.5, 0.25, 999,
         { viewMode => 0 },
     ),
-    [0, -0.5],
+    [0, -0.5, 80, 0, 1],
     'flat point projection ignores depth and maps normalized coordinates to clip space',
 );
+
+is(
+    Math::Fractal::Noisemaker::DrawOps::compute_clip_center(
+        0, 0, 200,
+        { viewMode => 2, rotateX => 0, rotateY => 0, rotateZ => 0, posX => 0, posY => 0, posZ => 0, viewScale => 1, fieldOfView => 60 },
+        64, 64,
+    ),
+    undef,
+    'perspective projection culls a point behind the near plane',
+);
+
+{
+    my $persp = Math::Fractal::Noisemaker::DrawOps::compute_clip_center(
+        0, 0, 0,
+        { viewMode => 2, rotateX => 0, rotateY => 0, rotateZ => 0, posX => 0, posY => 0, posZ => 0, viewScale => 1, fieldOfView => 60 },
+        64, 64,
+    );
+    ok(defined $persp, 'perspective projection keeps a point in front of the camera');
+    close_to($persp->[0], 0, 'perspective clip_x is centered for an on-axis point');
+    close_to($persp->[1], 0, 'perspective clip_y is centered for an on-axis point');
+    close_to($persp->[2], 80, 'perspective camera_depth matches the Z=80 camera at the origin');
+}
 
 my $rgba = Math::Fractal::Noisemaker::Surface->new(1, 1, [0.2, 0.3, 0.4, 0.5]);
 my $vel = Math::Fractal::Noisemaker::Surface->new(1, 1, [0, 1, 0, 0]);

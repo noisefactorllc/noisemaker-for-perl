@@ -11,6 +11,7 @@ my $run_pixel = sub {
     my $_retc;
     my $_u_inputTex = $ctx->texture_binding('inputTex');
     my $_u_tex = $ctx->texture_binding('tex');
+    my $_u_baseTex = $ctx->texture_binding('baseTex');
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_tileOffset = exists $U->{'tileOffset'} ? $U->{'tileOffset'} : $rt->construct(2, 0.0);
     my $_u_fullResolution = exists $U->{'fullResolution'} ? $U->{'fullResolution'} : $rt->construct(2, 0.0);
@@ -22,28 +23,28 @@ my $run_pixel = sub {
         return $rt->binary('+', $outMin, $rt->binary('/', $rt->binary('*', $rt->binary('-', $outMax, $outMin, 1, 'float'), $rt->binary('-', $value, $inMin, 1, 'float'), 1, 'float'), $rt->binary('-', $inMax, $inMin, 1, 'float'), 1, 'float'), 1, 'float');
     };
     $main__void = sub {
-        my ($AoverB, $BoverA, $color, $color1, $color2, $globalCoord, $maskVal, $st);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $st = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $color1 = $rt->texture($_u_inputTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
-        $color2 = $rt->texture($_u_tex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float'));
+        my ($AoverB, $BoverA, $background, $color, $color1, $color2, $maskVal, $uv);
+        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float');
+        $color1 = $rt->texture($_u_inputTex, $uv);
+        $color2 = $rt->texture($_u_tex, $uv);
+        $background = $rt->construct(4, 0.0);
         $maskVal = $rt->f(0.0);
         if ($_u_maskMode) {
             $maskVal = $rt->dot($rt->swizzle($color2, 'rgb'), $rt->construct(3, $rt->f(0.29899999999999999), $rt->f(0.58699999999999997), $rt->f(0.114)));
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($color1, 'rgb'), $rt->binary('*', $rt->swizzle($color1, 'a'), $maskVal, 1, 'float')))};
+            $background = $rt->texture($_u_baseTex, $uv);
+            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('mix', $background, $color1, $maskVal))};
             return;
         }
         $color = $rt->construct(4, 0.0);
         $AoverB = $rt->construct(4, 0.0);
         $BoverA = $rt->construct(4, 0.0);
         if ($rt->binary('<', $_u_mixAmt, $rt->f(0))) {
-            $AoverB = $rt->binary('+', $rt->binary('*', $color2, $rt->binary('-', $rt->f(1), $rt->swizzle($color1, 'a'), 1, 'float'), 4, 'float'), $rt->binary('*', $color1, $rt->swizzle($color1, 'a'), 4, 'float'), 4, 'float');
+            $AoverB = $rt->binary('+', $rt->binary('*', $color2, $rt->binary('-', $rt->f(1), $rt->swizzle($color1, 'a'), 1, 'float'), 4, 'float'), $color1, 4, 'float');
             @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $color1, $AoverB, $map__float_float_float_float_float->($_u_mixAmt, $rt->unary('-', $rt->f(100)), $rt->f(0), $rt->f(0), $rt->f(1))))};
         } else {
-            $BoverA = $rt->binary('+', $rt->binary('*', $color1, $rt->binary('-', $rt->f(1), $rt->swizzle($color2, 'a'), 1, 'float'), 4, 'float'), $rt->binary('*', $color2, $rt->swizzle($color2, 'a'), 4, 'float'), 4, 'float');
+            $BoverA = $rt->binary('+', $rt->binary('*', $color1, $rt->binary('-', $rt->f(1), $rt->swizzle($color2, 'a'), 1, 'float'), 4, 'float'), $color2, 4, 'float');
             @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $BoverA, $color2, $map__float_float_float_float_float->($_u_mixAmt, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(1))))};
         }
-        $color = $rt->assign_swizzle($color, 'a', $rt->component_wise('max', $rt->swizzle($color1, 'a'), $rt->swizzle($color2, 'a')));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
     };
     $main__void->();

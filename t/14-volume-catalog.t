@@ -19,11 +19,13 @@ my @volume_effects = qw(
     render/render3d
     render/renderCubemap3d
     render/renderCubemapSurface
+    render/renderLandscape3d
     render/renderLit3d
     synth3d/cell3d
     synth3d/cellularAutomata3d
     synth3d/flythrough3d
     synth3d/fractal3d
+    synth3d/heightmap3d
     synth3d/noise3d
     synth3d/reactionDiffusion3d
     synth3d/shape3d
@@ -95,11 +97,11 @@ my $eligible;
     $eligible = Math::Fractal::Noisemaker::Transpiler::CDN::eligible_ids();
 }
 my %eligible = map { $_ => 1 } @$eligible;
-is(scalar(@$eligible), 184, 'CDN build selects 167 image effects and 17 volume effects');
+is(scalar(@$eligible), 186, 'CDN build selects 167 image effects and 19 volume effects');
 is_deeply(
     [grep { $eligible{$_} } @volume_effects],
     \@volume_effects,
-    'all 17 volume and loop effects are eligible for generation',
+    'all 19 volume and loop effects are eligible for generation',
 );
 ok(!$eligible{'synth/reactionDiffusion'}, 'previously authored stateful effects remain excluded');
 ok(!$eligible{'render/meshRender'}, 'unsupported mesh effects remain excluded');

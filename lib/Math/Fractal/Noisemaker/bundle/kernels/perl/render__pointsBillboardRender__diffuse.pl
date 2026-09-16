@@ -7,18 +7,37 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($main__void);
+    my ($sampleDefocus__vec2, $main__void);
     my $_retc;
     my $_u_trailTex = $ctx->texture_binding('trailTex');
+    my $_u_defocusTex = $ctx->texture_binding('defocusTex');
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_intensity = exists $U->{'intensity'} ? $U->{'intensity'} : $rt->f(0.0);
+    my $_u_aperture = exists $U->{'aperture'} ? $U->{'aperture'} : $rt->f(0.0);
+    my $_u_viewMode = exists $U->{'viewMode'} ? $U->{'viewMode'} : 0;
+    my $_u_blendMode = exists $U->{'blendMode'} ? $U->{'blendMode'} : 0;
     $g->{fragColor} = $rt->construct(4, 0.0);
+    $sampleDefocus__vec2 = sub {
+        my ($uv) = @_;
+        $uv = $rt->copy($uv, 'float');
+        my ($a, $b, $dims, $f, $lo, $p);
+        $dims = $rt->texture_size($_u_defocusTex);
+        $p = $rt->binary('-', $rt->binary('*', $uv, $rt->construct(2, $dims), 2, 'float'), $rt->f(0.5), 2, 'float');
+        $lo = $rt->construct(2, $rt->component_wise('floor', $p), 'int');
+        $f = $rt->component_wise('fract', $p);
+        $a = $rt->component_wise('clamp', $lo, $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $dims, $rt->i(1), 2, 'int'));
+        $b = $rt->component_wise('clamp', $rt->binary('+', $lo, $rt->i(1), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $dims, $rt->i(1), 2, 'int'));
+        return $rt->component_wise('mix', $rt->component_wise('mix', $rt->texel_fetch($_u_defocusTex, $a, $rt->i(0)), $rt->texel_fetch($_u_defocusTex, $rt->construct(2, $rt->swizzle($b, 'x'), $rt->swizzle($a, 'y'), 'int'), $rt->i(0)), $rt->swizzle($f, 'x')), $rt->component_wise('mix', $rt->texel_fetch($_u_defocusTex, $rt->construct(2, $rt->swizzle($a, 'x'), $rt->swizzle($b, 'y'), 'int'), $rt->i(0)), $rt->texel_fetch($_u_defocusTex, $b, $rt->i(0)), $rt->swizzle($f, 'x')), $rt->swizzle($f, 'y'));
+    };
     $main__void = sub {
         my ($decay, $trailColor, $uv);
         $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
         $trailColor = $rt->texture($_u_trailTex, $uv);
         $decay = $rt->component_wise('clamp', $rt->binary('/', $_u_intensity, $rt->f(100), 1, 'float'), $rt->f(0), $rt->f(1));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('*', $trailColor, $decay, 4, 'float'), $rt->f(0), $rt->f(1)))};
+        if ((((($rt->binary('==', $_u_blendMode, $rt->i(0))) && ($rt->binary('>', $_u_aperture, $rt->f(0))) ? 1 : 0)) && ($rt->binary('!=', $_u_viewMode, $rt->i(0))) ? 1 : 0)) {
+            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('+', $g->{fragColor}, $sampleDefocus__vec2->($uv), 4, 'float'))};
+        }
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

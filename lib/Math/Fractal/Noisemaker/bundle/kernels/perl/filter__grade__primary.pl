@@ -159,11 +159,12 @@ my $run_pixel = sub {
         return $rt->binary('+', $luma, $rt->binary('*', $chroma, $satAmount, 3, 'float'), 3, 'float');
     };
     $main__void = sub {
-        my ($color, $coord, $globalCoord, $rgb);
+        my ($color, $coord, $globalCoord, $rgb, $straight);
         $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
-        $rgb = $srgbToLinear__vec3->($rt->swizzle($color, 'rgb'));
+        $straight = (($rt->binary('>', $rt->swizzle($color, 'a'), $rt->f(0))) ? ($rt->binary('/', $rt->swizzle($color, 'rgb'), $rt->swizzle($color, 'a'), 3, 'float')) : ($rt->construct(3, $rt->f(0))));
+        $rgb = $srgbToLinear__vec3->($straight);
         @{$rgb} = map { $rt->f32($_) } @{($applyWhiteBalance__vec3_float_float->($rgb, $_u_temperature, $_u_tint))};
         @{$rgb} = map { $rt->f32($_) } @{($rt->binary('*', $rgb, $rt->component_wise('pow', $rt->f(2), $_u_exposure), 3, 'float'))};
         @{$rgb} = map { $rt->f32($_) } @{($applyContrast__vec3_float->($rgb, $_u_contrast))};

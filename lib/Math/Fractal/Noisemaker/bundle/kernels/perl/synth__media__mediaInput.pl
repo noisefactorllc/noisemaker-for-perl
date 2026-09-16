@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($map__float_float_float_float_float, $rotate2D__vec2_float, $tile__vec2, $getImage__vec2, $main__void);
+    my ($map__float_float_float_float_float, $rotate2D__vec2_float, $tile__vec2, $mediaTexel__ivec2_ivec2, $sampleMedia__vec2, $getImage__vec2, $main__void);
     my $_retc;
     my $_u_imageTex = $ctx->texture_binding('imageTex');
     my $_u_imageSize = exists $U->{'imageSize'} ? $U->{'imageSize'} : $rt->construct(2, 0.0);
@@ -59,6 +59,24 @@ my $run_pixel = sub {
             }
         }
         return $st;
+    };
+    $mediaTexel__ivec2_ivec2 = sub {
+        my ($p, $size) = @_;
+        $p = $rt->copy($p, 'int');
+        $size = $rt->copy($size, 'int');
+        my ($c);
+        $c = $rt->texel_fetch($_u_imageTex, $rt->component_wise('clamp', $p, $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int')), $rt->i(0));
+        return $rt->construct(4, $rt->binary('*', $rt->swizzle($c, 'rgb'), $rt->swizzle($c, 'a'), 3, 'float'), $rt->swizzle($c, 'a'));
+    };
+    $sampleMedia__vec2 = sub {
+        my ($uv) = @_;
+        $uv = $rt->copy($uv, 'float');
+        my ($f, $lo, $p, $size);
+        $size = $rt->texture_size($_u_imageTex);
+        $p = $rt->binary('-', $rt->binary('*', $uv, $rt->construct(2, $size), 2, 'float'), $rt->f(0.5), 2, 'float');
+        $lo = $rt->construct(2, $rt->component_wise('floor', $p), 'int');
+        $f = $rt->component_wise('fract', $p);
+        return $rt->component_wise('mix', $rt->component_wise('mix', $mediaTexel__ivec2_ivec2->($lo, $size), $mediaTexel__ivec2_ivec2->($rt->binary('+', $lo, $rt->construct(2, $rt->i(1), $rt->i(0), 'int'), 2, 'int'), $size), $rt->swizzle($f, 'x')), $rt->component_wise('mix', $mediaTexel__ivec2_ivec2->($rt->binary('+', $lo, $rt->construct(2, $rt->i(0), $rt->i(1), 'int'), 2, 'int'), $size), $mediaTexel__ivec2_ivec2->($rt->binary('+', $lo, $rt->construct(2, $rt->i(1), $rt->i(1), 'int'), 2, 'int'), $size), $rt->swizzle($f, 'x')), $rt->swizzle($f, 'y'));
     };
     $getImage__vec2 = sub {
         my ($st) = @_;
@@ -116,7 +134,9 @@ my $run_pixel = sub {
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('*', $map__float_float_float_float_float->($_u_offsetX, $rt->unary('-', $rt->f(100)), $rt->f(100), $rt->binary('*', $rt->binary('/', $rt->unary('-', $rt->swizzle($_u_resolution, 'x')), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float')), $rt->f(1.5), 1, 'float'), 1, 'float'));
         $st = $rt->assign_swizzle($st, 'y', $rt->binary('-', $rt->swizzle($st, 'y'), $rt->binary('*', $map__float_float_float_float_float->($_u_offsetY, $rt->unary('-', $rt->f(100)), $rt->f(100), $rt->binary('*', $rt->binary('/', $rt->unary('-', $rt->swizzle($_u_resolution, 'y')), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float')), $rt->f(1.5), 1, 'float'), 1, 'float'));
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('*', $rt->swizzle($st, 'x'), $rt->binary('/', $rt->swizzle($size, 'x'), $rt->swizzle($size, 'y'), 1, 'float'), 1, 'float'));
-        @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $_u_rotation))};
+        if ($rt->binary('!=', $_u_rotation, $rt->f(0))) {
+            @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $_u_rotation))};
+        }
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('/', $rt->swizzle($st, 'x'), $rt->binary('/', $rt->swizzle($size, 'x'), $rt->swizzle($size, 'y'), 1, 'float'), 1, 'float'));
         @{$st} = map { $rt->f32($_) } @{($tile__vec2->($st))};
         @{$st} = map { $rt->f32($_) } @{($rt->binary('+', $st, $rt->binary('/', $rt->f(1), $size, 2, 'float'), 2, 'float'))};
@@ -192,12 +212,9 @@ my $run_pixel = sub {
                 }
             }
         }
-        $text = $rt->texture($_u_imageTex, $st);
+        $text = $sampleMedia__vec2->($st);
         if ((((((($rt->binary('<', $rt->swizzle($st, 'x'), $rt->f(0))) || ($rt->binary('>', $rt->swizzle($st, 'x'), $rt->f(1))) ? 1 : 0)) || ($rt->binary('<', $rt->swizzle($st, 'y'), $rt->f(0))) ? 1 : 0)) || ($rt->binary('>', $rt->swizzle($st, 'y'), $rt->f(1))) ? 1 : 0)) {
-            return $rt->construct(4, $_u_bgColor, $_u_bgAlpha);
-        }
-        if ($rt->binary('>', $rt->swizzle($text, 'a'), $rt->f(0))) {
-            $text = $rt->assign_swizzle($text, 'rgb', $rt->binary('/', $rt->swizzle($text, 'rgb'), $rt->swizzle($text, 'a'), 3, 'float'));
+            return $rt->construct(4, $rt->binary('*', $_u_bgColor, $_u_bgAlpha, 3, 'float'), $_u_bgAlpha);
         }
         return $text;
     };

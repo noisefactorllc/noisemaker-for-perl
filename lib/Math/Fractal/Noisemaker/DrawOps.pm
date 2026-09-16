@@ -62,24 +62,56 @@ sub scatter_point_pixel {
 
 sub _fract { $_[0] - POSIX::floor($_[0]) }
 
+# Port of deposit.wgsl's vertex-stage world->clip projection, shared by
+# pointsRender and pointsBillboardRender. Returns [clip_x, clip_y,
+# camera_depth, camera_distance, projected_scale], or undef if the point is
+# behind the near plane in perspective view (viewMode 2) -- the caller must
+# cull on undef the same way the reference culls before emitting a vertex.
+# camera_depth/camera_distance/projected_scale are only meaningful when
+# viewMode != 0 (ortho/perspective); flat view returns the reference's fixed
+# camera_depth=80, camera_distance=0, projected_scale=1.
+#
+# NOTE on Y orientation: the WGSL reference flips clip_y (`1.0 - pos.y*2.0`
+# in flat mode; an explicit clip_y negation for ortho/perspective) but this
+# port's pre-existing flat/ortho code never did -- some other stage of this
+# pipeline already compensates. Preserve that established "never flip here"
+# convention into the new perspective branch below for consistency, rather
+# than matching the WGSL literally and risking a double-flip regression.
 sub compute_clip_center {
-    my ($x, $y, $z, $uniforms) = @_;
-    return [$x * 2 - 1, $y * 2 - 1] if int($uniforms->{viewMode} // 0) == 0;
+    my ($x, $y, $z, $uniforms, $dest_width, $dest_height) = @_;
+    my $view_mode = int($uniforms->{viewMode} // 0);
+    return [$x * 2 - 1, $y * 2 - 1, 80, 0, 1] if $view_mode == 0;
 
-    my $is_2d = abs($z) < 1 && $x >= 0 && $x <= 1 && $y >= 0 && $y <= 1;
+    my $is_2d = $view_mode == 1 && abs($z) < 1 && $x >= 0 && $x <= 1 && $y >= 0 && $y <= 1;
     my ($px, $py, $pz) = $is_2d ? ($x - 0.5, $y - 0.5, 0) : ($x, $y, $z);
     my ($rx, $ry, $rz) = map { 0 + ($uniforms->{$_} // 0) } qw(rotateX rotateY rotateZ);
 
     my ($cos_x, $sin_x) = (cos($rx), sin($rx));
     my ($x1, $y1, $z1) = ($px, $py * $cos_x - $pz * $sin_x, $py * $sin_x + $pz * $cos_x);
     my ($cos_y, $sin_y) = (cos($ry), sin($ry));
-    my ($x2, $y2) = ($x1 * $cos_y + $z1 * $sin_y, $y1);
+    my ($x2, $y2, $z2) = ($x1 * $cos_y + $z1 * $sin_y, $y1, -$x1 * $sin_y + $z1 * $cos_y);
     my ($cos_z, $sin_z) = (cos($rz), sin($rz));
     my $fx = $x2 * $cos_z - $y2 * $sin_z + ($uniforms->{posX} // 0);
     my $fy = $x2 * $sin_z + $y2 * $cos_z + ($uniforms->{posY} // 0);
+    my $fz = $z2 + ($uniforms->{posZ} // 0);
+    my $camera_depth = 80 - $fz;
+    my $camera_distance = sqrt($fx * $fx + $fy * $fy + $camera_depth * $camera_depth);
     my $scale = 0 + ($uniforms->{viewScale} // 0);
-    return $is_2d ? [$fx * 3.5 * $scale, $fy * 3.5 * $scale]
-                  : [($fx / 40) * $scale, ($fy / 40) * $scale];
+
+    if ($view_mode == 2) {
+        return undef if $camera_depth <= 0.1;
+        my $fov = _clamp(0 + ($uniforms->{fieldOfView} // 60), 10, 150);
+        my $focal_length = 1 / POSIX::tan($fov * 0.00872664626);
+        my $clip_x = $fx * $focal_length * $scale / $camera_depth;
+        $clip_x *= $dest_height / $dest_width if $dest_width && $dest_height;
+        my $clip_y = $fy * $focal_length * $scale / $camera_depth;
+        my $projected_scale = 80 * $focal_length * $scale / (1.732050808 * $camera_depth);
+        return [$clip_x, $clip_y, $camera_depth, $camera_distance, $projected_scale];
+    }
+    if ($is_2d) {
+        return [$fx * 3.5 * $scale, $fy * 3.5 * $scale, $camera_depth, $camera_distance, 1];
+    }
+    return [($fx / 40) * $scale, ($fy / 40) * $scale, $camera_depth, $camera_distance, 1];
 }
 
 sub _dla_deposit {
@@ -199,8 +231,9 @@ sub _points_render_deposit {
         my ($sx, $sy) = ($v % $width, POSIX::floor($v / $width));
         my $pos = texel_fetch_agent($xyz, $sx, $sy);
         next if $pos->[3] < 0.5;
-        my $clip = compute_clip_center(@$pos[0 .. 2], $ctx->{uniforms});
-        my $offset = scatter_point_pixel(@$clip, 1, $dest->width, $dest->height);
+        my $clip = compute_clip_center(@$pos[0 .. 2], $ctx->{uniforms}, $dest->width, $dest->height);
+        next unless defined $clip;
+        my $offset = scatter_point_pixel(@$clip[0, 1], 1, $dest->width, $dest->height);
         next unless defined $offset;
         my $color = texel_fetch_agent($rgba, $sx, $sy);
         for my $channel (0 .. 3) {
@@ -310,6 +343,15 @@ sub _billboard_deposit {
     my $size_variation = ($uniforms->{sizeVariation} // 0) / 100;
     my $rotation_variation = ($uniforms->{rotationVar} // 0) / 100;
     my $premultiplied = _premultiplied_blend($ctx->{pass});
+    my $size_distance = 0 + ($uniforms->{sizeDistance} // 0);
+    my $brightness_distance = 0 + ($uniforms->{brightnessDistance} // 0);
+    # KNOWN GAP (this round, reference 0ed489ec): the reference's depth-sorted
+    # alpha-blend draw order and aperture defocus blur are NOT ported -- see
+    # transpiler/ComputedDefs.pm's pointsBillboardRender header comment. This
+    # scanline rasterizer draws in emission order, not depth-sorted, and
+    # `aperture`/`focalDistance` (accepted below, matching python/ruby) have
+    # no visible effect: only the perspective CAMERA and distance-based size/
+    # brightness fade (sizeDistance/brightnessDistance) are ported.
     my $inf = 9**9**9;
     my $pixels = 0;
 
@@ -319,9 +361,20 @@ sub _billboard_deposit {
         my $pos = texel_fetch_agent($xyz, $sx, $sy);
         next if $pos->[3] < 0.5;
         my $color = texel_fetch_agent($rgba, $sx, $sy);
-        my $center = compute_clip_center(@$pos[0 .. 2], $uniforms);
-        my $size = ($uniforms->{pointSize} // 0)
-            * (1 - $size_variation * (billboard_hash($v, $uniforms->{seed} // 0) - 0.5));
+        my $center = compute_clip_center(@$pos[0 .. 2], $uniforms, $dest_width, $dest_height);
+        next unless defined $center;
+        my ($camera_depth, $camera_distance, $projected_scale) = @$center[2, 3, 4];
+        my $size_fade = 1;
+        $size_fade = 1 - _smoothstep(0, $size_distance, $camera_distance) if $size_distance > 0;
+        my $brightness_fade = 1;
+        $brightness_fade = 1 - _smoothstep(0, $brightness_distance, $camera_distance) if $brightness_distance > 0;
+        next if $brightness_fade <= 0;
+        if ($brightness_fade < 1) {
+            $color = [map { $_ * $brightness_fade } @$color];
+        }
+        my $size = ($uniforms->{pointSize} // 0) * $projected_scale
+            * (1 - $size_variation * (billboard_hash($v, $uniforms->{seed} // 0) - 0.5))
+            * $size_fade;
         next unless $size > 0;
         my $rotation = $rotation_variation
             * billboard_hash($v + 1234.5, $uniforms->{seed} // 0) * 6.283185;
