@@ -7,7 +7,7 @@ use File::Spec;
 use File::Temp ();
 
 # Cross-language parity: Perl renders must match the JS oracle byte-for-byte
-# on a fast subset (the full 169-image-effect sweep lives in scripts/parity.pl).
+# on a fast subset (the full 170-image-effect sweep lives in scripts/parity.pl).
 
 use Math::Fractal::Noisemaker::PNG qw(decode_png encode_png);
 use Math::Fractal::Noisemaker::Renderer qw(render_effect);

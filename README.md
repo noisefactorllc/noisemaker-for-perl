@@ -52,9 +52,9 @@ Or from Perl:
 
 ## Parity
 
-`scripts/parity.pl` compares all 169 non-iterated image effects with the
+`scripts/parity.pl` compares all 170 non-iterated image effects with the
 reference JS engine (a sibling `noisemaker-for-cpu` checkout). It requires
-exact RGBA8 bytes and fails on differences or errors. The 36 iterated and typed
+exact RGBA8 bytes and fails on differences or errors. The 38 iterated and typed
 effects are reported separately and covered by the DSL tests.
 
 ## Regenerating the bundle
