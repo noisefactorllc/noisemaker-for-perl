@@ -291,6 +291,78 @@ subtest 'CPU frame export preserves rows, storage identity, and alpha modes' => 
     is(export_bytes($alpha, 'premultiplied'), pack('C*', 128, 0, 32, 64, 0, 64, 191, 128), 'premultiplied before quantization');
 };
 
+subtest 'CpuFrameExportAdapter directly handles create_slot, begin, poll, read, and destroy_slot across alpha modes' => sub {
+    my $adapter = Math::Fractal::Noisemaker::CpuFrameExportAdapter->new;
+    my $slot = $adapter->create_slot(
+        0,
+        {
+            width => 2,
+            height => 1,
+            format => 'rgba8unorm',
+            colorSpace => 'srgb',
+            alphaMode => 'straight',
+            fps => 30,
+        },
+    );
+    is($slot->{index}, 0, 'slot index initialized');
+    ok(!$slot->{ready}, 'slot initially not ready');
+    ok(!$adapter->poll($slot), 'poll returns false before begin');
+
+    my $frame = Math::Fractal::Noisemaker::Surface->new(2, 1, [0.5, 0.2, 0.8, 1, 0, 1, 0, 0.5]);
+    $adapter->begin($slot, $frame);
+    ok($adapter->poll($slot), 'poll returns true after begin');
+
+    my $read_frame = $adapter->read($slot);
+    is($read_frame->width, 2, 'read frame width');
+    is($read_frame->height, 1, 'read frame height');
+    is_deeply([unpack('C*', ${ $read_frame->data })], [128, 51, 204, 255, 0, 255, 0, 128], 'straight RGBA8 bytes match');
+    ok(!$adapter->poll($slot), 'poll returns false after read');
+
+    my $opaque_slot = $adapter->create_slot(
+        1,
+        {
+            width => 1,
+            height => 1,
+            format => 'rgba8unorm',
+            colorSpace => 'srgb',
+            alphaMode => 'opaque',
+            fps => 30,
+        },
+    );
+    $adapter->begin($opaque_slot, Math::Fractal::Noisemaker::Surface->new(1, 1, [0.25, 0.5, 0.75, 0.1]));
+    is_deeply([unpack('C*', ${ $adapter->read($opaque_slot)->data })], [64, 128, 191, 255], 'opaque RGBA8 bytes match');
+
+    my $premul_slot = $adapter->create_slot(
+        2,
+        {
+            width => 1,
+            height => 1,
+            format => 'rgba8unorm',
+            colorSpace => 'srgb',
+            alphaMode => 'premultiplied',
+            fps => 30,
+        },
+    );
+    $adapter->begin($premul_slot, Math::Fractal::Noisemaker::Surface->new(1, 1, [0.5, 1, 0.25, 0.5]));
+    is_deeply([unpack('C*', ${ $adapter->read($premul_slot)->data })], [64, 128, 32, 128], 'premultiplied RGBA8 bytes match');
+
+    $adapter->destroy_slot($slot);
+    eval { $adapter->begin($slot, $frame) };
+    like($@, qr/not usable/, 'begin rejects destroyed slot');
+    eval { $adapter->poll($slot) };
+    like($@, qr/not usable/, 'poll rejects destroyed slot');
+    eval { $adapter->read($slot) };
+    like($@, qr/not usable/, 'read rejects destroyed slot');
+
+    $adapter->destroy_slot($opaque_slot);
+    eval { $adapter->poll($opaque_slot) };
+    like($@, qr/not usable/, 'poll rejects destroyed opaque slot');
+
+    $adapter->destroy_slot($premul_slot);
+    eval { $adapter->poll($premul_slot) };
+    like($@, qr/not usable/, 'poll rejects destroyed premul slot');
+};
+
 subtest 'CPU frame export rejects extent mismatch without consuming the slot' => sub {
     my @errors;
     my $queue = Math::Fractal::Noisemaker::FrameExportQueue->new(

@@ -82,14 +82,36 @@ sub begin {
 
     my @bytes;
     my $source = $surface->data;
-    for (my $index = 0; $index < @$source; $index += 4) {
-        my $alpha = $source->[ $index + 3 ];
-        my $color_scale = $slot->{alpha_mode} eq 'premultiplied' ? $alpha : 1;
-        push @bytes,
-            _byte_from_float($source->[$index] * $color_scale),
-            _byte_from_float($source->[ $index + 1 ] * $color_scale),
-            _byte_from_float($source->[ $index + 2 ] * $color_scale),
-            _byte_from_float($slot->{alpha_mode} eq 'opaque' ? 1 : $alpha);
+    my $len = @$source;
+    my $alpha_mode = $slot->{alpha_mode};
+
+    if ($alpha_mode eq 'premultiplied') {
+        for (my $index = 0; $index < $len; $index += 4) {
+            my $alpha = $source->[ $index + 3 ];
+            push @bytes,
+                _byte_from_float($source->[$index] * $alpha),
+                _byte_from_float($source->[ $index + 1 ] * $alpha),
+                _byte_from_float($source->[ $index + 2 ] * $alpha),
+                _byte_from_float($alpha);
+        }
+    }
+    elsif ($alpha_mode eq 'opaque') {
+        for (my $index = 0; $index < $len; $index += 4) {
+            push @bytes,
+                _byte_from_float($source->[$index]),
+                _byte_from_float($source->[ $index + 1 ]),
+                _byte_from_float($source->[ $index + 2 ]),
+                255;
+        }
+    }
+    else {
+        for (my $index = 0; $index < $len; $index += 4) {
+            push @bytes,
+                _byte_from_float($source->[$index]),
+                _byte_from_float($source->[ $index + 1 ]),
+                _byte_from_float($source->[ $index + 2 ]),
+                _byte_from_float($source->[ $index + 3 ]);
+        }
     }
     ${ $slot->{data} } = pack('C*', @bytes);
     $slot->{ready} = 1;
