@@ -34,4 +34,14 @@ my $effects = $metadata->{effects};
 ok($effects, 'metadata declares effects');
 is(scalar(keys %$effects), 208, 'metadata exposes all 208 bundled effects');
 
+my $bundle_lock_path = File::Spec->catfile($FindBin::Bin, '..', 'lib', 'Math', 'Fractal', 'Noisemaker', 'bundle', 'bundle-lock.json');
+ok(-f $bundle_lock_path, 'bundle-lock.json exists');
+open my $bfh, '<', $bundle_lock_path or die "Could not open $bundle_lock_path: $!";
+my $bundle_lock_content = do { local $/; <$bfh> };
+close $bfh;
+my $bundle_lock = JSON::PP::decode_json($bundle_lock_content);
+my $hashes = $bundle_lock->{hashes};
+ok($hashes, 'bundle-lock declares hashes');
+is(scalar(keys %$hashes), 292, 'bundle-lock.json locks all 292 program hashes');
+
 done_testing();
