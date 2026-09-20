@@ -128,4 +128,25 @@ for my $effect_id (qw(filter/mosaicTiles filter/stipple filter/strokes)) {
     is(max_diff($js, $pl), 0, "$effect_id canonical rounding byte-exact");
 }
 
+subtest 'noisemaker-for-cpu upstream source lock and snapshot parity' => sub {
+    my $source_lock_path = File::Spec->catfile($CPU_DIR, 'scripts', 'upstream', 'source-lock.js');
+    my $snapshot_path = File::Spec->catfile($CPU_DIR, 'src', 'effects', 'generated', 'upstream-snapshot.js');
+
+    plan skip_all => 'noisemaker-for-cpu source files not found'
+        unless -f $source_lock_path && -f $snapshot_path;
+
+    open my $sfh, '<:encoding(UTF-8)', $source_lock_path or die "Could not open $source_lock_path: $!";
+    my $source_lock_text = do { local $/; <$sfh> };
+    close $sfh;
+
+    like($source_lock_text, qr/PINNED_UPSTREAM_REVISION\s*=\s*['"]beabda385253a3461d2ee5ee2f1b032cbe9a2832['"]/, 'upstream source-lock revision is beabda38');
+    like($source_lock_text, qr/PINNED_SOURCE_DIGEST\s*=\s*['"]7c536c61938402fe8f56156e792b57ad201747798a8a943fac3eadb1ff53b885['"]/, 'upstream source-lock digest is 7c536c61');
+
+    open my $snfh, '<:encoding(UTF-8)', $snapshot_path or die "Could not open $snapshot_path: $!";
+    my $snapshot_text = do { local $/; <$snfh> };
+    close $snfh;
+
+    like($snapshot_text, qr/UPSTREAM_REVISION\s*=\s*['"]beabda385253a3461d2ee5ee2f1b032cbe9a2832['"]/, 'upstream snapshot revision is beabda38');
+};
+
 done_testing();
