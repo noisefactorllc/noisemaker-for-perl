@@ -32,7 +32,7 @@ close $mfh;
 my $metadata = JSON::PP::decode_json($metadata_content);
 my $effects = $metadata->{effects};
 ok($effects, 'metadata declares effects');
-is(scalar(keys %$effects), 208, 'metadata exposes all 208 bundled effects');
+is(scalar(keys %$effects), 205, 'metadata exposes all 205 bundled effects');
 
 my $bundle_lock_path = File::Spec->catfile($FindBin::Bin, '..', 'lib', 'Math', 'Fractal', 'Noisemaker', 'bundle', 'bundle-lock.json');
 ok(-f $bundle_lock_path, 'bundle-lock.json exists');
@@ -42,6 +42,6 @@ close $bfh;
 my $bundle_lock = JSON::PP::decode_json($bundle_lock_content);
 my $hashes = $bundle_lock->{hashes};
 ok($hashes, 'bundle-lock declares hashes');
-is(scalar(keys %$hashes), 292, 'bundle-lock.json locks all 292 program hashes');
+is(scalar(keys %$hashes), 289, 'bundle-lock.json locks all 289 program hashes');
 
 done_testing();

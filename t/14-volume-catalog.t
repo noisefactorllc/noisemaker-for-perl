@@ -97,7 +97,7 @@ my $eligible;
     $eligible = Math::Fractal::Noisemaker::Transpiler::CDN::eligible_ids();
 }
 my %eligible = map { $_ => 1 } @$eligible;
-is(scalar(@$eligible), 186, 'CDN build selects 167 image effects and 19 volume effects');
+is(scalar(@$eligible), 183, 'CDN build selects 164 image effects and 19 volume effects');
 is_deeply(
     [grep { $eligible{$_} } @volume_effects],
     \@volume_effects,

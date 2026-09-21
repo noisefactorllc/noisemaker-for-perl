@@ -1047,7 +1047,7 @@
           "ui": {
             "category": "refract",
             "control": "slider",
-            "label": "refract a → b"
+            "label": "refract a \u2192 b"
           },
           "uniform": "refractAAmt"
         },
@@ -1071,7 +1071,7 @@
           "ui": {
             "category": "refract",
             "control": "slider",
-            "label": "refract b → a"
+            "label": "refract b \u2192 a"
           },
           "uniform": "refractBAmt"
         },
@@ -5158,55 +5158,6 @@
       ],
       "textures": {}
     },
-    "filter/bc": {
-      "domain": "image",
-      "func": "bc",
-      "kind": "filter",
-      "namespace": "filter",
-      "paramOrder": [
-        "brightness",
-        "contrast"
-      ],
-      "params": {
-        "brightness": {
-          "default": 1,
-          "max": 10,
-          "min": 0,
-          "type": "float",
-          "ui": {
-            "control": "slider",
-            "label": "brightness"
-          },
-          "uniform": "brightness"
-        },
-        "contrast": {
-          "default": 0.5,
-          "max": 1,
-          "min": 0,
-          "type": "float",
-          "ui": {
-            "control": "slider",
-            "label": "contrast"
-          },
-          "uniform": "contrast"
-        }
-      },
-      "passes": [
-        {
-          "inputs": {
-            "inputTex": "inputTex"
-          },
-          "key": "filter/bc:bc",
-          "name": "render",
-          "outputs": {
-            "fragColor": "outputTex"
-          },
-          "program": "bc",
-          "uniforms": {}
-        }
-      ],
-      "textures": {}
-    },
     "filter/bloom": {
       "domain": "image",
       "func": "bloom",
@@ -6064,7 +6015,7 @@
           "type": "float",
           "ui": {
             "control": "slider",
-            "label": "unmatched α"
+            "label": "unmatched \u03b1"
           },
           "uniform": "keepAlpha"
         },
@@ -6076,7 +6027,7 @@
           "type": "float",
           "ui": {
             "control": "slider",
-            "label": "matched α"
+            "label": "matched \u03b1"
           },
           "uniform": "replaceAlpha"
         },
@@ -6142,46 +6093,6 @@
             "color": "outputTex"
           },
           "program": "colorReplace",
-          "uniforms": {}
-        }
-      ],
-      "textures": {}
-    },
-    "filter/colorspace": {
-      "domain": "image",
-      "func": "colorspace",
-      "kind": "filter",
-      "namespace": "filter",
-      "paramOrder": [
-        "mode"
-      ],
-      "params": {
-        "mode": {
-          "choices": {
-            "hsv": 0,
-            "oklab": 1,
-            "oklch": 2
-          },
-          "default": 0,
-          "type": "int",
-          "ui": {
-            "control": "dropdown",
-            "label": "mode"
-          },
-          "uniform": "mode"
-        }
-      },
-      "passes": [
-        {
-          "inputs": {
-            "inputTex": "inputTex"
-          },
-          "key": "filter/colorspace:colorspace",
-          "name": "render",
-          "outputs": {
-            "fragColor": "outputTex"
-          },
-          "program": "colorspace",
           "uniforms": {}
         }
       ],
@@ -9101,67 +9012,6 @@
             "fragColor": "outputTex"
           },
           "program": "historicPalette",
-          "uniforms": {}
-        }
-      ],
-      "textures": {}
-    },
-    "filter/hs": {
-      "domain": "image",
-      "func": "hs",
-      "kind": "filter",
-      "namespace": "filter",
-      "paramOrder": [
-        "rotation",
-        "hueRange",
-        "saturation"
-      ],
-      "params": {
-        "hueRange": {
-          "default": 100,
-          "max": 200,
-          "min": 0,
-          "type": "float",
-          "ui": {
-            "control": "slider",
-            "label": "hue range"
-          },
-          "uniform": "hueRange"
-        },
-        "rotation": {
-          "default": 0,
-          "max": 180,
-          "min": -180,
-          "type": "float",
-          "ui": {
-            "control": "slider",
-            "label": "hue rotation"
-          },
-          "uniform": "rotation"
-        },
-        "saturation": {
-          "default": 1,
-          "max": 4,
-          "min": 0,
-          "type": "float",
-          "ui": {
-            "control": "slider",
-            "label": "saturation"
-          },
-          "uniform": "saturation"
-        }
-      },
-      "passes": [
-        {
-          "inputs": {
-            "inputTex": "inputTex"
-          },
-          "key": "filter/hs:hs",
-          "name": "render",
-          "outputs": {
-            "fragColor": "outputTex"
-          },
-          "program": "hs",
           "uniforms": {}
         }
       ],

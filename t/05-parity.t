@@ -7,7 +7,7 @@ use File::Spec;
 use File::Temp ();
 
 # Cross-language parity: Perl renders must match the JS oracle byte-for-byte
-# on a fast subset (the full 170-image-effect sweep lives in scripts/parity.pl).
+# on a fast subset (the full 167-image-effect sweep lives in scripts/parity.pl).
 
 use Math::Fractal::Noisemaker::PNG qw(decode_png encode_png);
 use Math::Fractal::Noisemaker::Renderer qw(render_effect);
@@ -139,14 +139,14 @@ subtest 'noisemaker-for-cpu upstream source lock and snapshot parity' => sub {
     my $source_lock_text = do { local $/; <$sfh> };
     close $sfh;
 
-    like($source_lock_text, qr/PINNED_UPSTREAM_REVISION\s*=\s*['"]beabda385253a3461d2ee5ee2f1b032cbe9a2832['"]/, 'upstream source-lock revision is beabda38');
-    like($source_lock_text, qr/PINNED_SOURCE_DIGEST\s*=\s*['"]7c536c61938402fe8f56156e792b57ad201747798a8a943fac3eadb1ff53b885['"]/, 'upstream source-lock digest is 7c536c61');
+    like($source_lock_text, qr/PINNED_UPSTREAM_REVISION\s*=\s*['"]f61ac07320888732594689258c6f7042cde0303b['"]/, 'upstream source-lock revision is f61ac073');
+    like($source_lock_text, qr/PINNED_SOURCE_DIGEST\s*=\s*['"]cfc89f8f95b9b1798e14d3604a8cd786bfcc2243e427e8042f5a8aea0b982caf['"]/, 'upstream source-lock digest is cfc89f8f');
 
     open my $snfh, '<:encoding(UTF-8)', $snapshot_path or die "Could not open $snapshot_path: $!";
     my $snapshot_text = do { local $/; <$snfh> };
     close $snfh;
 
-    like($snapshot_text, qr/UPSTREAM_REVISION\s*=\s*['"]beabda385253a3461d2ee5ee2f1b032cbe9a2832['"]/, 'upstream snapshot revision is beabda38');
+    like($snapshot_text, qr/UPSTREAM_REVISION\s*=\s*['"]f61ac07320888732594689258c6f7042cde0303b['"]/, 'upstream snapshot revision is f61ac073');
 };
 
 done_testing();

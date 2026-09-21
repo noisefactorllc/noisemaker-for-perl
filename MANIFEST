@@ -25,7 +25,6 @@ lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__shapes__shapes
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__shapes3d__shapes3d.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/classicNoisedeck__splat__splat.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__adjust__adjust.pl
-lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__bc__bc.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__bloom__brightPass.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__bloom__composite.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__bloom__ntapGather.pl
@@ -43,7 +42,6 @@ lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__chrome__chBlurV.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__chrome__chMap.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__clouds__clouds.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__colorReplace__colorReplace.pl
-lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__colorspace__colorspace.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__corrupt__corrupt.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__craquelure__craquelure.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__crt__crt.pl
@@ -73,7 +71,6 @@ lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__highPass__hpBlurH.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__highPass__hpBlurV.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__highPass__hpCombine.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__historicPalette__historicPalette.pl
-lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__hs__hs.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__invert__inv.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__lens__lens.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/filter__lensFlare__lensFlare.pl
