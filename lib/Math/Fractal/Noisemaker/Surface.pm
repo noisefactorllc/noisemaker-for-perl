@@ -98,3 +98,62 @@ sub to_rgba8 {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Math::Fractal::Noisemaker::Surface - top-down RGBA pixel storage
+
+=head1 SYNOPSIS
+
+    use Math::Fractal::Noisemaker::Surface;
+    my $image = Math::Fractal::Noisemaker::Surface->new(32, 32);
+    $image->clear([0.25, 0.5, 0.75, 1]);
+    my $rgba = $image->to_rgba8;
+
+=head1 METHODS
+
+=head2 new($width, $height, $data)
+
+Creates a surface. Dimensions must be positive integers, with at most
+16,777,216 pixels. Omit C<$data> for a zero-filled image. Supplied data must be
+an array reference with exactly C<width * height * 4> numeric components in
+RGBA order, left to right, top to bottom. The array is borrowed, not copied
+or rounded by this constructor. Call C<clone> for independent storage.
+
+=head2 from_rgba8($width, $height, $bytes)
+
+Class method accepting exactly four packed bytes per pixel. Divides components
+by 255 and rounds to float32. There is no color-profile or gamma conversion.
+
+=head2 width(), height(), data()
+
+Return dimensions and the live mutable component array reference. Pixel
+C<($x, $y)> begins at index C<4 * ($y * $image-E<gt>width + $x)>.
+
+=head2 clear($rgba)
+
+Fills the surface with four components rounded to float32; defaults to
+transparent black. Returns the surface itself.
+
+=head2 clone()
+
+Returns an independent copy of the components and sampling filter.
+
+=head2 filter(), filter($mode)
+
+Gets or sets the sampling mode. Use C<nearest> (default) or C<linear>.
+
+=head2 to_rgba8()
+
+Returns packed, top-down RGBA bytes, with straight alpha and no gamma transform.
+Finite components are clamped to 0..1 and rounded to the nearest byte;
+non-finite components become zero. Does not modify the surface.
+
+=head1 ERRORS
+
+Invalid dimensions and buffer lengths throw exceptions. The pixel limit is
+not a memory reservation: Perl arrays use far more memory than packed bytes.
+
+=cut

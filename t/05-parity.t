@@ -3,6 +3,8 @@ use warnings;
 use Test::More;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
+use lib "$FindBin::Bin/../scripts";
+use ParityOracle qw(verify_oracle);
 use File::Spec;
 use File::Temp ();
 
@@ -18,7 +20,11 @@ my $CLI = File::Spec->catfile($CPU_DIR, 'bin', 'noisemaker-cpu.js');
 my $PARITY_SCRIPT = File::Spec->catfile($FindBin::Bin, '..', 'scripts', 'parity.pl');
 
 plan skip_all => 'JS oracle (node + noisemaker-cpu) not available'
-    unless -e $CLI && system('node --version >/dev/null 2>&1') == 0;
+    unless $ENV{RELEASE_TESTING} || (-e $CLI && system('node --version >/dev/null 2>&1') == 0);
+
+my $verified = eval { verify_oracle($CPU_DIR); 1 };
+BAIL_OUT("Reference verification failed: $@") unless $verified;
+pass('reference runtime matches the recorded oracle pin');
 
 my $TMP = File::Temp::tempdir(CLEANUP => 1);
 
@@ -127,26 +133,5 @@ for my $effect_id (qw(filter/mosaicTiles filter/stipple filter/strokes)) {
         width => 8, height => 8, seed => 1, time => 0.25);
     is(max_diff($js, $pl), 0, "$effect_id canonical rounding byte-exact");
 }
-
-subtest 'noisemaker-for-cpu upstream source lock and snapshot parity' => sub {
-    my $source_lock_path = File::Spec->catfile($CPU_DIR, 'scripts', 'upstream', 'source-lock.js');
-    my $snapshot_path = File::Spec->catfile($CPU_DIR, 'src', 'effects', 'generated', 'upstream-snapshot.js');
-
-    plan skip_all => 'noisemaker-for-cpu source files not found'
-        unless -f $source_lock_path && -f $snapshot_path;
-
-    open my $sfh, '<:encoding(UTF-8)', $source_lock_path or die "Could not open $source_lock_path: $!";
-    my $source_lock_text = do { local $/; <$sfh> };
-    close $sfh;
-
-    like($source_lock_text, qr/PINNED_UPSTREAM_REVISION\s*=\s*['"]e5bd2013087e54d53841db8c45a54f973aaa5174['"]/, 'upstream source-lock revision is e5bd2013');
-    like($source_lock_text, qr/PINNED_SOURCE_DIGEST\s*=\s*['"]5da0cf512a52ea78d33bb0fa9f571fcbc2de83950f452673717d3dd3aa43a95a['"]/, 'upstream source-lock digest is 5da0cf51');
-
-    open my $snfh, '<:encoding(UTF-8)', $snapshot_path or die "Could not open $snapshot_path: $!";
-    my $snapshot_text = do { local $/; <$snfh> };
-    close $snfh;
-
-    like($snapshot_text, qr/UPSTREAM_REVISION\s*=\s*['"]e5bd2013087e54d53841db8c45a54f973aaa5174['"]/, 'upstream snapshot revision is e5bd2013');
-};
 
 done_testing();

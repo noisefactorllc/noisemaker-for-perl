@@ -14,6 +14,9 @@ use Digest::SHA    ();
 use File::Basename ();
 use File::Path     ();
 use File::Spec     ();
+use File::Copy     ();
+use File::Find     ();
+use File::Temp     ();
 use JSON::PP       ();
 use Exporter 'import';
 
@@ -22,6 +25,7 @@ use Math::Fractal::Noisemaker::Transpiler::Preprocess  qw(normalize);
 use Math::Fractal::Noisemaker::Transpiler::Parser      qw(parse);
 use Math::Fractal::Noisemaker::Transpiler::Codegen     qw(emit_perl);
 use Math::Fractal::Noisemaker::Transpiler::SharedEnums qw(%SHARED_ENUMS);
+use Math::Fractal::Noisemaker::KernelCache ();
 
 our @EXPORT_OK = qw(build run bundle_dir);
 our $STATEFUL_REVISION = 'a024dc3a960cc44af454abc7aebce50456c194e6';
@@ -108,7 +112,58 @@ sub _write_raw {
     my ($path, $text) = @_;
     File::Path::make_path(File::Basename::dirname($path));
     open my $fh, '>:raw', $path or die "cannot write $path: $!\n";
-    print {$fh} $text;
+    print {$fh} $text or die "cannot write $path: $!\n";
+    close $fh or die "cannot close $path: $!\n";
+}
+
+# Stage on the same filesystem. A rejected build never changes the installed
+# bundle. If publication fails, restore the previous directory; retain its
+# backup for recovery if the filesystem also refuses that restoration.
+sub _publish_bundle {
+    my ($out_dir, $files, $bundle) = @_;
+    die "bundle directory must not be a symlink\n" if -l $out_dir;
+    my $parent = File::Basename::dirname($out_dir);
+    File::Path::make_path($parent);
+    my $work = File::Temp::tempdir('.bundle-build-XXXXXX', DIR => $parent, CLEANUP => 0);
+    my ($stage, $backup) = ("$work/new", "$work/previous");
+    my $ok = eval {
+        File::Path::make_path($stage);
+        if (-d $out_dir) {
+            File::Find::find({ no_chdir => 1, wanted => sub {
+                my $src = $File::Find::name;
+                die "bundle contains a symlink: $src\n" if -l $src;
+                return if $src eq $out_dir;
+                my $dst = File::Spec->catfile($stage, File::Spec->abs2rel($src, $out_dir));
+                if (-d $src) { File::Path::make_path($dst) }
+                elsif (-f $src) {
+                    File::Path::make_path(File::Basename::dirname($dst));
+                    File::Copy::copy($src, $dst) or die "cannot stage $src: $!\n";
+                }
+            }}, $out_dir);
+        }
+        _write_raw(File::Spec->catfile($stage, $_), $files->{$_}) for sort keys %$files;
+        for my $effect (values %{ $bundle->{effects} }) {
+            for my $pass (@{ $effect->{passes} }) {
+                next unless defined $pass->{key};
+                my $path = File::Spec->catfile($stage, 'kernels', 'perl', _file($pass->{key}));
+                die "candidate bundle is missing kernel $pass->{key}\n" unless -f $path;
+            }
+        }
+        my $had_old = -e $out_dir;
+        rename($out_dir, $backup) or die "cannot preserve $out_dir: $!\n" if $had_old;
+        unless (rename($stage, $out_dir)) {
+            my $error = $!;
+            if ($had_old) {
+                rename($backup, $out_dir)
+                    or die "cannot restore bundle; previous bundle retained at $backup: $!\n";
+            }
+            die "cannot publish $out_dir: $error\n";
+        }
+        1;
+    };
+    my $error = $@;
+    File::Path::remove_tree($work) if $ok || !-e $backup;
+    die $error unless $ok;
 }
 
 sub _preserve_stateful {
@@ -134,10 +189,9 @@ sub _preserve_stateful {
 
 sub build {
     my ($ids, %opt) = @_;
-    my $out_dir     = defined $opt{out_dir} ? $opt{out_dir} : bundle_dir();
+    die "build requires at least one effect id\n" unless ref $ids eq 'ARRAY' && @$ids;
+    my $out_dir     = File::Spec->rel2abs(defined $opt{out_dir} ? $opt{out_dir} : bundle_dir());
     my $update_lock = $opt{update_lock} ? 1 : 0;
-    my $kdir        = File::Spec->catdir($out_dir, 'kernels', 'perl');
-    File::Path::make_path($kdir);
     my $lock_path   = File::Spec->catfile($out_dir, 'bundle-lock.json');
     my $metadata_path = File::Spec->catfile($out_dir, 'metadata.json');
     my $old         = _read_json($lock_path) || { hashes => {} };
@@ -152,14 +206,12 @@ sub build {
         },
         effects => {},
     };
-    my ($n_ok, $n_skip) = (0, 0);
+    my $n_ok = 0;
+    my %files;
     for my $eid (@$ids) {
         my $eff = eval { fetch_effect($eid) };
         if (!$eff) {
-            $n_skip++;
-            (my $e = $@) =~ s/\n.*//s;
-            print STDERR "skip $eid: cdn: " . substr($e, 0, 70) . "\n";
-            next;
+            die "cannot fetch $eid: " . ($@ || "no effect returned\n");
         }
         _resolve_shared_enums($eff->{params});
         my $defines = runtime_defines($eff->{params});
@@ -177,8 +229,9 @@ sub build {
                     $pass{outputs}  ||= {};
                     $pass{uniforms} ||= {};
                     push @passes, \%pass;
+                    next;
                 }
-                next;
+                die "missing GLSL for $eid:$p->{program}\n";
             }
             my $key = _key($eid, $p->{program});
             (my $stripped = $glsl) =~ s/^\s+|\s+$//g;
@@ -189,12 +242,10 @@ sub build {
                 emit_perl($ast, $norm->{outputs}, $norm->{varyings});
             };
             if (!defined $perl) {
-                $n_skip++;
-                (my $e = $@) =~ s/\n.*//s;
-                print STDERR "skip $key: " . substr($e, 0, 80) . "\n";
-                next;
+                die "cannot compile $key: $@";
             }
-            _write_raw(File::Spec->catfile($kdir, _file($key)), $perl);
+            Math::Fractal::Noisemaker::KernelCache::load_kernel($perl, $key);
+            $files{File::Spec->catfile('kernels', 'perl', _file($key))} = $perl;
             push @drift, $key
                 if $old->{hashes} && $old->{hashes}{$key} && $old->{hashes}{$key} ne $h;
             $hashes{$key} = $h;
@@ -206,7 +257,7 @@ sub build {
             $pass{uniforms} ||= {};
             push @passes, \%pass;
         }
-        next unless @passes;
+        die "effect $eid has no renderable passes\n" unless @passes;
         $bundle->{effects}{$eid} = {
             namespace => $eff->{namespace},
             func      => $eff->{func},
@@ -228,10 +279,9 @@ sub build {
             if exists $eff->{iterated};
     }
     if (@drift && !$update_lock) {
-        print STDERR "\nSHADER DRIFT vs bundle-lock.json (" . scalar(@drift) . "): "
+        die "SHADER DRIFT vs bundle-lock.json (" . scalar(@drift) . "): "
             . join(', ', @drift[0 .. (@drift > 8 ? 7 : $#drift)])
             . "\nRe-run with --update-lock to accept.\n";
-        exit 1;
     }
     my $stateful_revision = _preserve_stateful($bundle, $old_bundle);
     my $new_lock = {
@@ -240,10 +290,11 @@ sub build {
         hashes  => \%hashes,
     };
     $new_lock->{statefulRevision} = $stateful_revision if defined $stateful_revision;
-    _write_raw($metadata_path, $_JSON_PRETTY->encode($bundle));
-    _write_raw($lock_path, $_JSON_PRETTY->encode($new_lock));
-    printf "wrote %d effect(s) (%d programs, %d skipped) from CDN %s\n",
-        scalar(keys %{ $bundle->{effects} }), $n_ok, $n_skip,
+    $files{'metadata.json'} = $_JSON_PRETTY->encode($bundle);
+    $files{'bundle-lock.json'} = $_JSON_PRETTY->encode($new_lock);
+    _publish_bundle($out_dir, \%files, $bundle);
+    printf "wrote %d effect(s) (%d programs) from CDN %s\n",
+        scalar(keys %{ $bundle->{effects} }), $n_ok,
         $Math::Fractal::Noisemaker::Transpiler::CDN::CDN_VERSION;
 }
 
@@ -265,3 +316,39 @@ sub run {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Math::Fractal::Noisemaker::Transpiler::Build - regenerate a Perl shader bundle
+
+=head1 SYNOPSIS
+
+    perl scripts/build-bundle.pl --all
+
+=head1 DEVELOPER INTERFACE
+
+This is a maintainer tool; installed rendering uses the checked-in bundle and
+does not fetch shaders. C<build>, C<run>, and C<bundle_dir> are optional exports.
+
+C<build(\@effect_ids, out_dir =E<gt> $directory, update_lock =E<gt> 0)> fetches,
+parses, and compiles every requested effect. Source or compilation failures,
+missing kernels, and unaccepted source-hash changes throw exceptions and leave
+the previous bundle unchanged. The complete candidate is staged on the same
+filesystem before publication. Do not run concurrent builders or readers while
+replacing a bundle. If filesystem recovery fails, the error identifies the
+preserved previous directory for manual recovery.
+
+C<update_lock =E<gt> 1> explicitly accepts source changes. Review the resulting
+diff and rerun parity; hashes record inputs, not proof of rendering equivalence.
+Authored stateful effects are preserved from their pinned existing bundle.
+An explicit subset produces metadata for that subset plus preserved authored
+stateful effects; use C<--all> for a complete release bundle.
+
+C<run(@arguments)> implements the build script's C<--all>, C<--only id,id>, and
+C<--update-lock> switches. C<bundle_dir()> returns the default output directory.
+The CDN source can be selected with C<NM_SHADER_CDN> and C<NM_SHADER_VERSION>;
+existing cached inputs may be used. Never rebuild the bundle during installation.
+
+=cut

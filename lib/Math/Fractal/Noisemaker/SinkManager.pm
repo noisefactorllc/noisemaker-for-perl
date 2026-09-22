@@ -170,3 +170,66 @@ sub _report {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Math::Fractal::Noisemaker::SinkManager - deliver rendered frames to output sinks
+
+=head1 SYNOPSIS
+
+    my $renderer = Math::Fractal::Noisemaker::Renderer->new(
+        on_sink_error => sub { my ($error, $sink) = @_; warn $error },
+    );
+    my $unsubscribe = $renderer->add_sink($sink);
+    # Render frames, then release the registration:
+    $unsubscribe->();
+    $renderer->dispose;
+
+=head1 SINK CONTRACT
+
+A sink is a blessed object with C<configure($descriptor)>,
+C<submit($surface, $timestamp_ms)>, and C<close($options)> methods.
+The descriptor describes width, height, format, colorSpace, alphaMode, and fps.
+Callbacks run synchronously. Frames and descriptors are borrowed; do not mutate
+them. Clone a surface when retaining an independent image.
+
+C<submit> returns true for accepted, false for dropped, or C<undef> for an
+untracked submission. Thrown configure/submit exceptions increment failed
+counts, invoke the optional error callback, and allow later sinks to run.
+
+=head1 METHODS
+
+=head2 new(on_error => $callback)
+
+Creates an empty manager. The optional callback receives C<($error, $sink)>;
+exceptions from the error callback are contained.
+
+=head2 add($sink), remove($sink)
+
+C<add> returns an idempotent unsubscribe coderef. Adding the same sink twice
+or adding after closure throws. A newly added sink is immediately configured
+if the manager already has a descriptor. C<remove> or unsubscribe closes the
+sink and removes its statistics; close errors propagate.
+
+=head2 configure($descriptor), submit($surface, $timestamp_ms)
+
+Configure all active sinks or deliver a frame to them in registration order.
+Neither method starts a worker, schedules frames, nor waits for asynchronous
+completion. Calls on a closed manager do nothing.
+
+=head2 stats(), stats_for($sink)
+
+Return live, read-only-by-convention statistics: C<accepted>, C<dropped>, and
+C<failed>. C<stats> maps object identities to those hashes; C<stats_for> returns
+C<undef> for an unregistered sink. These are sink submission counts, not the
+completion counters of C<FrameExportQueue>.
+
+=head2 close($options)
+
+Closes every registered sink and clears registrations. Repeated calls do
+nothing. The first close error is rethrown after all sinks have been visited.
+Optional options are forwarded unchanged to sinks.
+
+=cut

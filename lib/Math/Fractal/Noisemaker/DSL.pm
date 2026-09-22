@@ -629,11 +629,9 @@ sub _surface_marker {
 }
 
 # Map a call's arguments onto the effect's params, splitting value params
-# (handed to render_effect) from surface bindings. Like the Python port (and
-# unlike JS normalizeArguments) this does NOT validate value
-# type/range/enum-membership here; render_effect's _coerce performs the
-# coercion and fills defaults, so malformed values render leniently while
-# unknown parameter NAMES are still rejected. paramOrder stands in for
+# (handed to render_effect) from surface bindings. Value validation happens
+# in the renderer before coercion; unknown parameter names are rejected here.
+# Catalog slider ranges remain UI hints. paramOrder stands in for
 # Python's list(param_specs.keys()) (see module header).
 sub _normalize_effect {
     my ($effect_id, $spec, $args) = @_;
@@ -853,3 +851,60 @@ sub line        { $_[0]{line} }
 sub column      { $_[0]{column} }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Math::Fractal::Noisemaker::DSL - parse and compile Polymorphic compositions
+
+=head1 SYNOPSIS
+
+    use Math::Fractal::Noisemaker::DSL qw(compile_dsl);
+    use Math::Fractal::Noisemaker::Renderer qw(meta);
+    my $plan = compile_dsl(
+        "search synth, filter\nnoise(seed: 3).invert().write(o0)\nrender(o0)",
+        meta()->{effects},
+        {sourceName => 'example.dsl'},
+    );
+
+=head1 FUNCTIONS
+
+C<tokenize_dsl>, C<parse_dsl>, and C<compile_dsl> are optional exports.
+
+=head2 tokenize_dsl($source, $options)
+
+Returns an array reference of tokens with type, lexeme, value, and source
+location fields. C<$options> is an optional hash with C<sourceName> for errors.
+
+=head2 parse_dsl($source, $options)
+
+Returns the parsed syntax tree. Accepts the same source and options as the
+tokenizer. Token and syntax-tree internals may change; most callers should
+use C<compile_dsl> or C<Renderer::render_dsl>.
+
+=head2 compile_dsl($source, $effects, $options)
+
+C<$effects> is the catalog's C<effects> hash. Returns a plan containing
+C<search> (namespace array), C<chains> (compiled chains), and C<render_surface>
+(output name). Compilation checks names, arguments, and chain domains;
+effect parameter values are validated when the renderer runs the plan.
+Compilation neither executes kernels nor performs network I/O.
+
+=head1 LANGUAGE
+
+C<search synth, filter> selects effect namespaces. Dotted calls compose
+effects; keyword arguments use C<name: value>. C<write(o0)> stores an image;
+C<read(o0)> begins a chain from a previously written or seeded image.
+C<render(o0)> selects the final image. Names C<o0> through C<o7> are available.
+Values include numbers, booleans, quoted strings, colors, vectors, and named
+enum choices. C<let> binds reusable values or partial effect calls.
+
+=head1 ERRORS
+
+Syntax and compilation failures throw C<Math::Fractal::Noisemaker::DSL::Error>
+objects, which stringify as source name, line, column, and message. They expose
+C<message>, C<source_name>, C<line>, and C<column> methods. Catch them with C<eval>;
+ordinary argument errors may be plain string exceptions.
+
+=cut

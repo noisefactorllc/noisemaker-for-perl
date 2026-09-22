@@ -4,7 +4,7 @@ use Test::More;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 
-use Math::Fractal::Noisemaker::Renderer qw(render_dsl render_effect);
+use Math::Fractal::Noisemaker::Renderer qw(render_dsl render_effect meta);
 
 sub assert_surface {
     my ($surface, $name) = @_;
@@ -49,8 +49,10 @@ for my $effect_id (qw(
     synth/navierStokes
     synth/reactionDiffusion
 )) {
+    my %params = (iterationCount => 1);
+    $params{$_} = 1 for grep { exists meta()->{effects}{$effect_id}{params}{$_} } qw(iterations zoom);
     my $surface = render_effect(
-        $effect_id, { iterationCount => 1, iterations => 1, zoom => 1 }, {},
+        $effect_id, \%params, {},
         width => 4, height => 4, seed => 1, time => 0.25,
     );
     assert_surface($surface, $effect_id);

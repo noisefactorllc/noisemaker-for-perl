@@ -105,15 +105,31 @@ sub _parse_hex {
     return \@rgb;
 }
 
+sub _choice_value {
+    my ($spec, $value) = @_;
+    return undef if !defined $value || ref $value || ref $spec->{choices} ne 'HASH';
+    my ($key) = $value =~ /([^.]+)$/;
+    my $choices = $spec->{choices};
+    my $choice = exists $choices->{$value} ? $choices->{$value}
+        : defined $key ? $choices->{$key} : undef;
+    # Catalog dropdowns also contain non-selectable group headings (null).
+    return _finite_number($choice) ? $choice : undef;
+}
+
 sub _coerce {
     my ($spec, $value) = @_;
     my $t = $spec->{type} || '';
     $value = $spec->{default} unless defined $value;
+    if ($t =~ /\A(?:float|int|enum|member|palette)\z/
+        && defined $value && !looks_like_number($value)) {
+        my $choice = _choice_value($spec, $value);
+        $value = $choice if defined $choice;
+    }
     if ($t eq 'color') {
         $value = _parse_hex($value) if defined $value && !ref $value;
         return [map { f32($_) } @{ $value || [0, 0, 0] }];
     }
-    if ($t eq 'vec2' || $t eq 'vec3' || $t eq 'vec4') {
+    if ($t eq 'vec2' || $t eq 'vec3' || $t eq 'vec4' || $t eq 'mat3') {
         if (defined $value && !ref $value) {    # CLI --param: "0.1,0.2,0.3"
             $value = [map { 0 + $_ } split /,/, $value];
         }
@@ -122,22 +138,100 @@ sub _coerce {
     if ($t eq 'float') {
         return f32(defined $value ? $value : 0);
     }
-    if ($t eq 'int' || $t eq 'enum' || $t eq 'member') {
-        if (defined $value && $value =~ /[^\d\s.+-]/) {    # enum name lookup
-            my $choices = $spec->{choices} || {};
-            my ($key) = $value =~ /([^.]+)$/;              # "oscType.sine" -> "sine"
-            return int($choices->{$value}) if exists $choices->{$value};
-            return int($choices->{$key})   if defined $key && exists $choices->{$key};
+    if ($t eq 'int' || $t eq 'enum' || $t eq 'member' || $t eq 'palette') {
+        if (defined $value && !looks_like_number($value)) {    # enum name lookup
             return 0;    # CDN member with no inline choices: 0th member
         }
         return int(defined $value ? $value : 0);
     }
     if ($t eq 'bool' || $t eq 'boolean') {
-        if (defined $value && $value =~ /^\s*(?:true|yes|on)\s*$/i) { return 1 }
-        if (defined $value && $value =~ /^\s*(?:false|no|off)\s*$/i) { return 0 }
+        if (defined $value && $value =~ /^\s*(?:1|true|yes|on)\s*$/i) { return 1 }
+        if (defined $value && $value =~ /^\s*(?:0|false|no|off)\s*$/i) { return 0 }
         return (defined $value && $value) ? 1 : 0;
     }
     return $value;
+}
+
+sub _finite_number {
+    my ($value) = @_;
+    return defined $value && !ref $value && looks_like_number($value)
+        && POSIX::isfinite(0 + $value);
+}
+
+# Slider ranges and numeric dropdown choices are UI hints: callers also use
+# small CPU state buffers and seeds outside those ranges. Reject malformed
+# values without clamping or changing valid numeric rendering behavior.
+sub _validate_parameters {
+    my ($effect_id, $effect, $params) = @_;
+    die "Parameters for $effect_id must be a hash reference\n" unless ref $params eq 'HASH';
+    my $specs = $effect->{params} || {};
+    for my $name (sort keys %$params) {
+        die "Unknown parameter '$name' for $effect_id; accepted: "
+            . join(', ', @{ $effect->{paramOrder} || [sort keys %$specs] }) . "\n"
+            unless exists $specs->{$name};
+        my $value = $params->{$name};
+        next unless defined $value;    # undef requests the catalog default
+        my $spec = $specs->{$name};
+        my $type = $spec->{type} || '';
+        my $bad = sub { die "Invalid parameter '$name' for $effect_id: $_[0]\n" };
+        if ($type =~ /\A(?:float|int|enum|member|palette)\z/ && !_finite_number($value)) {
+            my $choice = _choice_value($spec, $value);
+            $value = $choice if defined $choice;
+        }
+        if ($type eq 'float') {
+            $bad->('expected a finite number') unless _finite_number($value);
+        }
+        elsif ($type =~ /\A(?:int|enum|member|palette)\z/) {
+            if (_finite_number($value)) {
+                $bad->('expected an integer') unless $value == int($value);
+            }
+            else {
+                my $choices = ref $spec->{choices} eq 'HASH' ? $spec->{choices} : {};
+                # Some shared enums have only their default in the bundle.
+                next if !keys %$choices && !ref $value && defined $spec->{default} && !ref $spec->{default}
+                    && $value eq $spec->{default};
+                my @names = sort grep { _finite_number($choices->{$_}) } keys %$choices;
+                $bad->('expected an integer or a named choice'
+                    . (@names ? '; choices: ' . join(', ', @names) : ''));
+            }
+        }
+        elsif ($type eq 'bool' || $type eq 'boolean') {
+            next if JSON::PP::is_bool($value);
+            $bad->('expected a boolean (0, 1, true, false, yes, no, on, off)')
+                unless !ref $value && $value =~ /\A\s*(?:0|1|true|false|yes|no|on|off)\s*\z/i;
+        }
+        elsif ($type eq 'color') {
+            if (!ref $value) {
+                $bad->('expected #RGB, #RRGGBB, #RRGGBBAA, or an RGB/RGBA array')
+                    unless $value =~ /\A\#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\z/;
+            }
+            else {
+                $bad->('expected three or four finite color components')
+                    unless ref $value eq 'ARRAY' && (@$value == 3 || @$value == 4)
+                        && !grep { !_finite_number($_) } @$value;
+            }
+        }
+        elsif ($type =~ /\Avec([234])\z/ || $type eq 'mat3') {
+            my $length = $type eq 'mat3' ? 9 : substr($type, -1);
+            my $items = ref $value ? $value : [split /,/, $value, -1];
+            $bad->("expected $length finite components")
+                unless ref $items eq 'ARRAY' && @$items == $length
+                    && !grep { !_finite_number($_) } @$items;
+        }
+        elsif ($type eq 'string') {
+            $bad->('expected a string') if ref $value;
+        }
+        elsif ($type eq 'surface') {
+            $bad->('bind surfaces in the inputs hash, not the parameters hash');
+        }
+        elsif ($type eq 'volume' || $type eq 'geometry') {
+            # These catalog markers describe the chain input. They do not
+            # select arbitrary resources; actual surfaces use the inputs hash.
+            next if !ref $value && defined $spec->{default} && $value eq $spec->{default};
+            my $binding = $type eq 'volume' ? 'inputTex3d' : 'inputGeo';
+            $bad->("bind $type resources using $binding in the inputs hash");
+        }
+    }
 }
 
 # Pack synth/remap's std140 data[267] block from the bound uniforms — port of
@@ -312,7 +406,8 @@ sub _prepare_state {
     my ($step, $width, $height, $seed, $owner_state_size, $input_bundle) = @_;
     my $eff = meta()->{effects}{ $step->{effect_id} }
         or die "unknown effect '$step->{effect_id}' (not in bundle)\n";
-    my %raw = %{ $step->{params} || {} };
+    _validate_parameters($step->{effect_id}, $eff, $step->{params});
+    my %raw = %{ $step->{params} };
     $raw{stateSize} = $owner_state_size
         if defined $owner_state_size && exists(($eff->{params} || {})->{stateSize});
     my $normalized = _normalized_params($eff, \%raw, $seed);
@@ -714,7 +809,7 @@ sub _zero_iteration_output {
 
 sub render_effect {
     my ($effect_id, $params, $inputs, %opt) = @_;
-    $params ||= {};
+    $params = {} unless defined $params;
     $inputs ||= {};
     my $width  = defined $opt{width}  ? $opt{width}  : 256;
     my $height = defined $opt{height} ? $opt{height} : 256;
@@ -975,3 +1070,130 @@ sub dispose {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Math::Fractal::Noisemaker::Renderer - render effects and shader compositions
+
+=head1 SYNOPSIS
+
+    use Math::Fractal::Noisemaker::Renderer qw(render_effect render_dsl meta);
+
+    my $image = render_effect('synth/solid', {color => '#4080c0'}, undef,
+        width => 32, height => 32);
+    my $inverse = render_effect('filter/invert', {}, {inputTex => $image},
+        width => 32, height => 32);
+    my $composed = render_dsl(
+        "search synth, filter\nsolid(color: #4080c0).invert().write(o0)\nrender(o0)",
+        width => 32, height => 32,
+    );
+
+=head1 FUNCTIONS
+
+Functions are exported only on request. Rendering is synchronous and returns
+a L<Math::Fractal::Noisemaker::Surface> for image effects and complete DSL programs.
+Failures throw exceptions. Underscore-prefixed functions are private.
+
+=head2 render_effect($id, $parameters, $inputs, %options)
+
+C<$id> is a catalog ID such as C<synth/noise> or C<filter/invert>.
+C<$parameters> is a hash reference of effect parameters; C<undef> means defaults.
+Unknown names and malformed values are errors. An individual C<undef> value
+also requests its catalog default. Numbers must be finite; integers must be
+integral. Numeric dropdown values and values outside UI slider ranges remain
+allowed. Named dropdown choices must exist in the metadata; qualified names
+such as C<noise.simplex> use their final component. Booleans accept 0, 1,
+JSON booleans, or the strings true/false, yes/no, and on/off. Colors accept
+C<#RGB>, C<#RRGGBB>, C<#RRGGBBAA>, or arrays of three or four finite components.
+Vectors and matrices accept arrays or comma-separated component strings.
+
+C<$inputs> is a hash reference of borrowed C<Surface> objects, or C<undef>.
+C<inputTex> is the primary filter input. Mixer surface parameters are bound
+here by parameter name, uniform name, or texture name. External media uses the
+effect's C<externalTexture> metadata key. Do not place surfaces in C<$parameters>.
+Missing texture bindings sample a blank surface. Do not mutate an input during
+rendering; returned surfaces may alias inputs in zero-iteration/pass-through cases.
+
+Options are C<width> and C<height> (positive integers, default 256 each),
+C<seed> (default 1), C<time> (default 0), and, for non-iterated effects,
+C<frame> and C<delta_time> (default 0). The render seed fills an effect's
+C<seed> parameter unless explicitly supplied there. Iterated effects use their
+C<iterationCount> and internal time stepping.
+
+Low-level typed effects can return a hash containing C<image>, C<volume>,
+C<geometry>, and C<volumeSize>. Prefer C<render_dsl> for typed chains ending
+in an image renderer; do not pass a typed bundle to C<encode_png>.
+Bind typed input surfaces with C<inputTex3d> and C<inputGeo> in C<$inputs>.
+Volume/geometry parameter defaults such as C<vol0> and C<geo0> are catalog
+markers for the chain input; they do not select named resources. Only those
+default markers or C<undef> are accepted in the parameter hash.
+
+=head2 render_dsl($source, %options)
+
+Compiles and renders a Polymorphic DSL string. Options are C<width>, C<height>
+(default 512 each), C<seed> (1), C<time> (0), C<external_textures> (a hash of
+named texture surfaces), and C<seed_surfaces> (a hash such as C<< {o0 => $image} >>).
+The program selects its output using C<render(oN)>; absent that directive,
+the compiler selects the last written surface. Surfaces must be written before reading them,
+unless supplied in C<seed_surfaces>. DSL errors include source locations where
+available. See L<Math::Fractal::Noisemaker::DSL>.
+
+=head2 meta()
+
+Returns the cached bundle metadata hash. Treat it as read-only. Discover effects
+and their parameter names, types, defaults, named choices, and UI ranges with:
+
+    my $effects = meta()->{effects};
+    print "$_\n" for sort keys %$effects;
+    my $effect = $effects->{'synth/noise'};
+    for my $name (@{ $effect->{paramOrder} }) {
+        my $spec = $effect->{params}{$name};
+        print "$name ($spec->{type})\n";
+    }
+
+=head2 bundle_dir()
+
+Returns the installed bundle path, or C<NOISEMAKER_BUNDLE> when set. Set this
+environment variable before loading metadata or rendering; caches are process
+wide and do not support switching bundles mid-process. Kernels are executable
+Perl, so a custom bundle must be trusted.
+
+=head1 OBJECT INTERFACE
+
+=head2 new(on_sink_error => sub { ... })
+
+Creates a renderer with an independent sink manager. The optional callback
+receives C<($error, $sink)>. Construction does not render anything.
+
+=head2 render($source, %options)
+
+Renders DSL with the same options as C<render_dsl>, then submits the image to
+registered sinks. C<presentation_timestamp> optionally supplies the timestamp
+in milliseconds; otherwise a monotonic clock supplies it. Sinks receive an
+RGBA8/sRGB/straight-alpha descriptor with nominal fps 60. No playback pacing,
+cross-frame simulation state, or background worker is created.
+
+=head2 add_sink($sink)
+
+Registers an object implementing C<configure>, C<submit>, and C<close>.
+Returns an idempotent unsubscribe coderef which closes the sink. See
+L<Math::Fractal::Noisemaker::SinkManager> for the callback contract.
+
+=head2 sink_manager()
+
+Returns this renderer's sink manager.
+
+=head2 create_frame_export_queue(%options)
+
+Returns a L<Math::Fractal::Noisemaker::FrameExportQueue> with the CPU adapter.
+Options are C<slots> (2 through 8; default 3) and C<on_error> (a coderef).
+The caller owns this queue and must configure, poll, and close it separately.
+
+=head2 dispose()
+
+Closes all sinks. Repeated calls are harmless. Close errors are rethrown after
+all sinks have been visited. The sink manager cannot be reused after disposal.
+
+=cut

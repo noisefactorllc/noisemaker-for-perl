@@ -154,3 +154,37 @@ sub row_stride { $_[0]{row_stride} }
 sub data       { $_[0]{data} }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Math::Fractal::Noisemaker::CpuFrameExportAdapter - RGBA8 frame export storage
+
+=head1 DESCRIPTION
+
+The renderer's frame-export factory installs this adapter automatically.
+A descriptor requires positive integer C<width> and C<height>, C<format> equal
+to C<rgba8unorm>, C<colorSpace> equal to C<srgb> or C<display-p3>, C<alphaMode>
+equal to C<opaque>, C<straight>, or C<premultiplied>, and positive finite C<fps>.
+Dimensions are limited to 16,777,216 pixels. Color space is a label; this adapter
+does not convert primaries or gamma. Premultiplication multiplies RGB by alpha
+before byte conversion; opaque output forces alpha to 255.
+
+=head1 ADAPTER METHODS
+
+C<new()> constructs the adapter. C<create_slot($index, $descriptor)> allocates
+storage. C<begin($slot, $surface, $timestamp)> copies and converts pixels,
+requiring matching dimensions. C<poll($slot)> returns readiness as 0 or 1.
+C<read($slot)> consumes readiness and returns a borrowed frame.
+C<destroy_slot($slot)> marks a slot unusable. Invalid operations throw exceptions.
+Applications should normally use L<Math::Fractal::Noisemaker::FrameExportQueue>.
+
+=head1 FRAME METHODS
+
+The returned C<Math::Fractal::Noisemaker::FrameExportFrame> exposes C<width>,
+C<height>, C<row_stride> (width times four bytes), and C<data> (a scalar reference
+to packed top-down RGBA8). Copy C<${ $frame-E<gt>data }> to retain bytes after
+the callback; the frame and scalar reference are reused with the queue slot.
+
+=cut

@@ -99,7 +99,7 @@ sub _bounded_inflate {
             }
             else { $stalls = 0 }
             next if length($buf) || length($input);
-            last;    # input consumed, nothing pending — truncated stream
+            die "invalid or truncated zlib stream\n";
         }
         die "invalid zlib stream (status $status)\n";
     }
@@ -273,3 +273,47 @@ sub decode_png {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Math::Fractal::Noisemaker::PNG - encode and decode PNG byte strings
+
+=head1 SYNOPSIS
+
+    use Math::Fractal::Noisemaker::PNG qw(encode_png decode_png);
+    open my $in, '<:raw', 'input.png' or die $!;
+    my $bytes = do { local $/; <$in> };
+    close $in or die $!;
+    my $image = decode_png($bytes);
+    my $output_bytes = encode_png($image);
+
+=head1 FUNCTIONS
+
+Nothing is exported by default. These functions perform no file I/O themselves.
+
+=head2 encode_png($surface)
+
+Returns an 8-bit, non-interlaced RGBA PNG byte string from a
+L<Math::Fractal::Noisemaker::Surface>. Components are converted with C<to_rgba8>.
+The input is not modified. Write the returned string using a raw filehandle,
+and check both C<print> and C<close> for I/O errors.
+
+=head2 decode_png($bytes)
+
+Returns a new C<Surface>. Supports 8-bit, non-interlaced grayscale, RGB,
+indexed palette, grayscale with alpha, and RGBA PNGs, including all five row
+filters and supported C<tRNS> transparency. Interlacing, other bit depths,
+JPEG, and color-profile conversion are unsupported. Chunk ordering, CRCs,
+compressed-stream completion, and decompressed length are checked.
+
+Limits are 16,777,216 pixels, 256 MiB encoded input, and 96 MiB decompressed
+scanlines. Actual memory consumption is greater because pixels use Perl arrays.
+
+=head1 ERRORS
+
+Malformed or unsupported images and size-limit violations throw exceptions.
+No partial image is returned. Use C<eval> and inspect C<$@>.
+
+=cut

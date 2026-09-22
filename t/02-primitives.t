@@ -98,6 +98,22 @@ substr($corrupt, 20, 1) ^= "\x01";
 eval { decode_png($corrupt) };
 ok($@, 'decode rejects corrupt CRC');
 
+# Removing the zlib trailer while repairing the PNG CRC must not turn a
+# truncated compressed stream into an accepted image.
+my $truncated_stream = substr($png, 0, 8);
+my $offset = 8;
+while ($offset < length $png) {
+    my $length = unpack('N', substr($png, $offset, 4));
+    my $type = substr($png, $offset + 4, 4);
+    my $data = substr($png, $offset + 8, $length);
+    $data = substr($data, 0, -4) if $type eq 'IDAT';
+    my $body = $type . $data;
+    $truncated_stream .= pack('N', length $data) . $body . pack('N', Compress::Zlib::crc32($body));
+    $offset += $length + 12;
+}
+eval { decode_png($truncated_stream) };
+like($@, qr/invalid|truncated/, 'decode requires a complete zlib stream even when all pixels are present');
+
 # rgba8 quantize: NaN propagates (oracle semantics), clamp handles the rest
 my $qn = Math::Fractal::Noisemaker::Surface->new(1, 1, [$nan, -0.5, 0.5, 2.0]);
 quantize_texture($qn, 'rgba8unorm');

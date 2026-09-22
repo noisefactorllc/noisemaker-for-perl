@@ -122,6 +122,7 @@ my $solid_png = File::Spec->catfile($TMPDIR, 'solid.png');
         '--filename', $solid_png,
     ]);
     is($rc, 0, 'generate synth/solid exits 0') or diag("stdout=[$out] stderr=[$err]");
+    like($err, qr/Rendering 4x4 synth\/solid/, 'render progress goes to standard error');
     like($out, qr{^synth/solid$}m, 'generate echoes the resolved effect id first');
     like($out, qr{Rendered 4x4 -> \Q$solid_png\E}, 'generate echoes the Rendered message');
     ok(-f $solid_png, 'generate wrote the output file');
@@ -335,6 +336,17 @@ SKIP: {
         stdin => "solid().write(o0)\nrender(o0)\n");
     isnt($rc3, 0, 'DSL error (missing search) exits nonzero');
     like($se3, qr/Missing required search directive/, 'DSL error message surfaces');
+}
+
+for my $param ('seeed=3', 'type=not_a_noise_type', 'scaleX=banana') {
+    my $filename = File::Spec->catfile($TMPDIR, 'invalid-param.png');
+    my ($rc, $out, $err) = run_cli([
+        'generate', 'synth/noise', '--width', 2, '--height', 2,
+        '--param', $param, '--filename', $filename,
+    ]);
+    is($rc, 2, "$param exits with a usage error");
+    like($err, qr/(?:Unknown|Invalid) parameter.*synth\/noise/, 'diagnostic names the effect and parameter');
+    ok(!-e $filename, 'invalid parameters do not write an image');
 }
 
 done_testing();

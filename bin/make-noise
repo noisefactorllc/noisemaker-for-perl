@@ -23,6 +23,7 @@ use File::Temp ();
 use File::Path qw(make_path);
 use File::Spec ();
 use JSON::PP   ();
+use Time::HiRes qw(time);
 use POSIX      qw(WIFSIGNALED WTERMSIG WEXITSTATUS);
 
 use Math::Fractal::Noisemaker;
@@ -74,6 +75,7 @@ sub main {
         # click exits 2 for usage/parameter errors, 1 for runtime failures;
         # usage-class dies carry a "usage: " sentinel prefix (stripped here).
         my $usage_error = $err =~ s/^usage: //;
+        $usage_error ||= $err =~ /\A(?:Unknown|Invalid) parameter\b/;
         print STDERR $err;
         return $usage_error ? 2 : 1;
     }
@@ -217,10 +219,10 @@ sub cmd_apply {
         . (meta()->{effects}{$effect}{domain} || 'image') . " effects\n"
         if (meta()->{effects}{$effect}{domain} || 'image') ne 'image';
     my $source  = _load_png($input_filename);
-    my $surface = render_effect(
+    my $surface = _render_with_progress('input image ' . $effect, sub { render_effect(
         $effect, _parse_params(\@params), _bind_input($effect, $source),
         width => $source->width, height => $source->height, seed => $seed, time => $time_value,
-    );
+    ) });
     _write_png($surface, $filename);
     print 'Rendered ' . $source->width . 'x' . $source->height . " -> $filename\n";
     return 0;
@@ -266,6 +268,9 @@ sub cmd_animate {
 
     ($effect, $seed) = _prologue($effect, $seed, 'generator');
     my $parsed = _parse_params(\@params);
+    my $ffmpeg = _which('ffmpeg');
+    die "ffmpeg not found; install it, or pass --save-frames DIR to keep the PNG frames.\n"
+        if !defined $ffmpeg && !defined $save_frames;
 
     # Cleaned up automatically (even on die) unless --save-frames was given,
     # since File::Temp::Dir removes the directory when this object is
@@ -279,6 +284,7 @@ sub cmd_animate {
     make_path($frames_dir);
 
     for my $i (0 .. $frame_count - 1) {
+        print STDERR 'Frame ' . ($i + 1) . "/$frame_count\n";
         my $time_value = ($i / $frame_count) * $speed;    # sweep [0,1) phase, `speed` loops
         my $surface = _render_cli_effect(
             $effect, $parsed,
@@ -287,7 +293,6 @@ sub cmd_animate {
         _write_png($surface, File::Spec->catfile($frames_dir, sprintf('frame_%04d.png', $i)));
     }
 
-    my $ffmpeg = _which('ffmpeg');
     if (!defined $ffmpeg) {
         if (defined $save_frames) {
             print "ffmpeg not found; wrote $frame_count frames to $frames_dir (no video).\n";
@@ -381,14 +386,16 @@ sub cmd_run {
     die "render_dsl is not available in Math::Fractal::Noisemaker::Renderer yet.\n"
         unless Math::Fractal::Noisemaker::Renderer->can('render_dsl');
 
-    my $surface = Math::Fractal::Noisemaker::Renderer::render_dsl(
+    my $surface = _render_with_progress("${width}x${height} DSL program", sub {
+        Math::Fractal::Noisemaker::Renderer::render_dsl(
         $source_program,
         width              => $width,
         height             => $height,
         seed               => $seed,
         time               => $time_value,
         external_textures  => \%external,
-    );
+        )
+    });
     _write_png($surface, $filename);
     print 'Rendered ' . $surface->width . 'x' . $surface->height . " -> $filename\n";
     return 0;
@@ -479,10 +486,30 @@ sub _typed_effect_program {
 sub _render_cli_effect {
     my ($effect_id, $params, %opt) = @_;
     my $domain = meta()->{effects}{$effect_id}{domain} || 'image';
-    return render_effect($effect_id, $params, undef, %opt) if $domain eq 'image';
-    return Math::Fractal::Noisemaker::Renderer::render_dsl(
-        _typed_effect_program($effect_id, $params), %opt,
-    );
+    return _render_with_progress("$opt{width}x$opt{height} $effect_id", sub {
+        return render_effect($effect_id, $params, undef, %opt) if $domain eq 'image';
+        return Math::Fractal::Noisemaker::Renderer::render_dsl(
+            _typed_effect_program($effect_id, $params), %opt,
+        );
+    });
+}
+
+# CLI-only elapsed-time feedback: no guesses about multi-pass completion.
+# Perl delivers these deferred signals between interpreter operations.
+sub _render_with_progress {
+    my ($label, $render) = @_;
+    my $start = time;
+    print STDERR "Rendering $label...\n";
+    local $SIG{ALRM} = sub {
+        printf STDERR "Rendering %s: %.0f seconds elapsed\n", $label, time - $start;
+        alarm 5;
+    };
+    alarm 5;
+    my $result = eval { $render->() };
+    my $error = $@;
+    alarm 0;
+    die $error if $error;
+    return $result;
 }
 
 # An effect that reads a host texture (filter/text, synth/media) binds the

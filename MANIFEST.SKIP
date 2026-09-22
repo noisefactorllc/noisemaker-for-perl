@@ -1,5 +1,6 @@
 ^\.git/
 ^\.gitignore$
+^\.github/
 ^\.cdn-cache/
 ^Makefile$
 ^Makefile\.old$

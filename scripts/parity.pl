@@ -10,6 +10,8 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
+use lib $FindBin::Bin;
+use ParityOracle qw(verify_oracle);
 use File::Spec;
 use File::Temp ();
 
@@ -20,6 +22,8 @@ use Math::Fractal::Noisemaker::Surface;
 my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
     || File::Spec->rel2abs(File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-for-cpu'));
 my $CLI = File::Spec->catfile($CPU_DIR, 'bin', 'noisemaker-cpu.js');
+my $oracle_pin = verify_oracle($CPU_DIR);
+print "Reference: $oracle_pin->{revision} (runtime SHA-256 verified)\n";
 
 my $SIZE = 8;
 my $SEED = 1;

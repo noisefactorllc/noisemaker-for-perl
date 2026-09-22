@@ -13,13 +13,20 @@ WriteMakefile(
     MIN_PERL_VERSION => '5.022',
     EXE_FILES        => ['bin/make-noise'],
     PREREQ_PM        => {
-        # Core modules only: JSON::PP, Compress::Zlib, POSIX, HTTP::Tiny,
-        # Getopt::Long, File::Spec, List::Util. No CPAN dependencies.
+        # Declare core dependencies too: some Perl installations split them
+        # into OS packages, and CPAN clients need the complete dependency list.
+        map { $_ => 0 } qw(
+            Compress::Zlib Compress::Raw::Zlib Digest::SHA Exporter
+            File::Basename File::Copy File::Find File::Path File::Spec File::Temp
+            FindBin Getopt::Long HTTP::Tiny JSON::PP List::Util POSIX Scalar::Util Time::HiRes
+        ),
     },
+    CONFIGURE_REQUIRES => { 'ExtUtils::MakeMaker' => '6.64' },
     TEST_REQUIRES => { 'Test::More' => 0 },
     META_MERGE    => {
         'meta-spec' => { version => 2 },
         resources   => {
+            bugtracker => { web => 'https://github.com/noisefactorllc/noisemaker-for-perl/issues' },
             repository => {
                 type => 'git',
                 url  => 'https://github.com/noisefactorllc/noisemaker-for-perl.git',

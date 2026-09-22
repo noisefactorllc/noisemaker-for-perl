@@ -16,13 +16,82 @@ on:
       - "LICENSE"
       - "lib/**"
       - "bin/make-noise"
+      - "t/**"
+      - "scripts/**"
+      - "Makefile.PL"
+      - "MANIFEST*"
+      - "README.md"
+
+permissions:
+  contents: read
 
 concurrency:
   group: export-kit-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  test:
+    name: Perl ${{ matrix.perl }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, perl: '5.22' }
+          - { os: ubuntu-latest, perl: '5.42' }
+          - { os: macos-latest, perl: '5.42' }
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+      - uses: shogo82148/actions-setup-perl@ac3202722f5744e62a8fa3af3e1aaaebb08861f3 # v1
+        with:
+          perl-version: ${{ matrix.perl }}
+      - name: Test source and packaged distribution
+        run: |
+          perl Makefile.PL
+          make test
+          make distcheck
+          make disttest
+      - name: Check public POD
+        run: |
+          perl -MPod::Checker=podchecker -e 'my $bad=0; for (@ARGV) { $bad++ if podchecker($_) > 0 } exit($bad ? 1 : 0)' lib/Math/Fractal/Noisemaker.pm lib/Math/Fractal/Noisemaker/*.pm lib/Math/Fractal/Noisemaker/Transpiler/Build.pm
+
+  parity:
+    name: Pinned CPU reference
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          path: port
+          persist-credentials: false
+      - uses: shogo82148/actions-setup-perl@ac3202722f5744e62a8fa3af3e1aaaebb08861f3 # v1
+        with:
+          perl-version: '5.42'
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '22'
+      - name: Read reference revision
+        id: oracle
+        run: |
+          perl -MJSON::PP -e 'local $/; my $p=decode_json(<>); die "Invalid oracle revision" unless $p->{revision} =~ /\A[0-9a-f]{40}\z/; print "revision=$p->{revision}\n"' port/scripts/oracle-lock.json >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          repository: noisefactorllc/noisemaker-for-cpu
+          ref: ${{ steps.oracle.outputs.revision }}
+          path: oracle
+          persist-credentials: false
+      - name: Verify reference and rendered bytes
+        working-directory: port
+        env:
+          NOISEMAKER_CPU_DIR: ${{ github.workspace }}/oracle
+          RELEASE_TESTING: '1'
+        run: |
+          prove -l t/05-parity.t
+          perl scripts/parity.pl
+
   dispatch:
+    needs: [test, parity]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:

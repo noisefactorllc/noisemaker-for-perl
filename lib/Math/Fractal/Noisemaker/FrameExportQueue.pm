@@ -192,3 +192,71 @@ sub _report {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Math::Fractal::Noisemaker::FrameExportQueue - bounded frame export callbacks
+
+=head1 SYNOPSIS
+
+    my $queue = $renderer->create_frame_export_queue(slots => 3);
+    $queue->configure({width => 32, height => 32, format => 'rgba8unorm',
+        colorSpace => 'srgb', alphaMode => 'straight', fps => 30});
+    $queue->enqueue($surface, 0, sub {
+        my ($frame, $timestamp, $context) = @_;
+        my $owned_bytes = ${ $frame->data }; # copy before a slot is reused
+    });
+    $queue->poll;
+    $queue->close;
+
+=head1 METHODS
+
+=head2 new($adapter, slots => 3, on_error => $callback)
+
+Creates a queue with 2 through 8 slots. Normally use the renderer's factory
+for the CPU adapter. Custom adapters must implement C<create_slot>, C<begin>,
+C<poll>, C<read>, and C<destroy_slot>. The optional callback receives errors;
+exceptions it throws are contained.
+
+=head2 configure($descriptor)
+
+Destroys old slots and allocates replacements. Pending callbacks are discarded.
+Failure cleans up newly created slots and throws; the queue remains unconfigured.
+The CPU descriptor is documented in L<Math::Fractal::Noisemaker::CpuFrameExportAdapter>.
+
+=head2 available()
+
+Returns whether the queue is configured, open, and has a free slot.
+
+=head2 enqueue($surface, $timestamp_ms, $callback, $context)
+
+Returns 1 when accepted or 0 when full, unconfigured, closed, or the adapter
+fails. A callback coderef is required even if the queue cannot accept a frame.
+C<$context> is optional and returned unchanged to the callback. CPU pixel bytes
+are copied at enqueue time; callbacks are delivered only when C<poll> is called.
+
+=head2 poll()
+
+Checks pending slots and calls C<$callback-E<gt>($frame, $timestamp_ms, $context)>
+for ready frames. The frame and its data scalar reference belong to a reusable
+slot. Copy the bytes during the callback if they must survive another enqueue.
+Adapter and callback failures are counted and sent to C<on_error>.
+
+=head2 stats()
+
+Returns the live counter hash: C<accepted> counts successful begins;
+C<completed> counts successful callbacks; C<failed> counts begin, poll, read,
+and callback errors; C<dropped> counts rejected enqueue attempts. Reconfiguration
+and closure discard pending work without updating these counters, so these
+counters are not a conservation equation for individual frame outcomes.
+
+=head2 close(%options)
+
+Discards pending work and closes the queue. Repeated calls are harmless.
+C<backend_lost =E<gt> 1> (also C<backendLost>) abandons slots without asking
+the adapter to destroy them. Otherwise destruction errors propagate after
+cleanup. The queue cannot be reopened.
+
+=cut
