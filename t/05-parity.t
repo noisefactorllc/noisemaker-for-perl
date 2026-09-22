@@ -139,14 +139,14 @@ subtest 'noisemaker-for-cpu upstream source lock and snapshot parity' => sub {
     my $source_lock_text = do { local $/; <$sfh> };
     close $sfh;
 
-    like($source_lock_text, qr/PINNED_UPSTREAM_REVISION\s*=\s*['"]68d37721091a6fb9f5ab25c9ae1f0d9c84f51318['"]/, 'upstream source-lock revision is 68d37721');
-    like($source_lock_text, qr/PINNED_SOURCE_DIGEST\s*=\s*['"]baf065d19a13ea68cad0c3d37783751726ac8763c38876df2cc25c95cc690af9['"]/, 'upstream source-lock digest is baf065d1');
+    like($source_lock_text, qr/PINNED_UPSTREAM_REVISION\s*=\s*['"]e5bd2013087e54d53841db8c45a54f973aaa5174['"]/, 'upstream source-lock revision is e5bd2013');
+    like($source_lock_text, qr/PINNED_SOURCE_DIGEST\s*=\s*['"]5da0cf512a52ea78d33bb0fa9f571fcbc2de83950f452673717d3dd3aa43a95a['"]/, 'upstream source-lock digest is 5da0cf51');
 
     open my $snfh, '<:encoding(UTF-8)', $snapshot_path or die "Could not open $snapshot_path: $!";
     my $snapshot_text = do { local $/; <$snfh> };
     close $snfh;
 
-    like($snapshot_text, qr/UPSTREAM_REVISION\s*=\s*['"]68d37721091a6fb9f5ab25c9ae1f0d9c84f51318['"]/, 'upstream snapshot revision is 68d37721');
+    like($snapshot_text, qr/UPSTREAM_REVISION\s*=\s*['"]e5bd2013087e54d53841db8c45a54f973aaa5174['"]/, 'upstream snapshot revision is e5bd2013');
 };
 
 done_testing();
