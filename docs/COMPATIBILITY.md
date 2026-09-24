@@ -16,7 +16,8 @@ Published authority: `1.0.176`, source `c9ee8a049b2b63cd300da67c01ee40baf29dc288
 Its SHA-256 is `05c4d7b7744837ae90a3bb4c89e5403ff09448a74d9d7e824abb3d719ad3314e`.
 These IDs do not define complete parameter, state, input, or platform coverage.
 
-Served kit `0.1.9` records `06879ebfca5c321b253af507190f85f68e0abe84`. [Source metadata](https://kits.noisedeck.app/perl/0/deployment-meta.json).
+Served kit `0.1.10` records documentation publication `a45c6798554b6664a5af4c5db762e3b964bc8b91`. Runtime files match the inspected source.
+[Immutable source metadata](https://kits.noisedeck.app/perl/0.1.10/deployment-meta.json).
 Historical measurements remain bound to their original revisions in [completion gaps](COMPLETION_GAPS.md).
 
 ## 2. Host and distribution matrix
@@ -44,6 +45,7 @@ Unknown values mean `not measured`, never zero.
 | Gate | Expected cases | Executed | Strict passes | Failures | Skips | Status |
 |---|---|---|---|---|---|---|
 | Current full render suite | not measured | not measured | not measured | not measured | not measured | unverified |
+| Pinned CPU effect sweep | 205 | 167 | 167 | 0 | 38 | incomplete; historical authority |
 
 Served compatibility inventory declares 205 effect IDs. Declaration does not establish execution or parity.
 IDs absent from the served declaration: `render/meshLoader`, `render/meshRender`, `synth/roll`, `synth/scope`, `synth/spectrum`.
@@ -272,6 +274,16 @@ Official ecosystem reference: [Current ExtUtils::MakeMaker documentation, access
 Source CI, export dispatch, artifact delivery, and rendered parity are separate evidence dimensions.
 A successful dispatch or unit-test summary does not establish a full rendered gate.
 
+Publication CI at `a45c6798554b6664a5af4c5db762e3b964bc8b91` passed. The pinned CPU comparison passed 167 cases byte-for-byte and skipped 38 iterated/typed cases.
+The oracle revision was `16c38245c42030c8ee46dc61108791d2fea4bda9`, not the current upstream authority.
+The Perl version matrix passed source and packaged tests; its oracle tests were skipped. These skips remain qualification gaps.
+[Exact publication CI](https://github.com/noisefactorllc/noisemaker-for-perl/actions/runs/35959909895).
+The automatic release passed its existing gate. All 324 served kit files match the immutable manifest hashes and lengths.
+The served `run.pl` entry point rendered a 16×16 solid-red PNG with exact RGBA pixels.
+This verifies one useful artifact outcome. It does not qualify full installation, recovery, upgrade, host coverage, or rendered parity.
+[Release CI](https://github.com/noisefactorllc/scaffold/actions/runs/35960580529).
+[Served file verification](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-20260924-remaining-gap-documents/perl-served-verification.json). [Rendered artifact evidence](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-20260924-remaining-gap-documents/perl-served-render.json).
+
 ## 5. Open compatibility limits
 
 See [GAP-001 and the complete gap register](COMPLETION_GAPS.md#4-known-gaps) for evidence, dependencies, and acceptance criteria.
@@ -289,5 +301,7 @@ Implementation corrections remain with the separate job. This report does not ad
 | Date | Source | Result | Change |
 |---|---|---|---|
 | 2026-09-24 | `06879ebfca5c321b253af507190f85f68e0abe84` | Full qualification unverified | Created the requested maintained compatibility report. Preserved historical evidence and open gaps. |
+
+Publication follow-up: recorded exact-source CI and retained every observed skip. No gap was closed.
 
 Run: `20260924-remaining-gap-documents`. Later audits and reviews update this report with source-bound results.
