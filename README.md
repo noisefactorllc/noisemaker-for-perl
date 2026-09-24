@@ -5,6 +5,10 @@
 
 # noisemaker-for-perl
 
+Current measured support: [compatibility report](https://github.com/noisefactorllc/noisemaker-for-perl/blob/main/docs/COMPATIBILITY.md).
+
+Current qualification limits: [completion gaps](https://github.com/noisefactorllc/noisemaker-for-perl/blob/main/docs/COMPLETION_GAPS.md).
+
 > This package supports the "Export Shader Pipeline" feature in Noisedeck.app. The feature runs shader compositions on other platforms. Noise Factor derives this package from the upstream Noisemaker Engine project and tests it for pixel-level parity.
 
 **Math::Fractal::Noisemaker v1.000** — a software runtime for shaders, in pure Perl.
