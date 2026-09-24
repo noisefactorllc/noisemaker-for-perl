@@ -4,6 +4,7 @@ use Test::More;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Scalar::Util qw(refaddr);
+use JSON::PP ();
 
 use Math::Fractal::Noisemaker::CpuFrameExportAdapter;
 use Math::Fractal::Noisemaker::FrameExportQueue;
@@ -32,12 +33,61 @@ use Math::Fractal::Noisemaker::Surface;
         return $self->{result};
     }
 
+    sub defer_render {
+        my ($self) = @_;
+        push @{ $self->{events} }, ['defer_render'];
+        return $self->{on_defer}->($self) if $self->{on_defer};
+        die $self->{defer_error} if $self->{defer_error};
+        return $self->{defer_result} if exists $self->{defer_result};
+        return 0;
+    }
+
     sub close {
         my ($self, $options) = @_;
         push @{ $self->{events} }, ['close', $options];
         die $self->{close_error} if $self->{close_error};
     }
 }
+
+{
+    package Local::CamelSink;
+    our @ISA = qw(Local::Sink);
+
+    sub deferRender {
+        my ($self) = @_;
+        push @{ $self->{events} }, ['deferRender'];
+        return $self->{on_defer}->($self) if $self->{on_defer};
+        die $self->{defer_error} if $self->{defer_error};
+        return $self->{defer_result} if exists $self->{defer_result};
+        return 0;
+    }
+}
+
+{
+    package Local::MinimalSink;
+
+    sub new {
+        my ($class, %args) = @_;
+        return bless { events => [], %args }, $class;
+    }
+
+    sub configure {
+        my ($self, $descriptor) = @_;
+        push @{ $self->{events} }, ['configure', { %$descriptor }];
+    }
+
+    sub submit {
+        my ($self, $frame, $timestamp) = @_;
+        push @{ $self->{events} }, ['submit', $frame, $timestamp];
+        return 1;
+    }
+
+    sub close {
+        my ($self, $options) = @_;
+        push @{ $self->{events} }, ['close', $options];
+    }
+}
+
 
 {
     package Local::Adapter;
@@ -448,6 +498,106 @@ subtest 'Renderer object does not submit failures and disposal is idempotent' =>
     is_deeply([map { $_->[0] } @{ $sink->{events} }], ['configure', 'close'], 'sink closed once');
     eval { $renderer->add_sink(Local::Sink->new) };
     like($@, qr/closed/, 'disposed renderer rejects sinks');
+};
+
+subtest 'SinkManager should_defer_render checks sinks with strict boolean semantics' => sub {
+    my $manager = Math::Fractal::Noisemaker::SinkManager->new;
+    is($manager->should_defer_render, 0, 'empty manager does not defer');
+    is($manager->shouldDeferRender, 0, 'camelCase alias works on empty manager');
+
+    my $passive = Local::Sink->new(defer_result => 0);
+    my $unsub_passive = $manager->add($passive);
+    is($manager->should_defer_render, 0, 'sink returning 0 does not defer');
+    $unsub_passive->();
+
+    my $minimal = Local::MinimalSink->new;
+    my $unsub_minimal = $manager->add($minimal);
+    is($manager->should_defer_render, 0, 'sink without defer method does not defer');
+    $unsub_minimal->();
+
+    # Non-boolean truthy values do not trigger deferral
+    for my $non_bool (2, -1, 'yes', 'true', '1.5', [1], { defer => 1 }) {
+        my $sink = Local::Sink->new(defer_result => $non_bool);
+        my $unsub = $manager->add($sink);
+        is($manager->should_defer_render, 0, 'non-boolean value does not defer');
+        $unsub->();
+    }
+
+    # Strict boolean true values trigger deferral
+    for my $true_val (1, !0, \1, JSON::PP::true) {
+        my $sink = Local::Sink->new(defer_result => $true_val);
+        my $unsub = $manager->add($sink);
+        is($manager->should_defer_render, 1, 'boolean true value triggers deferral');
+        is($manager->shouldDeferRender, 1, 'camelCase alias returns true');
+        $unsub->();
+    }
+
+    # CamelCase deferRender method works
+    my $camel_sink = Local::CamelSink->new(defer_result => 1);
+    my $unsub_camel = $manager->add($camel_sink);
+    is($manager->should_defer_render, 1, 'camelCase deferRender triggers deferral');
+    $unsub_camel->();
+
+    # Closed manager returns 0 immediately
+    $manager->close;
+    is($manager->should_defer_render, 0, 'closed manager returns 0');
+};
+
+subtest 'SinkManager should_defer_render isolates exceptions and increments failure stats' => sub {
+    my @reported;
+    my $manager = Math::Fractal::Noisemaker::SinkManager->new(on_error => sub {
+        my ($error, $sink) = @_;
+        push @reported, [$error, $sink];
+        die "reporter failed\n";
+    });
+    my $failing = Local::Sink->new(defer_error => "defer error\n");
+    my $deferring = Local::Sink->new(defer_result => 1);
+    $manager->add($failing);
+    $manager->add($deferring);
+
+    my $result;
+    eval { $result = $manager->should_defer_render };
+    is($@, '', 'exception during defer_render is isolated');
+    is($result, 1, 'subsequent deferring sink is still evaluated');
+    is($manager->stats_for($failing)->{failed}, 1, 'failing sink incremented failure count');
+    is(scalar @reported, 1, 'on_error callback called once');
+    like($reported[0][0], qr/defer error/, 'reported error matches thrown error');
+    is($reported[0][1], $failing, 'reported sink matches failing sink');
+};
+
+subtest 'SinkManager should_defer_render supports reentrant removal' => sub {
+    my $manager = Math::Fractal::Noisemaker::SinkManager->new;
+    my ($unsub1, $unsub2);
+    my $sink1 = Local::Sink->new(on_defer => sub {
+        $unsub1->();
+        return 0;
+    });
+    my $sink2 = Local::Sink->new(on_defer => sub {
+        return 1;
+    });
+    $unsub1 = $manager->add($sink1);
+    $unsub2 = $manager->add($sink2);
+
+    is($manager->should_defer_render, 1, 'reentrant removal does not break iteration');
+    is($manager->should_defer_render, 1, 'subsequent call sees removed sink gone');
+    is_deeply([map { $_->[0] } @{ $sink1->{events} }], ['defer_render', 'close'], 'first sink was closed upon removal');
+};
+
+subtest 'Renderer should_defer_render delegates to SinkManager' => sub {
+    my $renderer = Math::Fractal::Noisemaker::Renderer->new;
+    is($renderer->should_defer_render, 0, 'empty renderer does not defer');
+    is($renderer->shouldDeferRender, 0, 'empty renderer camelCase alias does not defer');
+
+    my $deferring = Local::Sink->new(defer_result => 1);
+    my $unsub = $renderer->add_sink($deferring);
+    is($renderer->should_defer_render, 1, 'renderer defers when sink defers');
+    is($renderer->shouldDeferRender, 1, 'renderer camelCase alias defers when sink defers');
+
+    $unsub->();
+    is($renderer->should_defer_render, 0, 'renderer does not defer after sink removed');
+
+    $renderer->dispose;
+    is($renderer->should_defer_render, 0, 'disposed renderer does not defer');
 };
 
 done_testing();

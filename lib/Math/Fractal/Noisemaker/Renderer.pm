@@ -1010,6 +1010,12 @@ sub add_sink {
     return $self->{sink_manager}->add($sink);
 }
 
+sub should_defer_render {
+    my ($self) = @_;
+    return $self->{sink_manager}->should_defer_render;
+}
+*shouldDeferRender = \&should_defer_render;
+
 sub create_frame_export_queue {
     my ($self, %options) = @_;
     return Math::Fractal::Noisemaker::FrameExportQueue->new(
@@ -1180,6 +1186,11 @@ cross-frame simulation state, or background worker is created.
 Registers an object implementing C<configure>, C<submit>, and C<close>.
 Returns an idempotent unsubscribe coderef which closes the sink. See
 L<Math::Fractal::Noisemaker::SinkManager> for the callback contract.
+
+=head2 should_defer_render(), shouldDeferRender()
+
+Delegates directly to C<sink_manager->should_defer_render>. Returns true (1)
+if any active registered output sink requests that rendering be deferred.
 
 =head2 sink_manager()
 

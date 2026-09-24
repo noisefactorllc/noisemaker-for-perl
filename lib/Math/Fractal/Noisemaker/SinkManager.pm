@@ -2,7 +2,8 @@ package Math::Fractal::Noisemaker::SinkManager;
 
 use strict;
 use warnings;
-use Scalar::Util qw(blessed refaddr);
+use Scalar::Util qw(blessed refaddr looks_like_number);
+use JSON::PP ();
 
 sub new {
     my ($class, %options) = @_;
@@ -140,6 +141,56 @@ sub submit {
     $self->_compact_registrations if $self->{iteration_depth} == 0;
 }
 
+sub _is_strict_boolean_true {
+    my ($val) = @_;
+    return 0 unless defined $val;
+    if (eval { JSON::PP::is_bool($val) }) {
+        return $val ? 1 : 0;
+    }
+    if (ref($val) eq 'SCALAR') {
+        return (defined $$val && looks_like_number($$val) && $$val == 1) ? 1 : 0;
+    }
+    return 1 if !ref($val) && looks_like_number($val) && $val == 1;
+    return 0;
+}
+
+sub should_defer_render {
+    my ($self) = @_;
+    return 0 if $self->{closed};
+    $self->{iteration_depth}++;
+    my $defer = 0;
+    my $outer_error;
+    eval {
+        for my $registration (@{ $self->{registrations} }) {
+            next unless $registration->{active};
+            my $sink = $registration->{sink};
+            next unless blessed($sink);
+            my $method = $sink->can('deferRender') || $sink->can('defer_render');
+            next unless $method;
+            my $result;
+            my $ok = eval { $result = $sink->$method(); 1 };
+            if (!$ok) {
+                my $error = $@;
+                $registration->{stats}{failed}++;
+                $self->_report($error, $sink);
+                next;
+            }
+            if (_is_strict_boolean_true($result)) {
+                $defer = 1;
+                last;
+            }
+        }
+        1;
+    } or do {
+        $outer_error = $@;
+    };
+    $self->{iteration_depth}--;
+    $self->_compact_registrations if $self->{iteration_depth} == 0;
+    die $outer_error if defined $outer_error;
+    return $defer;
+}
+*shouldDeferRender = \&should_defer_render;
+
 sub close {
     my ($self, $options) = @_;
     return if $self->{closed};
@@ -225,6 +276,14 @@ Return live, read-only-by-convention statistics: C<accepted>, C<dropped>, and
 C<failed>. C<stats> maps object identities to those hashes; C<stats_for> returns
 C<undef> for an unregistered sink. These are sink submission counts, not the
 completion counters of C<FrameExportQueue>.
+
+=head2 should_defer_render(), shouldDeferRender()
+
+Returns true (1) if any active registered sink requests deferral via a
+C<deferRender> or C<defer_render> method returning strict boolean true.
+Exceptions thrown by sinks are isolated: they increment the sink's C<failed>
+counter and invoke the optional error callback without preventing other sinks
+from being checked. Returns 0 if no sink defers or if the manager is closed.
 
 =head2 close($options)
 
