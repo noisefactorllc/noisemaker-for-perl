@@ -243,16 +243,28 @@ my %SWIZZLE = (
     s => 0, t => 1, p => 2, q => 3,
 );
 
+# Swizzle strings recur constantly in kernel code (x, xyz, rgb...); cache the
+# parsed index arrays so the hot per-pixel path avoids split/map every call.
+my %SWIZZLE_IDX = ();
+sub _swizzle_idx {
+    my ($sw) = @_;
+    my $idx = $SWIZZLE_IDX{$sw};
+    return $idx if $idx;
+    die "invalid swizzle '$sw'\n"
+        unless length($sw) && !grep { !exists $SWIZZLE{$_} } split //, $sw;
+    return $SWIZZLE_IDX{$sw} = [map { $SWIZZLE{$_} } split //, $sw];
+}
+
 sub swizzle {
     my ($self, $vec, $sw) = @_;
-    my @idx = map { $SWIZZLE{$_} } split //, $sw;
+    my $idx = _swizzle_idx($sw);
     if (_is_ivec($vec)) {
-        return int($vec->[ $idx[0] ]) if @idx == 1;
-        return bless [@{$vec}[@idx]], 'Math::Fractal::Noisemaker::Runtime::IVec';
+        return int($vec->[ $idx->[0] ]) if @$idx == 1;
+        return bless [@{$vec}[@$idx]], 'Math::Fractal::Noisemaker::Runtime::IVec';
     }
     # JS reads a stored f32 element (binary defers the round).
-    return f32($vec->[ $idx[0] ]) if @idx == 1;
-    return [map { f32($vec->[$_]) } @idx];
+    return f32($vec->[ $idx->[0] ]) if @$idx == 1;
+    return [map { f32($vec->[$_]) } @$idx];
 }
 
 # Copy-on-write with GLSL value semantics; the emitted
@@ -260,29 +272,29 @@ sub swizzle {
 # A stored vector is f32 in JS; snap the base and the assigned value.
 sub assign_swizzle {
     my ($self, $vec, $sw, $value) = @_;
-    my @idx = map { $SWIZZLE{$_} } split //, $sw;
+    my $idx = _swizzle_idx($sw);
     my $v;
     if (_is_ivec($vec)) {
         $v = bless [@$vec], 'Math::Fractal::Noisemaker::Runtime::IVec';
         if (_is_vec($value)) {
             my @val = @$value;
-            $v->[ $idx[$_] ] = int $val[$_] for 0 .. $#idx;
+            $v->[ $idx->[$_] ] = int $val[$_] for 0 .. $#$idx;
         }
         else {
-            $v->[$_] = int $value for @idx;
+            $v->[$_] = int $value for @$idx;
         }
         return $v;
     }
     $v = [map { f32($_) } @$vec];
     if (_is_vec($value)) {
         my @val = map { f32($_) } @$value;
-        $v->[ $idx[$_] ] = $val[$_] for 0 .. $#idx;
+        $v->[ $idx->[$_] ] = $val[$_] for 0 .. $#$idx;
     }
     else {
         # Scalar writes snap too — the store is into f32 storage (numpy's
         # float32 dtype / JS's Float32Array both round scalar assignments).
         my $sv = f32($value);
-        $v->[$_] = $sv for @idx;
+        $v->[$_] = $sv for @$idx;
     }
     return $v;
 }
@@ -299,6 +311,14 @@ sub _bc2 {
     return $fn->($a, $b);
 }
 
+my %BIN_FN = (
+    '+' => sub { $_[0] + $_[1] },
+    '-' => sub { $_[0] - $_[1] },
+    '*' => sub { $_[0] * $_[1] },
+    '/' => sub { fdiv($_[0], $_[1]) },
+    '%' => sub { $_[1] == 0 ? $NAN : POSIX::fmod($_[0], $_[1]) },
+);
+
 sub binary {
     my ($self, $op, $a, $b, $width, $base) = @_;
     $base = 'float' unless defined $base;
@@ -311,14 +331,9 @@ sub binary {
         return _int_binary($op, $a, $b, $base eq 'uint' ? 'uint' : 'int');
     }
     # Float path: compute raw f64 and DEFER the f32 rounding to the
-    # consumption boundaries (see module header).
-    my $fn =
-          $op eq '+' ? sub { $_[0] + $_[1] }
-        : $op eq '-' ? sub { $_[0] - $_[1] }
-        : $op eq '*' ? sub { $_[0] * $_[1] }
-        : $op eq '/' ? sub { fdiv($_[0], $_[1]) }
-        : $op eq '%' ? sub { $_[1] == 0 ? $NAN : POSIX::fmod($_[0], $_[1]) }
-        : die "unsupported binary op '$op'\n";
+    # consumption boundaries (see module header). The op closures live in a
+    # package table — the per-pixel hot path must not allocate a sub per call.
+    my $fn = $BIN_FN{$op} or die "unsupported binary op '$op'\n";
     return _bc2($fn, $a, $b);
 }
 
