@@ -5,7 +5,7 @@
 Daily review: 2026-09-25. Current inspected source: [`5cf1b4e462f2865ff85fa043af0e005a3a8b7ee6`](https://github.com/noisefactorllc/noisemaker-for-perl/commit/5cf1b4e462f2865ff85fa043af0e005a3a8b7ee6).
 Full rendered parity remains **unverified** (the current bounded gate also has failures). No release approval or new closure follows from this review.
 Current upstream discovery: `bbdeb56c4b75cf33379766c3e87b0f5a18bcbba8`. Published Noisemaker authority: `1.0.179`, source `fca611fd8f91424661d4e531d39313d24ea21134`, 210 effect IDs.
-The observations below retain their original source and authority identities; they do not qualify later updates.
+The observations below retain their original source and authority identities. They do not qualify later updates.
 Current served kit: `0.1.13`, source `bf02783236fdfa3d5cfb9dce64e32400a6ba61d4`. [Retrieved inventory and hashes](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/current-served-inventories.json). Artifact identity does not establish host qualification.
 
 ### Earlier source observations
@@ -305,7 +305,7 @@ Current served declaration: 205 effect IDs. This inventory is not evidence of ex
 
 ## 4. Evidence
 
-Review CI boundary: No workflow run exists at the inspected source SHA. The preceding runtime source bf02783236fdfa3d5cfb9dce64e32400a6ba61d4 has a passing source CI run; the current difference is documentation only. A passing export dispatch does not qualify rendered parity. Current complete-render enforcement remains an open verification requirement. [Exact-source responses and workflows](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/noisemaker-for-perl-remote-evidence.json).
+Review CI boundary: No workflow run exists at the inspected source SHA. The preceding runtime source bf02783236fdfa3d5cfb9dce64e32400a6ba61d4 has a passing source CI run. The current difference is documentation only. A passing export dispatch does not qualify rendered parity. Current complete-render enforcement remains an open verification requirement. [Exact-source responses and workflows](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/noisemaker-for-perl-remote-evidence.json).
 
 Environment: macOS 26.5, arm64, Perl 5.34.1, Node 26.10.0. FFmpeg encoded the animation probe.
 [Tracked SHA-256 inventory](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/source-hashes.json) binds this run to the reviewed source.
@@ -390,7 +390,7 @@ Every eligible port has equal priority. None of these report changes closes an i
 
 ## 6. History
 
-2026-09-25 daily review at `5cf1b4e462f2865ff85fa043af0e005a3a8b7ee6`: source freshness and bounded evidence reviewed; open qualification limits retained. [Retained review evidence](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/perl-alpha-current.json). No new closure claimed.
+2026-09-25 daily review at `5cf1b4e462f2865ff85fa043af0e005a3a8b7ee6`: source freshness and bounded evidence reviewed. Open qualification limits retained. [Retained review evidence](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/perl-alpha-current.json). No new closure claimed.
 
 | Date | Source | Result | Change |
 |---|---|---|---|
