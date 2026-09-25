@@ -2,6 +2,14 @@
 
 ## 1. Source and authority revisions
 
+Daily review: 2026-09-25. Current inspected source: [`5cf1b4e462f2865ff85fa043af0e005a3a8b7ee6`](https://github.com/noisefactorllc/noisemaker-for-perl/commit/5cf1b4e462f2865ff85fa043af0e005a3a8b7ee6).
+Full rendered parity remains **unverified** (the current bounded gate also has failures). No release approval or new closure follows from this review.
+Current upstream discovery: `bbdeb56c4b75cf33379766c3e87b0f5a18bcbba8`. Published Noisemaker authority: `1.0.179`, source `fca611fd8f91424661d4e531d39313d24ea21134`, 210 effect IDs.
+The observations below retain their original source and authority identities; they do not qualify later updates.
+Current served kit: `0.1.13`, source `bf02783236fdfa3d5cfb9dce64e32400a6ba61d4`. [Retrieved inventory and hashes](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/current-served-inventories.json). Artifact identity does not establish host qualification.
+
+### Earlier source observations
+
 Date: 2026-09-25 UTC. Reviewed source: [`bf02783236fdfa3d5cfb9dce64e32400a6ba61d4`](https://github.com/noisefactorllc/noisemaker-for-perl/commit/bf02783236fdfa3d5cfb9dce64e32400a6ba61d4).
 Local and remote `main` matched. All tracked file hashes matched before report edits.
 This audit changes only the two requested reports. It does not advance implementation or the parity checkpoint.
@@ -28,6 +36,9 @@ Later runtime, package, or authority changes require new source-bound checks.
 
 ## 2. Host and distribution matrix
 
+Current tests and qualification limits are in [section 3](#3-parity-coverage).
+The matrix below retains the earlier measured scope. A historical verified row is not a current-source or full-platform certification.
+
 | Dimension | Status | Measured scope or limit |
 |---|---|---|
 | macOS arm64, Perl 5.34.1 | verified | 909 assertions. Installed CLI, API, media, animation, errors, recovery, cancellation, and private removal. |
@@ -49,6 +60,14 @@ The audit exercised installed CLI help, progress, diagnostics, and cancellation.
 
 ## 3. Parity coverage
 
+### Daily review, 2026-09-25
+
+The four-component solid color defect reproduces at the current source. With color alpha 0.3 and explicit alpha 0.8, the output alpha is 61 instead of the retained reference value 204. Omitting explicit alpha produces 76 instead of 255. The original 167 exact default cases, 38 exclusions, and five missing effect IDs do not qualify full parity. [Raw evidence](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/perl-alpha-current.json).
+
+The current full case denominator remains incomplete. Missing parameters, hosts, external inputs, and stateful sequences remain qualification gaps. No skip or tolerated difference counts as exact parity.
+
+### Earlier measurements
+
 RGBA8 byte equality is the strict comparison rule. No tolerance or golden changed.
 Full parity requires complete coverage with no skipped or missing cases.
 Unknown denominators remain `not measured`.
@@ -66,6 +85,8 @@ The sweep uses size 8×8, seed 1, time 0.25, and default parameters.
 The independent probes use size 16×12, seed 7, time 0.7, and recorded nondefault parameters.
 Default passes do not qualify all parameter choices. Additional probes overlap effects and do not increase the unique effect denominator.
 `t/05-parity.t` separately permits delta two for one Navier-Stokes assertion. That tolerant assertion does not count as strict equality.
+
+Current served declaration: 205 effect IDs. This inventory is not evidence of execution. The declaration column below reflects kit `0.1.13`.
 
 ### Effect inventory
 
@@ -284,6 +305,8 @@ Default passes do not qualify all parameter choices. Additional probes overlap e
 
 ## 4. Evidence
 
+Review CI boundary: No workflow run exists at the inspected source SHA. The preceding runtime source bf02783236fdfa3d5cfb9dce64e32400a6ba61d4 has a passing source CI run; the current difference is documentation only. A passing export dispatch does not qualify rendered parity. Current complete-render enforcement remains an open verification requirement. [Exact-source responses and workflows](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/noisemaker-for-perl-remote-evidence.json).
+
 Environment: macOS 26.5, arm64, Perl 5.34.1, Node 26.10.0. FFmpeg encoded the animation probe.
 [Tracked SHA-256 inventory](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/source-hashes.json) binds this run to the reviewed source.
 The oracle archive contains regular files. Its runtime digest passed the existing integrity check.
@@ -352,6 +375,9 @@ The kit builder rejected an archive without a Git index. Its unchanged retry use
 
 ## 5. Open compatibility limits
 
+Next bounded check: Run the three retained solid DSL cases through the installed Perl distribution and the immutable CPU reference. Require all RGBA bytes to agree without changing the existing RGB case. Then check the missing landscape filtering parameter, all 38 excluded effects, and the five missing effect IDs before rerunning the full declared gate.
+See the stable entries in [completion gaps](COMPLETION_GAPS.md).
+
 See [the gap register](COMPLETION_GAPS.md#4-known-gaps) for stable IDs, evidence, dependencies, and acceptance criteria.
 
 1. Reproduce the alpha and landscape parameter failures for GAP-004 and GAP-005.
@@ -363,6 +389,8 @@ See [the gap register](COMPLETION_GAPS.md#4-known-gaps) for stable IDs, evidence
 Every eligible port has equal priority. None of these report changes closes an implementation gap.
 
 ## 6. History
+
+2026-09-25 daily review at `5cf1b4e462f2865ff85fa043af0e005a3a8b7ee6`: source freshness and bounded evidence reviewed; open qualification limits retained. [Retained review evidence](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/perl-alpha-current.json). No new closure claimed.
 
 | Date | Source | Result | Change |
 |---|---|---|---|
