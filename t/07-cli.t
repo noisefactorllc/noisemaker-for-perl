@@ -349,4 +349,62 @@ for my $param ('seeed=3', 'type=not_a_noise_type', 'scaleX=banana') {
     ok(!-e $filename, 'invalid parameters do not write an image');
 }
 
+# --- installed (INSTALL_BASE) layout --------------------------------------
+# An INSTALL_BASE install places modules under <prefix>/lib/perl5 while the
+# script stays at <prefix>/bin/make-noise; the script must find them there
+# with no PERL5LIB and no checkout around it.
+{
+    require File::Path;
+    require File::Copy;
+    require File::Find;
+    my $prefix = File::Spec->catdir($TMPDIR, 'prefix');
+    my $bin    = File::Spec->catdir($prefix, 'bin');
+    my $lib5   = File::Spec->catdir($prefix, 'lib', 'perl5');
+    File::Path::make_path($bin, $lib5);
+
+    # Copy the checkout lib/ tree into <prefix>/lib/perl5/ with core modules
+    # only (File::Find + File::Copy), mirroring an INSTALL_BASE install.
+    require File::Basename;
+    my $lib_src = File::Spec->catdir($DIST_ROOT, 'lib');
+    File::Find::find(
+        {
+            wanted => sub {
+                return unless -f $_;
+                (my $rel = $File::Find::name) =~ s/^\Q$lib_src\E//;
+                my $dest = File::Spec->catfile($lib5, $rel);
+                File::Path::make_path(File::Basename::dirname($dest));
+                File::Copy::copy($File::Find::name, $dest)
+                    or die "cannot stage $File::Find::name: $!";
+            },
+            no_chdir => 1,
+        },
+        $lib_src
+    );
+    my $installed = File::Spec->catfile($bin, 'make-noise');
+    File::Copy::copy($MAKE_NOISE, $installed) or die "cannot stage bin: $!";
+
+    my (undef, $out_path) = File::Temp::tempfile(UNLINK => 1);
+    my (undef, $err_path) = File::Temp::tempfile(UNLINK => 1);
+    open(my $saved_out, '>&', \*STDOUT) or die "cannot save STDOUT: $!\n";
+    open(my $saved_err, '>&', \*STDERR) or die "cannot save STDERR: $!\n";
+    open(STDOUT, '>', $out_path) or die "cannot redirect STDOUT: $!\n";
+    open(STDERR, '>', $err_path) or die "cannot redirect STDERR: $!\n";
+    my $rc = do {
+        local %ENV = %ENV;
+        delete $ENV{PERL5LIB};
+        my $raw = system($PERL, $installed, '--version');
+        $raw == -1 ? -1 : ($raw >> 8);
+    };
+    open(STDOUT, '>&', $saved_out) or die "cannot restore STDOUT: $!\n";
+    open(STDERR, '>&', $saved_err) or die "cannot restore STDERR: $!\n";
+    close $saved_out; close $saved_err;
+    open my $ofh, '<', $out_path; my $out = do { local $/; <$ofh> } // '';
+    open my $efh, '<', $err_path; my $err = do { local $/; <$efh> } // '';
+    close $ofh; close $efh;
+    is($rc, 0, 'installed-layout make-noise --version exits 0') or diag("stderr=[$err]");
+    like($out, qr/make-noise \(Math::Fractal::Noisemaker\) 1\.000/,
+        'installed-layout script locates modules under <prefix>/lib/perl5');
+    unlike($err, qr/Can't locate Math\/Fractal\/Noisemaker\.pm/, 'no module-load failure');
+}
+
 done_testing();

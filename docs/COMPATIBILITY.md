@@ -44,13 +44,13 @@ The matrix below retains the earlier measured scope. A historical verified row i
 | macOS arm64, Perl 5.34.1 | verified | 909 assertions. Installed CLI, API, media, animation, errors, recovery, cancellation, and private removal. |
 | Linux Perl 5.22 and 5.42 | verified | Exact-source CI source and packaged tests. External oracle file skips in these matrix jobs. |
 | macOS Perl 5.42 | verified | Exact-source CI source and packaged tests. External oracle file skips. |
-| Current Perl 5.44 | unverified | No local or exact-source CI execution. |
+| Current Perl 5.44 | partial | Linux Perl 5.44.0 local build (MetaCPAN-verified tarball): 900 assertions and installed CLI workflows pass with byte-identical output. macOS 5.44 and Windows remain unqualified. |
 | Windows, 32-bit Perl, alternative floating-point configurations | unverified | No qualification evidence. |
 | Candidate module 1.000 installation | verified | Built archive installs privately and supports README CLI and API examples. |
 | Served kit 0.1.13 | verified | 324 file hashes, local reproduction, 319 source matches, notices, output, diagnostics, and recovery. |
 | CPAN module 1.000 | unverified | Registry discovery still returns historical 0.105. No GitHub release exists. |
-| Upgrade from 0.105 | unverified | README declares incompatible APIs. No migration run. |
-| Sustained resources and broad host lifecycle | unverified | Bounded process exit and cancellation do not qualify sustained operation. |
+| Upgrade from 0.105 | partial | Linux Perl 5.36.0: CPAN 0.105 (MetaCPAN-verified SHA-256) installed into an occupied prefix, then 1.000 replaces all its files with no leftovers; documented API break holds. 0.105's own runtime needs noncore `Imager`/`Tie::CArray`, absent here. macOS upgrade unverified. |
+| Sustained resources and broad host lifecycle | partial | Linux Perl 5.36.0: 10 consecutive installed 128×128 `synth/curl` renders exit 0 with stable peak RSS (31.4–33.0 MB) and byte-identical output. macOS sustained behavior unverified. |
 | Four-component solid color | failed | Separate alpha differs from the CPU reference. GAP-004. |
 | Landscape filtering parameter | failed | Perl rejects the current parameter. GAP-005. |
 | Full parity and release readiness | blocked | Exclusions, missing effects, parameter failures, and remaining platform qualification. |
@@ -362,7 +362,8 @@ The current documentation lists Perl 5.44.0. This audit does not qualify that ve
 The private installation uses the documented `INSTALL_BASE` mechanism.
 [CPAN discovery](https://fastapi.metacpan.org/v1/release/Math-Fractal-Noisemaker) still returns historical 0.105. No GitHub release exists.
 Candidate 1.000 installation and served kit 0.1.13 are separate distribution results.
-Migration from 0.105 remains untested. The README explicitly declares the breaking API change.
+Migration from 0.105 was untested at this 2026-09-25 audit. The README explicitly declares the breaking API change.
+(2026-09-26 update: an isolated Linux 0.105→1.000 upgrade run is recorded in the compatibility matrix above and in [COMPLETION_GAPS.md](COMPLETION_GAPS.md) section 3; macOS upgrade remains untested.)
 
 The port provides useful offline generation and filtering in a normal Perl process.
 Measured discovery, installation, outputs, diagnostics, and recovery support that bounded contribution.

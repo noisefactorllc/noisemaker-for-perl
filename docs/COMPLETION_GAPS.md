@@ -120,6 +120,31 @@ Probe limitations: initial `/latest/` shader requests failed. The documented `/1
 The kit builder rejected an archive without a Git index. Its unchanged retry used the verified checkout and reproduced every file.
 [Rejected setup](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/kit-rebuild.json). [Successful reproduction](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/kit-rebuild-verified.json).
 
+### Installed-artifact qualification, 2026-09-26
+
+Environment: Linux (Debian 12, x86_64, kernel 6.8.0), system Perl 5.36.0, Node 26.5.1. No FFmpeg in the container, so `animate` used `--save-frames`. Perl 5.22.4 and Perl 5.44.0 were built from the CPAN 5.0 source tarballs (5.22.4 needed `-Accflags='-fno-plt -fcommon -O1 -fno-strict-aliasing'`; the first plain build failed with a miniperl segfault under gcc 12.2.0/glibc 2.36; the 5.44.0 tarball matched its MetaCPAN SHA-256 `3b855066b92491cb40e86affb1ca57d1a388aa43e51b91c7806a32c2f65f96c3`). All consumers used isolated private `INSTALL_BASE` prefixes and an isolated `HOME` with `PERL5LIB` unset; user outputs lived outside every prefix. Host kernel 6.8.0 and gcc 12.2.0 facts were taken from the live container.
+
+Defect found and fixed: the installed `bin/make-noise` added only `$FindBin::Bin/../lib` to `@INC`. On an `INSTALL_BASE` install modules live in `<prefix>/lib/perl5`, so every installed command failed with `Can't locate Math/Fractal/Noisemaker.pm in @INC` (exit 2) unless the consumer set `PERL5LIB`. The fix adds `use lib "$FindBin::Bin/../lib/perl5"`, and `t/07-cli.t` gained a regression case that stages `<prefix>/bin/make-noise` plus `lib/` under `<prefix>/lib/perl5/` and requires `--version` to succeed with no `PERL5LIB` (it fails on the unfixed script). All rows below ran the fixed installed script. The defect is inherent to the `INSTALL_BASE` layout and therefore predates this fix; how the earlier macOS CLI rows passed is not recorded in the retained macOS evidence.
+
+| Command (installed artifact, isolated prefix) | Exit | Measured result |
+|---|---|---|
+| `perl Makefile.PL INSTALL_BASE=<prefix>`; `make`; `make install` | 0, 0, 0 | Candidate 1.000 installs on Perl 5.36.0, Perl 5.22.4, and Perl 5.44.0. |
+| `make-noise --version` | 0 | `make-noise (Math::Fractal::Noisemaker) 1.000`. |
+| `generate synth/noise --width 32 --height 32 --seed 3` twice | 0, 0 | Repeat renders byte-identical: SHA-256 `074dcadc4666c1a9bd87fa649e13e21dd2ab94b3e5651e6de7c24e6a218a3a10`. |
+| `apply filter/crt <input> --seed 3`; stdin DSL `run` | 0, 0 | Same-seed `filter/crt` and DSL outputs from Perl 5.22.4 and 5.44.0 byte-match the Perl 5.36.0 outputs. (Without an explicit seed `apply` randomizes the seed, so default-seed outputs differ across runs by design.) |
+| `animate synth/curl --frame-count 3 --save-frames DIR` | 0 | 3 PNG frames written; explicit message that FFmpeg is absent and no video was produced. |
+| `--param seeed=3` on an existing destination | 2 | Names the parameter and accepted names; pre-existing destination bytes unchanged (verified by `cmp`). |
+| Corrected `generate` after the error; unknown effect; `--width 0` | 0, 2, 2 | Recovery renders; `Unknown effect: bogus/effect`; `--width must be a positive integer`. |
+| SIGINT (signal 2) to a 1024×1024 `synth/curl` render | signal 2 | An initial SIGINT aimed at the wrapping shell left the render running; a second SIGINT to the perl process, delivered after the 30-second progress report and before the 35-second one, stopped it immediately (the log ends at the 30-second line). No partial destination was written; pre-existing destination bytes survived (`cmp`). |
+| 0.105 → 1.000 upgrade: install CPAN 0.105 (SHA-256 `17dfc7bded95551f6ec8ce182ab2fe197e622c3f7f5e3ee00f31f8f5b4f55e7a`, verified against MetaCPAN) into a prefix, then install 1.000 into the same prefix | 0 | All five 0.105 files (module, `make-noise`, man page, `.packlist`, `perllocal.pod`) replaced or refreshed; no 0.105-only files left; installed module reports 1.000; `Math::Fractal::Noisemaker::make()` absent; `make-noise -type noise` exits `Unknown command: '-type'` — the documented 0.105 break. Consumer files created before the upgrade kept their pre-upgrade MD5s. 0.105's own CLI could not run here: it requires noncore `Imager`/`Tie::CArray`, and the container has no root to install them. |
+| 10× `generate synth/curl --width 128 --height 128 --seed 3` | 0 ×10 | Per-render 52.45–55.49 s; sampled peak RSS per process 31,400–33,040 kB, no growth trend; final SHA-256 `a702df014293c9c39bad9c17c76a7e81313467e74eeb9b28a92efae02aa2b3ba`, equal to an earlier same-input render. |
+| `ExtUtils::Install::uninstall` of the `.packlist` (dry run, then real) | 0 | Every installed file removed; only `perllocal.pod` bookkeeping remained in the prefix; user outputs outside the prefix untouched. |
+| `RELEASE_TESTING=0 prove -lr t` on Perl 5.36.0, 5.22.4, and 5.44.0 | 0, 0, 0 | 22 files, 900 assertions each, all pass with the `bin/make-noise` fix and the new installed-layout regression case. |
+
+Measurement note: the 10-iteration resource run sampled each render process's cumulative `/proc/<pid>/status` VmHWM at 50 ms intervals. An earlier 20-iteration attempt was discarded after three iterations because the prefix was concurrently uninstalled (iterations 4–20 exited 127); the recorded run is a clean restart against the upgraded prefix.
+
+Remaining limits: macOS installed upgrade and sustained-resource qualification are not automatable in this Linux-only harness; Linux Perl 5.42 installed workflows were not run locally, but the floor (5.22.4) and the current release (5.44.0) are qualified above and CI covers 5.42 source and packaged assertions; FFmpeg MP4 encoding was unavailable, so `animate` was qualified through saved PNG frames only.
+
 ## 4. Known gaps
 
 P1 means false completion or a major correctness gap. P2 means bounded correctness, coverage, or integration gaps. P3 means documentation inconsistency.
@@ -140,16 +165,16 @@ No existing gap closes in this pass.
 
 ### GAP-002: remaining installed workflow qualification
 
-- Status: open. Priority: P2. Category: usability.
+- Status: blocked. Priority: P2. Category: usability.
 - Affected scope: README.md, public API, CLI, supported hosts, and lifecycle.
 - Expected behavior: Developers can install, render, recover, cancel, upgrade, and remove the package on supported hosts.
-- Observed behavior: Private installation, README workflows, diagnostics, cancellation, and removal pass on macOS Perl 5.34.1. Upgrades and sustained resource behavior remain unverified.
-- Evidence: [Installed evidence](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/usability.json) and section 3.
-- Next action: Measure migration, repeated renders, resource behavior, and supported host workflows with installed artifacts.
+- Observed behavior: Private installation, README workflows, diagnostics, cancellation, and removal pass on macOS Perl 5.34.1. On Linux, an installed-CLI defect was found and fixed: `bin/make-noise` only searched `<prefix>/lib`, so an `INSTALL_BASE` install failed with "Can't locate Math/Fractal/Noisemaker.pm" unless `PERL5LIB` was set. With the fix, install, README workflows, errors, recovery, cancellation, 0.105→1.000 upgrade over an occupied prefix, 10-iteration sustained rendering (peak RSS 31.4–33.0 MB, stable), and packlist removal pass on Linux Perl 5.22.4 (minimum), 5.36.0, and 5.44.0 (current) with byte-identical outputs and 900 passing assertions per version. macOS upgrade and sustained-resource qualification remain unverified.
+- Evidence: [Installed evidence](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/usability.json), section 3 ("Installed-artifact qualification, 2026-09-26"), and section 6.
+- Next action: Qualify upgrade, repeated renders, and sustained resource behavior with installed artifacts on macOS, the one supported environment this harness cannot automate.
 - Dependencies: Use isolated consumers. Preserve user files and the documented 0.105 compatibility boundary.
 - Acceptance criteria: Retain commands, output bytes, resource measurements, and recovery results for each supported environment.
 - Required checks: Minimum and current Perl versions, platform matrix, errors, cancellation, upgrade, and removal.
-- Last verification: 2026-09-25.
+- Last verification: 2026-09-26.
 
 ### GAP-003: distribution and release qualification
 
@@ -204,6 +229,8 @@ Subsequent historical actions remain dependent on that evidence. No implementati
 This audit authorizes no implementation work, new effects, or parity checkpoint advancement.
 
 ## 6. Pass history
+
+2026-09-26 GAP-002 implementation at this commit: fixed the installed-CLI `INSTALL_BASE` `@INC` defect in `bin/make-noise` with an installed-layout regression case in `t/07-cli.t`, and recorded installed-artifact qualification on Linux Perl 5.22.4 (minimum), 5.36.0, and 5.44.0 (current) — workflows, errors, recovery, cancellation, 0.105→1.000 upgrade, sustained 10-iteration resource run, removal — in section 3. GAP-002 moves to blocked: macOS upgrade and sustained-resource qualification need macOS hardware this harness lacks. No parity, authority, or tolerance change.
 
 2026-09-25 daily review at `5cf1b4e462f2865ff85fa043af0e005a3a8b7ee6`: source freshness and bounded evidence reviewed. Open qualification limits retained. [Retained review evidence](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/perl-alpha-current.json). No new closure claimed.
 
