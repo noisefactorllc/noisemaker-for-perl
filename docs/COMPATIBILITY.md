@@ -49,8 +49,8 @@ The matrix below retains the earlier measured scope. A historical verified row i
 | Candidate module 1.000 installation | verified | Built archive installs privately and supports README CLI and API examples. |
 | Served kit 0.1.13 | verified | 324 file hashes, local reproduction, 319 source matches, notices, output, diagnostics, and recovery. |
 | CPAN module 1.000 | unverified | Registry discovery still returns historical 0.105. No GitHub release exists. |
-| Upgrade from 0.105 | partial | Linux Perl 5.36.0: CPAN 0.105 (MetaCPAN-verified SHA-256) installed into an occupied prefix, then 1.000 replaces all its files with no leftovers; documented API break holds. 0.105's own runtime needs noncore `Imager`/`Tie::CArray`, absent here. macOS upgrade unverified. |
-| Sustained resources and broad host lifecycle | partial | Linux Perl 5.36.0: 10 consecutive installed 128×128 `synth/curl` renders exit 0 with stable peak RSS (31.4–33.0 MB) and byte-identical output. macOS sustained behavior unverified. |
+| Upgrade from 0.105 | supported within measured scope | Linux Perl 5.36.0: CPAN 0.105 (MetaCPAN-verified SHA-256) installed into an occupied prefix, then 1.000 replaces all its files with no leftovers; documented API break holds. 0.105's own runtime needs noncore `Imager`/`Tie::CArray`, absent here. macOS 26.5/Perl 5.34.1 upgrade and removal also pass, including man pages and consumer-file preservation ([measurements](COMPLETION_GAPS.md#installed-artifact-qualification-2026-09-26)). |
+| Sustained resources and broad host lifecycle | partial | Linux Perl 5.36.0: 10 consecutive installed 128×128 `synth/curl` renders exit 0 with stable peak RSS (31.4–33.0 MB) and byte-identical output. macOS 26.5/Perl 5.34.1: ten matching outputs, peak RSS 34.8–35.1 MB. Long-lived in-process resource behavior remains unqualified. |
 | Four-component solid color | failed | Separate alpha differs from the CPU reference. GAP-004. |
 | Landscape filtering parameter | failed | Perl rejects the current parameter. GAP-005. |
 | Full parity and release readiness | blocked | Exclusions, missing effects, parameter failures, and remaining platform qualification. |
@@ -384,7 +384,7 @@ See [the gap register](COMPLETION_GAPS.md#4-known-gaps) for stable IDs, evidence
 1. Reproduce the alpha and landscape parameter failures for GAP-004 and GAP-005.
 2. Reconcile parameter representations and define complete cases for GAP-001.
 3. Add missing source-update parity enforcement through existing CI in the separate implementation job.
-4. Qualify migration, current Perl, remaining hosts, and sustained resources for GAP-002.
+4. GAP-002 is closed for its measured Linux/macOS workflows; broader platform and long-lived process claims remain outside that evidence.
 5. Qualify the intended distribution channel and release contract for GAP-003.
 
 Every eligible port has equal priority. None of these report changes closes an implementation gap.

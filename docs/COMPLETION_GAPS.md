@@ -145,6 +145,9 @@ Measurement note: the 10-iteration resource run sampled each render process's cu
 
 Remaining limits: macOS installed upgrade and sustained-resource qualification are not automatable in this Linux-only harness; Linux Perl 5.42 installed workflows were not run locally, but the floor (5.22.4) and the current release (5.44.0) are qualified above and CI covers 5.42 source and packaged assertions; FFmpeg MP4 encoding was unavailable, so `animate` was qualified through saved PNG frames only.
 
+
+2026-09-27 macOS follow-up at [`72fd6845`](https://github.com/noisefactorllc/noisemaker-for-perl/commit/72fd6845c5e8f148995c8e9abc9521c03e38d18d): macOS 26.5 arm64, Perl 5.34.1. The same isolated 0.105→1.000 upgrade, installed generate/apply/DSL/animation, invalid-input recovery, SIGINT preservation, and removal checks pass; default installation replaces all old package files, installs nine man pages, and removes all 328 package-listed files while preserving consumer files. Ten installed `synth/curl` renders at 128×128, seed 3, exit 0 in 57.4–65.3 s each; `/usr/bin/time -l` peak RSS is 34,783,232–35,078,144 bytes. Every PNG hashes to `b5a4f37617042c045c19369b99b63f04ba64c3d031152f9988c0e3f9c7c73ed6`. Tests: 912 assertions pass against pinned oracle `aaa6df50`. These are separate CLI processes, not an in-process leak test; historical 0.105 rendering remains untested. [Raw resource and workflow measurements](/tmp/worker-elves-perl-macos/result.json), [default installation](/tmp/worker-elves-perl-macos/default-install.log), [tests](/tmp/worker-elves-perl-macos/tests-pinned.log).
+
 ## 4. Known gaps
 
 P1 means false completion or a major correctness gap. P2 means bounded correctness, coverage, or integration gaps. P3 means documentation inconsistency.
@@ -165,16 +168,16 @@ No existing gap closes in this pass.
 
 ### GAP-002: remaining installed workflow qualification
 
-- Status: blocked. Priority: P2. Category: usability.
+- Status: closed. Priority: P2. Category: usability.
 - Affected scope: README.md, public API, CLI, supported hosts, and lifecycle.
 - Expected behavior: Developers can install, render, recover, cancel, upgrade, and remove the package on supported hosts.
-- Observed behavior: Private installation, README workflows, diagnostics, cancellation, and removal pass on macOS Perl 5.34.1. On Linux, an installed-CLI defect was found and fixed: `bin/make-noise` only searched `<prefix>/lib`, so an `INSTALL_BASE` install failed with "Can't locate Math/Fractal/Noisemaker.pm" unless `PERL5LIB` was set. With the fix, install, README workflows, errors, recovery, cancellation, 0.105→1.000 upgrade over an occupied prefix, 10-iteration sustained rendering (peak RSS 31.4–33.0 MB, stable), and packlist removal pass on Linux Perl 5.22.4 (minimum), 5.36.0, and 5.44.0 (current) with byte-identical outputs and 900 passing assertions per version. macOS upgrade and sustained-resource qualification remain unverified.
+- Observed behavior: Private installation, README workflows, diagnostics, cancellation, and removal pass on macOS Perl 5.34.1. On Linux, an installed-CLI defect was found and fixed: `bin/make-noise` only searched `<prefix>/lib`, so an `INSTALL_BASE` install failed with "Can't locate Math/Fractal/Noisemaker.pm" unless `PERL5LIB` was set. With the fix, install, README workflows, errors, recovery, cancellation, 0.105→1.000 upgrade over an occupied prefix, 10-iteration sustained rendering (peak RSS 31.4–33.0 MB, stable), and packlist removal pass on Linux Perl 5.22.4 (minimum), 5.36.0, and 5.44.0 (current) with byte-identical outputs and 900 passing assertions per version. The macOS 5.34.1 follow-up above passes upgrade, repeated rendering, bounded resource measurements, and removal.
 - Evidence: [Installed evidence](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/usability.json), section 3 ("Installed-artifact qualification, 2026-09-26"), and section 6.
-- Next action: Qualify upgrade, repeated renders, and sustained resource behavior with installed artifacts on macOS, the one supported environment this harness cannot automate.
+- Next action: None for the measured Linux/macOS installed workflows.
 - Dependencies: Use isolated consumers. Preserve user files and the documented 0.105 compatibility boundary.
 - Acceptance criteria: Retain commands, output bytes, resource measurements, and recovery results for each supported environment.
 - Required checks: Minimum and current Perl versions, platform matrix, errors, cancellation, upgrade, and removal.
-- Last verification: 2026-09-26.
+- Last verification: 2026-09-27.
 
 ### GAP-003: distribution and release qualification
 
