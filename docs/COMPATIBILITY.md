@@ -6,7 +6,7 @@ Daily review: 2026-09-25. Current inspected source: [`5cf1b4e462f2865ff85fa043af
 Full rendered parity remains **unverified** (the current bounded gate also has failures). No release approval or new closure follows from this review.
 Current upstream discovery: `bbdeb56c4b75cf33379766c3e87b0f5a18bcbba8`. Published Noisemaker authority: `1.0.179`, source `fca611fd8f91424661d4e531d39313d24ea21134`, 210 effect IDs.
 The observations below retain their original source and authority identities. They do not qualify later updates.
-Current served kit: `0.1.13`, source `bf02783236fdfa3d5cfb9dce64e32400a6ba61d4`. [Retrieved inventory and hashes](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/current-served-inventories.json). Artifact identity does not establish host qualification.
+Current served kit: `0.1.13`, source `bf02783236fdfa3d5cfb9dce64e32400a6ba61d4`. Retrieved inventory and hashes (audit evidence `review-20260925-053200/current-served-inventories.json`). Artifact identity does not establish host qualification.
 
 ### Earlier source observations
 
@@ -25,11 +25,11 @@ Its runtime SHA-256 is `f188fbae51f369037babb6a3b06c7c9ec58a8c018fdcc3c89b17e1c9
 Pinned upstream: `13fa8b54002539df71ceffa34b4d894cb0a4573d`. Published engine: `1.0.177`.
 Current upstream: `aa96726ddb542a03d0b58cbad2af206fba40e7fe`.
 The four intervening commits change six documentation or website files. They do not change renderer inputs.
-[Authority delta](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/upstream-delta.json). [Oracle lock](https://github.com/noisefactorllc/noisemaker-for-perl/blob/bf02783236fdfa3d5cfb9dce64e32400a6ba61d4/scripts/oracle-lock.json).
+Authority delta (audit evidence `evidence-audit-20260925-010210/upstream-delta.json`). [Oracle lock](https://github.com/noisefactorllc/noisemaker-for-perl/blob/bf02783236fdfa3d5cfb9dce64e32400a6ba61d4/scripts/oracle-lock.json).
 
 Served kit `0.1.13` identifies the reviewed source. All 324 files match their hashes and a local reproduction.
 All 319 served engine files match this source. Both MIT notices are present.
-[Immutable metadata](https://kits.noisedeck.app/perl/0.1.13/deployment-meta.json). [Artifact verification](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/artifact-verification.json).
+[Immutable metadata](https://kits.noisedeck.app/perl/0.1.13/deployment-meta.json). Artifact verification (audit evidence `evidence-audit-20260925-010210/artifact-verification.json`).
 
 Evidence is fresh for the stated CPU probes and distribution bytes. Full current parity remains unverified.
 Later runtime, package, or authority changes require new source-bound checks.
@@ -62,7 +62,7 @@ The audit exercised installed CLI help, progress, diagnostics, and cancellation.
 
 ### Daily review, 2026-09-25
 
-The four-component solid color defect reproduces at the current source. With color alpha 0.3 and explicit alpha 0.8, the output alpha is 61 instead of the retained reference value 204. Omitting explicit alpha produces 76 instead of 255. The original 167 exact default cases, 38 exclusions, and five missing effect IDs do not qualify full parity. [Raw evidence](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/perl-alpha-current.json).
+The four-component solid color defect reproduces at the current source. With color alpha 0.3 and explicit alpha 0.8, the output alpha is 61 instead of the retained reference value 204. Omitting explicit alpha produces 76 instead of 255. The original 167 exact default cases, 38 exclusions, and five missing effect IDs do not qualify full parity. Raw evidence (audit evidence `review-20260925-053200/perl-alpha-current.json`).
 
 The current full case denominator remains incomplete. Missing parameters, hosts, external inputs, and stateful sequences remain qualification gaps. No skip or tolerated difference counts as exact parity.
 
@@ -305,10 +305,10 @@ Current served declaration: 205 effect IDs. This inventory is not evidence of ex
 
 ## 4. Evidence
 
-Review CI boundary: No workflow run exists at the inspected source SHA. The preceding runtime source bf02783236fdfa3d5cfb9dce64e32400a6ba61d4 has a passing source CI run. The current difference is documentation only. A passing export dispatch does not qualify rendered parity. Current complete-render enforcement remains an open verification requirement. [Exact-source responses and workflows](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/noisemaker-for-perl-remote-evidence.json).
+Review CI boundary: No workflow run exists at the inspected source SHA. The preceding runtime source bf02783236fdfa3d5cfb9dce64e32400a6ba61d4 has a passing source CI run. The current difference is documentation only. A passing export dispatch does not qualify rendered parity. Current complete-render enforcement remains an open verification requirement. Exact-source responses and workflows (audit evidence `review-20260925-053200/noisemaker-for-perl-remote-evidence.json`).
 
 Environment: macOS 26.5, arm64, Perl 5.34.1, Node 26.10.0. FFmpeg encoded the animation probe.
-[Tracked SHA-256 inventory](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/source-hashes.json) binds this run to the reviewed source.
+Tracked SHA-256 inventory (audit evidence `evidence-audit-20260925-010210/source-hashes.json`) binds this run to the reviewed source.
 The oracle archive contains regular files. Its runtime digest passed the existing integrity check.
 No authority data, tests, implementation, workflow, tolerance, or golden changed.
 
@@ -329,16 +329,16 @@ No authority data, tests, implementation, workflow, tolerance, or golden changed
 | Served `perl run.pl` and invalid DSL recovery | 0, 255, 0 | Useful 16×12 output. Diagnostic includes line and column. Existing output survives. |
 | Private installation removal | verified | The audit removed only its private prefix. User outputs remain. |
 
-[Test commands and exits](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/tests.json). [Full test log](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/source-tests.log). [Rendered sweep](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/full-parity.log).
-[Distribution checks](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/distribution-tests.json). [Archive installation](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/install.json). [POD checks](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/pod.json).
-[Installed workflows](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/usability.json). [Decoded output checks](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/workflow-output-checks.json).
-[External-input comparison](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/media-comparison.json). [Served recovery](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/served-recovery.json). [Removal](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/removal.json).
+Test commands and exits (audit evidence `evidence-audit-20260925-010210/tests.json`). Full test log (audit evidence `evidence-audit-20260925-010210/source-tests.log`). Rendered sweep (audit evidence `evidence-audit-20260925-010210/full-parity.log`).
+Distribution checks (audit evidence `evidence-audit-20260925-010210/distribution-tests.json`). Archive installation (audit evidence `evidence-audit-20260925-010210/install.json`). POD checks (audit evidence `evidence-audit-20260925-010210/pod.json`).
+Installed workflows (audit evidence `evidence-audit-20260925-010210/usability.json`). Decoded output checks (audit evidence `evidence-audit-20260925-010210/workflow-output-checks.json`).
+External-input comparison (audit evidence `evidence-audit-20260925-010210/media-comparison.json`). Served recovery (audit evidence `evidence-audit-20260925-010210/served-recovery.json`). Removal (audit evidence `evidence-audit-20260925-010210/removal.json`).
 
 Four independent 16×12 comparisons use seed 7 and time 0.7.
 Noise with type 10 and ridges, curl, and a two-iteration Navier-Stokes case match exactly.
 Four-component solid color fails. Maximum channel difference is 179 across 192 alpha channels.
 Three 2×2 DSL follow-ups reproduce two failures. The three-component control matches exactly.
-[Independent probes](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/independent-differential.json). [Controlled alpha reproduction](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/alpha-reproduction.json).
+Independent probes (audit evidence `evidence-audit-20260925-010210/independent-differential.json`). Controlled alpha reproduction (audit evidence `evidence-audit-20260925-010210/alpha-reproduction.json`).
 
 The existing `t/05-parity.t` runs 12 assertions. Its Navier-Stokes assertion permits a maximum channel difference of two.
 That tolerance remains unchanged. A tolerant assertion does not establish exact equality.
@@ -346,16 +346,16 @@ The independent Navier-Stokes probe separately measured exact equality for its s
 
 Current inventories contain 210 upstream IDs and 205 port IDs.
 The default sweep executes 167 cases and excludes 38. Five upstream IDs are absent.
-[Case identifiers and parameter limits](COMPATIBILITY.md#3-parity-coverage). [Inventory](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/coverage-inventory.json).
+[Case identifiers and parameter limits](COMPATIBILITY.md#3-parity-coverage). Inventory (audit evidence `evidence-audit-20260925-010210/coverage-inventory.json`).
 The parameter comparison found missing landscape `filtering` and different remap metadata representation.
 The remap representation difference needs contract reconciliation. It is not automatically an implementation defect.
-[Parameter comparison](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/parameter-inventory-diff.json). [Landscape rejection](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/landscape-parameter.json).
+Parameter comparison (audit evidence `evidence-audit-20260925-010210/parameter-inventory-diff.json`). Landscape rejection (audit evidence `evidence-audit-20260925-010210/landscape-parameter.json`).
 
 [Exact-source CI](https://github.com/noisefactorllc/noisemaker-for-perl/actions/runs/36077699976) passed all five jobs.
 Linux Perl 5.22/5.42 and macOS Perl 5.42 each pass 897 source and packaged assertions.
 Those matrix jobs skip the external oracle file. The separate oracle job passes 12 assertions and 167 comparisons, with 38 exclusions.
 [Downstream release](https://github.com/noisefactorllc/scaffold/actions/runs/36078402043) includes an executed Perl PNG check.
-[Source CI log](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/ci-log.txt). [Release log](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/downstream-log.txt).
+Source CI log (audit evidence `evidence-audit-20260925-010210/ci-log.txt`). Release log (audit evidence `evidence-audit-20260925-010210/downstream-log.txt`).
 
 Official references: [ExtUtils::MakeMaker 7.78](https://perldoc.perl.org/ExtUtils::MakeMaker) and [Perl maintenance policy](https://perldoc.perl.org/perlpolicy), accessed 2026-09-25.
 The current documentation lists Perl 5.44.0. This audit does not qualify that version.
@@ -372,7 +372,7 @@ Other platforms, upgrade safety, sustained resource use, and complete current pa
 
 Probe limitations: initial `/latest/` shader requests failed. The documented `/1/` path succeeded.
 The kit builder rejected an archive without a Git index. Its unchanged retry used the verified checkout and reproduced every file.
-[Rejected setup](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/kit-rebuild.json). [Successful reproduction](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/kit-rebuild-verified.json).
+Rejected setup (audit evidence `evidence-audit-20260925-010210/kit-rebuild.json`). Successful reproduction (audit evidence `evidence-audit-20260925-010210/kit-rebuild-verified.json`).
 
 ## 5. Open compatibility limits
 
@@ -391,7 +391,7 @@ Every eligible port has equal priority. None of these report changes closes an i
 
 ## 6. History
 
-2026-09-25 daily review at `5cf1b4e462f2865ff85fa043af0e005a3a8b7ee6`: source freshness and bounded evidence reviewed. Open qualification limits retained. [Retained review evidence](/Users/alex/.codex/automations/noisemaker-port-completion-audit/review-20260925-053200/perl-alpha-current.json). No new closure claimed.
+2026-09-25 daily review at `5cf1b4e462f2865ff85fa043af0e005a3a8b7ee6`: source freshness and bounded evidence reviewed. Open qualification limits retained. Retained review evidence (audit evidence `review-20260925-053200/perl-alpha-current.json`). No new closure claimed.
 
 | Date | Source | Result | Change |
 |---|---|---|---|
@@ -407,5 +407,5 @@ Source: `bf02783236fdfa3d5cfb9dce64e32400a6ba61d4`. CPU authority: `749aa116730d
 The existing sweep passes 167 exact cases and excludes 38. Five current upstream effect IDs remain absent.
 Installed workflows and all 324 served files pass bounded checks. Nondefault alpha fails. Perl rejects landscape filtering.
 No gap closes. Full parity and release readiness remain unqualified.
-Earlier results remain in [the preserved report](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/before-COMPATIBILITY.md) and the preceding publication.
-[Publication and queue result](/Users/alex/.codex/automations/noisemaker-port-completion-audit/evidence-audit-20260925-010210/result.json).
+Earlier results remain in the preserved report (audit evidence `evidence-audit-20260925-010210/before-COMPATIBILITY.md`) and the preceding publication.
+Publication and queue result (audit evidence `evidence-audit-20260925-010210/result.json`).
