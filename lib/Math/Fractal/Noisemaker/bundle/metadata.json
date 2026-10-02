@@ -27690,6 +27690,8 @@
       "func": "heightmap3d",
       "kind": "generator",
       "namespace": "synth3d",
+      "outputGeo": "geoBuffer",
+      "outputTex3d": "volumeCache",
       "paramOrder": [
         "heightTex",
         "tex",

@@ -59,6 +59,7 @@ my %VOLUME_OUTPUTS = (
     'synth3d/cellularAutomata3d'      => ['global_ca_state', 'geoBuffer'],
     'synth3d/flythrough3d'            => ['volumeCache', 'geoBuffer'],
     'synth3d/fractal3d'               => ['volumeCache', 'geoBuffer'],
+    'synth3d/heightmap3d'             => ['volumeCache', 'geoBuffer'],
     'synth3d/noise3d'                 => ['volumeCache', 'geoBuffer'],
     'synth3d/reactionDiffusion3d'     => ['global_rd_state', 'geoBuffer'],
     'synth3d/shape3d'                 => ['volumeCache', 'geoBuffer'],
