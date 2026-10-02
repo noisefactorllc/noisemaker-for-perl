@@ -329,6 +329,7 @@ lib/Math/Fractal/Noisemaker/bundle/metadata.json
 scripts/build-bundle.pl
 scripts/ParityOracle.pm
 scripts/oracle-lock.json
+scripts/parity-full.pl
 scripts/parity.pl
 scripts/test
 t/01-uintmath.t

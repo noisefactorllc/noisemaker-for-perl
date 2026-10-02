@@ -199,7 +199,7 @@ Current served declaration: 205 effect IDs. This inventory is not evidence of ex
 | `filter/spatter` | verified: exact default comparison | unverified |
 | `filter/spinBlur` | verified: exact default comparison | unverified |
 | `filter/spiral` | verified: exact default comparison | unverified |
-| `filter/spookyTicker` | verified: exact default comparison | unverified |
+| `filter/spookyTicker` | partial: exact default comparison; divergent with explicit parameters (see full-catalog sweep) | unverified |
 | `filter/stamp` | verified: exact default comparison | unverified |
 | `filter/step` | verified: exact default comparison | unverified |
 | `filter/stipple` | verified: exact default comparison | unverified |
@@ -302,6 +302,42 @@ Current served declaration: 205 effect IDs. This inventory is not evidence of ex
 | `synth3d/noise3d` | excluded: typed | unverified |
 | `synth3d/reactionDiffusion3d` | excluded: iterated | unverified |
 | `synth3d/shape3d` | excluded: typed | unverified |
+
+### Full-catalog sweep, oracle `bfbe54764eee87c8f67d2b281d5f304faad04a5b` (2026-10-02)
+
+Run evidence: Worker Elves job `a7805c19-dc58-4c3f-895f-0c565e780578`,
+evidence archive `parity-full-bfbe547.log` (sweep) and
+`presync-nonregression.log` (pre-sync reproduction below).
+
+`scripts/parity-full.pl` extends the same RGBA8 byte-comparison methodology to
+the whole bundled catalog: every one of the 205 bundled effect IDs plus three
+explicit `filtering: 0` isosurface variants of the volume renderers, rendered
+with identical program text and explicitly bound parameters on both the port
+and the pinned oracle at the revision above. Measured result: 204 of 208
+cases byte-exact. The four non-exact cases are pre-existing: the archived
+`presync-nonregression.log` renders each case at the pre-sync published
+source `8c7f350` and at the current source and compares the complete RGBA8
+output on both sides, recording byte-identical port output for spookyTicker,
+cellularAutomata3d and shape3d (points/flock times out at the 60 s probe
+budget on both sides, so no render is compared);
+the bundle-lock hashes for all four kernels are unchanged by the sync (only
+`classicNoisedeck/glitch`, `classicNoisedeck/noise`, and
+`render/renderLandscape3d` drifted):
+
+- `filter/spookyTicker` (max channel delta 106, 16x16 with explicit
+  parameters): the oracle's generated JS canonical kernel loses the GLSL
+  `int cellX = sx / CELL_W` division (JS `/` is float, so `localX` collapses
+  toward 0 and no glyph bit survives); the port keeps the GLSL integer
+  semantics and renders the glyph path. The default 8x8 comparison above
+  stays byte-exact because the glyph rows do not reach the canvas there.
+- `synth3d/cellularAutomata3d` (delta 96, excluded: iterated): the port's
+  output advances with `iterationCount` while the oracle's does not.
+- `synth3d/shape3d` (delta 74, excluded: typed): one oracle pixel renders a
+  surface the port's volume does not reach at volumeSize 2.
+- `points/flock` (port render error): the port's bounded-loops agent kernel
+  is transpilation-faithful but the pure-Perl interpreter exceeds a 600 s
+  render budget where the JS runtime takes about a second; the sweep records
+  this as a port timeout, not a byte comparison.
 
 ## 4. Evidence
 
