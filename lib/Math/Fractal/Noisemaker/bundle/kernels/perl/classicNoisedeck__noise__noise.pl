@@ -766,19 +766,31 @@ my $run_pixel = sub {
             $nominalBase = $rt->binary('*', $rt->binary('*', $rt->swizzle($nominalFreq, 'x'), $rt->f(0.5), 1, 'float'), $multiplier, 1, 'float');
             $multiplicand = $rt->binary('+', $multiplicand, $rt->binary('/', $rt->f(1), $multiplier, 1, 'float'), 1, 'float');
             if ((($rt->binary('==', $_u_REFRACT_MODE, $rt->i(1))) || ($rt->binary('==', $_u_REFRACT_MODE, $rt->i(2))) ? 1 : 0)) {
-                $xRefractFreq = $rt->construct(2, $rt->swizzle($baseFreq, 'x'), $nominalBase);
-                $yRefractFreq = $rt->construct(2, $nominalBase, $rt->swizzle($baseFreq, 'y'));
-                $xRef = $rt->binary('-', $value__vec2_vec2_float_float->($st, $xRefractFreq, $rt->binary('+', $s, $rt->binary('*', $rt->f(10), $rt->construct(1, $i), 1, 'float'), 1, 'float'), $blend), $rt->f(0.5), 1, 'float');
-                $yRef = $rt->binary('-', $value__vec2_vec2_float_float->($st, $yRefractFreq, $rt->binary('+', $s, $rt->binary('*', $rt->f(20), $rt->construct(1, $i), 1, 'float'), 1, 'float'), $blend), $rt->f(0.5), 1, 'float');
-                $ref = $rt->binary('/', $map__float_float_float_float_float->($_u_refractAmt, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(1)), $multiplier, 1, 'float');
-                @{$st} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('+', $rt->swizzle($st, 'x'), $rt->binary('*', $xRef, $ref, 1, 'float'), 1, 'float'), $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('*', $yRef, $ref, 1, 'float'), 1, 'float')))};
+                $ref = $rt->f(0.0);
+                $xRef = $rt->f(0.0);
+                $xRefractFreq = $rt->construct(2, 0.0);
+                $yRef = $rt->f(0.0);
+                $yRefractFreq = $rt->construct(2, 0.0);
+                if ($rt->binary('!=', $_u_refractAmt, $rt->f(0))) {
+                    $xRefractFreq = $rt->construct(2, $rt->swizzle($baseFreq, 'x'), $nominalBase);
+                    $yRefractFreq = $rt->construct(2, $nominalBase, $rt->swizzle($baseFreq, 'y'));
+                    $xRef = $rt->binary('-', $value__vec2_vec2_float_float->($st, $xRefractFreq, $rt->binary('+', $s, $rt->binary('*', $rt->f(10), $rt->construct(1, $i), 1, 'float'), 1, 'float'), $blend), $rt->f(0.5), 1, 'float');
+                    $yRef = $rt->binary('-', $value__vec2_vec2_float_float->($st, $yRefractFreq, $rt->binary('+', $s, $rt->binary('*', $rt->f(20), $rt->construct(1, $i), 1, 'float'), 1, 'float'), $blend), $rt->f(0.5), 1, 'float');
+                    $ref = $rt->binary('/', $map__float_float_float_float_float->($_u_refractAmt, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(1)), $multiplier, 1, 'float');
+                    @{$st} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('+', $rt->swizzle($st, 'x'), $rt->binary('*', $xRef, $ref, 1, 'float'), 1, 'float'), $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('*', $yRef, $ref, 1, 'float'), 1, 'float')))};
+                }
             }
             $layer = $generate_octave__vec2_vec2_float_float_float->($st, $baseFreq, $rt->binary('+', $s, $rt->binary('*', $rt->f(10), $rt->construct(1, $i), 1, 'float'), 1, 'float'), $blend, $rt->construct(1, $i));
             if ((($rt->binary('==', $_u_REFRACT_MODE, $rt->i(0))) || ($rt->binary('==', $_u_REFRACT_MODE, $rt->i(2))) ? 1 : 0)) {
-                $xOff = $rt->binary('+', $rt->binary('*', $rt->component_wise('cos', $rt->swizzle($layer, 'b')), $rt->f(0.5), 1, 'float'), $rt->f(0.5), 1, 'float');
-                $yOff = $rt->binary('+', $rt->binary('*', $rt->component_wise('sin', $rt->swizzle($layer, 'b')), $rt->f(0.5), 1, 'float'), $rt->f(0.5), 1, 'float');
-                $ref = $generate_octave__vec2_vec2_float_float_float->($rt->construct(2, $rt->binary('+', $rt->swizzle($st, 'x'), $xOff, 1, 'float'), $rt->binary('+', $rt->swizzle($st, 'y'), $yOff, 1, 'float')), $baseFreq, $rt->binary('+', $s, $rt->binary('*', $rt->f(15), $rt->construct(1, $i), 1, 'float'), 1, 'float'), $blend, $rt->construct(1, $i));
-                @{$layer} = map { $rt->f32($_) } @{($rt->component_wise('mix', $layer, $ref, $map__float_float_float_float_float->($_u_refractAmt, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(1))))};
+                $ref = $rt->construct(3, 0.0);
+                $xOff = $rt->f(0.0);
+                $yOff = $rt->f(0.0);
+                if ($rt->binary('!=', $_u_refractAmt, $rt->f(0))) {
+                    $xOff = $rt->binary('+', $rt->binary('*', $rt->component_wise('cos', $rt->swizzle($layer, 'b')), $rt->f(0.5), 1, 'float'), $rt->f(0.5), 1, 'float');
+                    $yOff = $rt->binary('+', $rt->binary('*', $rt->component_wise('sin', $rt->swizzle($layer, 'b')), $rt->f(0.5), 1, 'float'), $rt->f(0.5), 1, 'float');
+                    $ref = $generate_octave__vec2_vec2_float_float_float->($rt->construct(2, $rt->binary('+', $rt->swizzle($st, 'x'), $xOff, 1, 'float'), $rt->binary('+', $rt->swizzle($st, 'y'), $yOff, 1, 'float')), $baseFreq, $rt->binary('+', $s, $rt->binary('*', $rt->f(15), $rt->construct(1, $i), 1, 'float'), 1, 'float'), $blend, $rt->construct(1, $i));
+                    @{$layer} = map { $rt->f32($_) } @{($rt->component_wise('mix', $layer, $ref, $map__float_float_float_float_float->($_u_refractAmt, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(1))))};
+                }
             }
             $color = $rt->assign_swizzle($color, 'rgb', $rt->binary('+', $rt->swizzle($color, 'rgb'), $rt->binary('/', $layer, $multiplier, 3, 'float'), 3, 'float'));
         }

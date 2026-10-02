@@ -7,8 +7,9 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($lighting__vec3_vec3_vec3, $inverseRotation__vec3, $forwardRotation__vec3, $renderPerspective__vec2, $main__void);
+    my ($lighting__vec3_vec3_vec3, $sampleAtlasTexel__sampler2D_ivec3_bool, $interpolateAtlas__vec4_vec4_float, $atlasCoords__vec3, $sampleAtlasCoords__sampler2D_struct1_bool, $sampleAtlas__sampler2D_vec3_bool, $isSolid__struct1, $traceIsosurface__vec3_vec3_float_float, $isosurfaceNormal__vec3_vec3, $inverseRotation__vec3, $forwardRotation__vec3, $renderPerspective__vec2, $main__void);
     my $_retc;
+    my $_u_FILTERING = exists $U->{'FILTERING'} ? $U->{'FILTERING'} : 0;
     my $_u_VIEW_MODE = exists $U->{'VIEW_MODE'} ? $U->{'VIEW_MODE'} : 0;
     my $_u_volumeCache = $ctx->texture_binding('volumeCache');
     my $_u_analyticalGeo = $ctx->texture_binding('analyticalGeo');
@@ -53,6 +54,130 @@ my $run_pixel = sub {
         }
         return $rt->binary('+', $rt->binary('*', $color, $rt->binary('+', $_u_ambient, $rt->binary('*', $rt->component_wise('max', $rt->dot($normal, $light), $rt->f(0)), $_u_diffuseIntensity, 1, 'float'), 1, 'float'), 3, 'float'), $specular, 3, 'float');
     };
+    $sampleAtlasTexel__sampler2D_ivec3_bool = sub {
+        my ($atlas, $p, $material) = @_;
+        $p = $rt->copy($p, 'int');
+        my ($coord, $present, $value);
+        $coord = $rt->construct(2, $rt->swizzle($p, 'x'), $rt->binary('+', $rt->swizzle($p, 'y'), $rt->binary('*', $rt->swizzle($p, 'z'), $_u_volumeSize, 1, 'int'), 1, 'int'), 'int');
+        $value = $rt->texel_fetch($atlas, $coord, $rt->i(0));
+        $present = $rt->f(0.0);
+        if ($material) {
+            $present = (($rt->binary('>', $rt->swizzle($rt->texel_fetch($_u_analyticalGeo, $coord, $rt->i(0)), 'a'), $rt->f(0))) ? ($rt->f(1)) : ($rt->f(0)));
+            return $rt->construct(4, $rt->binary('*', $rt->swizzle($value, 'rgb'), $present, 3, 'float'), $present);
+        }
+        return $value;
+    };
+    $interpolateAtlas__vec4_vec4_float = sub {
+        my ($a, $b, $weight) = @_;
+        $a = $rt->copy($a, 'float');
+        $b = $rt->copy($b, 'float');
+        return $rt->binary('+', $a, $rt->binary('*', $rt->binary('-', $b, $a, 4, 'float'), $weight, 4, 'float'), 4, 'float');
+    };
+    $atlasCoords__vec3 = sub {
+        my ($p) = @_;
+        $p = $rt->copy($p, 'float');
+        my ($texel);
+        $texel = $rt->component_wise('clamp', $rt->binary('-', $p, $rt->f(0.5), 3, 'float'), $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->construct(1, $rt->binary('-', $_u_volumeSize, $rt->i(1), 1, 'int'))));
+        return [$rt->construct(3, $rt->component_wise('floor', $texel), 'int'), $rt->component_wise('fract', $texel)];
+    };
+    $sampleAtlasCoords__sampler2D_struct1_bool = sub {
+        my ($atlas, $coords, $material) = @_;
+        my ($c00, $c01, $c10, $c11, $f, $hi, $lo, $value);
+        $lo = $coords->[0];
+        $hi = $rt->component_wise('min', $rt->binary('+', $lo, $rt->i(1), 3, 'int'), $rt->construct(3, $rt->binary('-', $_u_volumeSize, $rt->i(1), 1, 'int'), 'int'));
+        $f = $coords->[1];
+        $c00 = $interpolateAtlas__vec4_vec4_float->($sampleAtlasTexel__sampler2D_ivec3_bool->($atlas, $rt->construct(3, $rt->swizzle($lo, 'x'), $rt->swizzle($lo, 'y'), $rt->swizzle($lo, 'z'), 'int'), $material), $sampleAtlasTexel__sampler2D_ivec3_bool->($atlas, $rt->construct(3, $rt->swizzle($hi, 'x'), $rt->swizzle($lo, 'y'), $rt->swizzle($lo, 'z'), 'int'), $material), $rt->swizzle($f, 'x'));
+        $c10 = $interpolateAtlas__vec4_vec4_float->($sampleAtlasTexel__sampler2D_ivec3_bool->($atlas, $rt->construct(3, $rt->swizzle($lo, 'x'), $rt->swizzle($hi, 'y'), $rt->swizzle($lo, 'z'), 'int'), $material), $sampleAtlasTexel__sampler2D_ivec3_bool->($atlas, $rt->construct(3, $rt->swizzle($hi, 'x'), $rt->swizzle($hi, 'y'), $rt->swizzle($lo, 'z'), 'int'), $material), $rt->swizzle($f, 'x'));
+        $c01 = $interpolateAtlas__vec4_vec4_float->($sampleAtlasTexel__sampler2D_ivec3_bool->($atlas, $rt->construct(3, $rt->swizzle($lo, 'x'), $rt->swizzle($lo, 'y'), $rt->swizzle($hi, 'z'), 'int'), $material), $sampleAtlasTexel__sampler2D_ivec3_bool->($atlas, $rt->construct(3, $rt->swizzle($hi, 'x'), $rt->swizzle($lo, 'y'), $rt->swizzle($hi, 'z'), 'int'), $material), $rt->swizzle($f, 'x'));
+        $c11 = $interpolateAtlas__vec4_vec4_float->($sampleAtlasTexel__sampler2D_ivec3_bool->($atlas, $rt->construct(3, $rt->swizzle($lo, 'x'), $rt->swizzle($hi, 'y'), $rt->swizzle($hi, 'z'), 'int'), $material), $sampleAtlasTexel__sampler2D_ivec3_bool->($atlas, $rt->construct(3, $rt->swizzle($hi, 'x'), $rt->swizzle($hi, 'y'), $rt->swizzle($hi, 'z'), 'int'), $material), $rt->swizzle($f, 'x'));
+        $value = $interpolateAtlas__vec4_vec4_float->($interpolateAtlas__vec4_vec4_float->($c00, $c10, $rt->swizzle($f, 'y')), $interpolateAtlas__vec4_vec4_float->($c01, $c11, $rt->swizzle($f, 'y')), $rt->swizzle($f, 'z'));
+        if ((($material) && ($rt->binary('>', $rt->swizzle($value, 'a'), $rt->f(0))) ? 1 : 0)) {
+            $value = $rt->assign_swizzle($value, 'rgb', $rt->binary('/', $rt->swizzle($value, 'rgb'), $rt->swizzle($value, 'a'), 3, 'float'));
+        }
+        return $value;
+    };
+    $sampleAtlas__sampler2D_vec3_bool = sub {
+        my ($atlas, $p, $material) = @_;
+        $p = $rt->copy($p, 'float');
+        return $sampleAtlasCoords__sampler2D_struct1_bool->($atlas, $atlasCoords__vec3->($p), $material);
+    };
+    $isSolid__struct1 = sub {
+        my ($coords) = @_;
+        my ($density);
+        $density = $rt->swizzle($sampleAtlasCoords__sampler2D_struct1_bool->($_u_analyticalGeo, $coords, 0), 'a');
+        return (($rt->binary('>', $density, $rt->f(0))) && ($rt->binary('>=', $density, $_u_threshold)) ? 1 : 0);
+    };
+    $traceIsosurface__vec3_vec3_float_float = sub {
+        my ($origin, $direction, $start, $leave) = @_;
+        $origin = $rt->copy($origin, 'float');
+        $direction = $rt->copy($direction, 'float');
+        my ($_for0_first, $_for1_first, $candidate, $candidateCoords, $coords, $distance, $hi, $lo, $mid, $position, $previous, $refine, $step, $stepSize);
+        $position = $rt->binary('+', $origin, $rt->binary('*', $direction, $start, 3, 'float'), 3, 'float');
+        $coords = $atlasCoords__vec3->($position);
+        if ($isSolid__struct1->($coords)) {
+            return [$start, $position, $coords];
+        }
+        $stepSize = $rt->binary('/', $rt->f(0.5), $rt->length($direction), 1, 'float');
+        $previous = $start;
+        $step = $rt->i(0);
+        $_for0_first = 1;
+        for my $_for0 (0 .. 1048575) {
+            if (!$_for0_first) {
+                $step = $rt->binary('+', $step, $rt->i(1), 1, 'int');
+            }
+            $_for0_first = 0;
+            if (!($rt->binary('<', $step, $rt->binary('*', $_u_volumeSize, $rt->i(4), 1, 'int')))) {
+                last;
+            }
+            $distance = $rt->component_wise('min', $rt->binary('+', $previous, $stepSize, 1, 'float'), $leave);
+            @{$position} = map { $rt->f32($_) } @{($rt->binary('+', $origin, $rt->binary('*', $direction, $distance, 3, 'float'), 3, 'float'))};
+            $coords = $atlasCoords__vec3->($position);
+            $hi = $rt->f(0.0);
+            $lo = $rt->f(0.0);
+            if ($isSolid__struct1->($coords)) {
+                $lo = $previous;
+                $hi = $distance;
+                $refine = $rt->i(0);
+                $_for1_first = 1;
+                for my $_for1 (0 .. 1048575) {
+                    if (!$_for1_first) {
+                        $refine = $rt->binary('+', $refine, $rt->i(1), 1, 'int');
+                    }
+                    $_for1_first = 0;
+                    if (!($rt->binary('<', $refine, $rt->i(8)))) {
+                        last;
+                    }
+                    $mid = $rt->binary('*', $rt->binary('+', $lo, $hi, 1, 'float'), $rt->f(0.5), 1, 'float');
+                    $candidate = $rt->binary('+', $origin, $rt->binary('*', $direction, $mid, 3, 'float'), 3, 'float');
+                    $candidateCoords = $atlasCoords__vec3->($candidate);
+                    if ($isSolid__struct1->($candidateCoords)) {
+                        $hi = $mid;
+                        @{$position} = map { $rt->f32($_) } @{($candidate)};
+                        $coords = $candidateCoords;
+                    } else {
+                        $lo = $mid;
+                    }
+                }
+                return [$hi, $position, $coords];
+            }
+            if ($rt->binary('>=', $distance, $leave)) {
+                last;
+            }
+            $previous = $distance;
+        }
+        return [$rt->unary('-', $rt->f(1)), $rt->construct(3, $rt->f(0)), [$rt->construct(3, $rt->i(0), 'int'), $rt->construct(3, $rt->f(0))]];
+    };
+    $isosurfaceNormal__vec3_vec3 = sub {
+        my ($p, $fallback) = @_;
+        $p = $rt->copy($p, 'float');
+        $fallback = $rt->copy($fallback, 'float');
+        my ($gradient);
+        $gradient = $rt->construct(3, $rt->binary('-', $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('-', $p, $rt->construct(3, $rt->f(0.5), $rt->f(0), $rt->f(0)), 3, 'float'), 0), 'a'), $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('+', $p, $rt->construct(3, $rt->f(0.5), $rt->f(0), $rt->f(0)), 3, 'float'), 0), 'a'), 1, 'float'), $rt->binary('-', $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('-', $p, $rt->construct(3, $rt->f(0), $rt->f(0.5), $rt->f(0)), 3, 'float'), 0), 'a'), $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('+', $p, $rt->construct(3, $rt->f(0), $rt->f(0.5), $rt->f(0)), 3, 'float'), 0), 'a'), 1, 'float'), $rt->binary('-', $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('-', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $rt->f(0.5)), 3, 'float'), 0), 'a'), $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('+', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $rt->f(0.5)), 3, 'float'), 0), 'a'), 1, 'float'));
+        if ($rt->binary('>', $rt->dot($gradient, $gradient), $rt->f(9.9999999999999998e-13))) {
+            return $rt->normalize($gradient);
+        }
+        return $fallback;
+    };
     $inverseRotation__vec3 = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
@@ -76,7 +201,7 @@ my $run_pixel = sub {
     $renderPerspective__vec2 = sub {
         my ($uv) = @_;
         $uv = $rt->copy($uv, 'float');
-        my ($_for0_first, $_for1_first, $_for2_first, $a, $atlas, $axis, $b, $boundary, $cameraRay, $cell, $crossed, $delta, $density, $direction, $distance, $enter, $farT, $focalLength, $framedUv, $leave, $nearT, $nextT, $normal, $origin, $size, $step, $stepDir, $viewDirection, $worldNormal);
+        my ($_for2_first, $_for3_first, $_for4_first, $a, $atlas, $axis, $b, $boundary, $cameraRay, $cell, $crossed, $delta, $density, $direction, $distance, $enter, $farT, $focalLength, $framedUv, $hit, $leave, $nearT, $nextT, $normal, $origin, $p, $size, $step, $stepDir, $viewDirection, $worldNormal);
         $size = $rt->construct(1, $_u_volumeSize);
         $focalLength = $rt->binary('/', $rt->f(1), $rt->component_wise('tan', $rt->binary('*', $rt->component_wise('clamp', $_u_fieldOfView, $rt->f(10), $rt->f(150)), $rt->f(0.0087266462600000001), 1, 'float')), 1, 'float');
         $origin = $rt->binary('*', $rt->binary('+', $rt->binary('/', $inverseRotation__vec3->($rt->construct(3, $rt->unary('-', $_u_posX), $rt->unary('-', $_u_posY), $rt->binary('-', $rt->f(80), $_u_posZ, 1, 'float'))), $rt->f(80), 3, 'float'), $rt->f(0.5), 3, 'float'), $size, 3, 'float');
@@ -88,12 +213,12 @@ my $run_pixel = sub {
         $delta = $rt->construct(3, $rt->f(1e+30));
         $stepDir = $rt->construct(3, $rt->i(0), 'int');
         $axis = $rt->i(0);
-        $_for0_first = 1;
-        for my $_for0 (0 .. 1048575) {
-            if (!$_for0_first) {
+        $_for2_first = 1;
+        for my $_for2 (0 .. 1048575) {
+            if (!$_for2_first) {
                 $axis = $rt->binary('+', $axis, $rt->i(1), 1, 'int');
             }
-            $_for0_first = 0;
+            $_for2_first = 0;
             if (!($rt->binary('<', $axis, $rt->i(3)))) {
                 last;
             }
@@ -121,12 +246,12 @@ my $run_pixel = sub {
         $cell = $rt->component_wise('clamp', $rt->construct(3, $rt->component_wise('floor', $rt->binary('+', $rt->binary('+', $origin, $rt->binary('*', $direction, $distance, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->construct(3, $stepDir), $rt->f(0.0001), 3, 'float'), 3, 'float')), 'int'), $rt->construct(3, $rt->i(0), 'int'), $rt->construct(3, $rt->binary('-', $_u_volumeSize, $rt->i(1), 1, 'int'), 'int'));
         $nextT = $rt->construct(3, $rt->f(1e+30));
         $axis = $rt->i(0);
-        $_for1_first = 1;
-        for my $_for1 (0 .. 1048575) {
-            if (!$_for1_first) {
+        $_for3_first = 1;
+        for my $_for3 (0 .. 1048575) {
+            if (!$_for3_first) {
                 $axis = $rt->binary('+', $axis, $rt->i(1), 1, 'int');
             }
-            $_for1_first = 0;
+            $_for3_first = 0;
             if (!($rt->binary('<', $axis, $rt->i(3)))) {
                 last;
             }
@@ -150,13 +275,30 @@ my $run_pixel = sub {
                 }
             }
         }
+        $hit = [$rt->f(0.0), $rt->construct(3, 0.0), [$rt->construct(3, 0.0, 'int'), $rt->construct(3, 0.0)]];
+        $p = $rt->construct(3, 0.0);
+        $worldNormal = $rt->construct(3, 0.0);
+        if ($rt->binary('==', $_u_FILTERING, $rt->i(0))) {
+            $hit = $traceIsosurface__vec3_vec3_float_float->($origin, $direction, $distance, $leave);
+            if ($rt->binary('<', $hit->[0], $rt->f(0))) {
+                return;
+            }
+            $p = $hit->[1];
+            if ($rt->binary('>', $hit->[0], $distance)) {
+                @{$normal} = map { $rt->f32($_) } @{($isosurfaceNormal__vec3_vec3->($p, $normal))};
+            }
+            $worldNormal = $forwardRotation__vec3->($normal);
+            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $lighting__vec3_vec3_vec3->($rt->swizzle($sampleAtlasCoords__sampler2D_struct1_bool->($_u_volumeCache, $hit->[2], 1), 'rgb'), $worldNormal, $viewDirection), $rt->f(1)))};
+            @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->binary('*', $worldNormal, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'), $rt->component_wise('clamp', $rt->binary('/', $hit->[0], $rt->f(320), 1, 'float'), $rt->f(0), $rt->f(1))))};
+            return;
+        }
         $step = $rt->i(0);
-        $_for2_first = 1;
-        for my $_for2 (0 .. 1048575) {
-            if (!$_for2_first) {
+        $_for4_first = 1;
+        for my $_for4 (0 .. 1048575) {
+            if (!$_for4_first) {
                 $step = $rt->binary('+', $step, $rt->i(1), 1, 'int');
             }
-            $_for2_first = 0;
+            $_for4_first = 0;
             if (!($rt->binary('<', $step, $rt->binary('*', $_u_volumeSize, $rt->i(3), 1, 'int')))) {
                 last;
             }
@@ -165,7 +307,6 @@ my $run_pixel = sub {
             }
             $atlas = $rt->construct(2, $rt->swizzle($cell, 'x'), $rt->binary('+', $rt->swizzle($cell, 'y'), $rt->binary('*', $rt->swizzle($cell, 'z'), $_u_volumeSize, 1, 'int'), 1, 'int'), 'int');
             $density = $rt->swizzle($rt->texel_fetch($_u_analyticalGeo, $atlas, $rt->i(0)), 'a');
-            $worldNormal = $rt->construct(3, 0.0);
             if ((($rt->binary('>', $density, $rt->f(0))) && ($rt->binary('>=', $density, $_u_threshold)) ? 1 : 0)) {
                 $worldNormal = $forwardRotation__vec3->($normal);
                 @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $lighting__vec3_vec3_vec3->($rt->swizzle($rt->texel_fetch($_u_volumeCache, $atlas, $rt->i(0)), 'rgb'), $worldNormal, $viewDirection), $rt->f(1)))};
@@ -189,7 +330,7 @@ my $run_pixel = sub {
         }
     };
     $main__void = sub {
-        my ($_for3_first, $aspect, $atlas, $cell, $color, $crossed, $density, $distance, $enter, $fullRes, $leave, $nearT, $nextT, $normal, $origin, $right, $size, $span, $step, $up, $uv);
+        my ($_for5_first, $aspect, $atlas, $cell, $color, $crossed, $density, $distance, $enter, $fullRes, $hit, $leave, $nearT, $nextT, $normal, $origin, $p, $right, $size, $span, $step, $up, $uv);
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $_u_bgColor, $_u_bgAlpha, 3, 'float'), $_u_bgAlpha))};
         @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(0.5), $rt->f(1), $rt->f(1)))};
         $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution));
@@ -233,13 +374,28 @@ my $run_pixel = sub {
                     @{$normal} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(1), $rt->f(0), $rt->f(0)))};
                 }
             }
+            $hit = [$rt->f(0.0), $rt->construct(3, 0.0), [$rt->construct(3, 0.0, 'int'), $rt->construct(3, 0.0)]];
+            $p = $rt->construct(3, 0.0);
+            if ($rt->binary('==', $_u_FILTERING, $rt->i(0))) {
+                $hit = $traceIsosurface__vec3_vec3_float_float->($origin, $rt->construct(3, $rt->unary('-', $rt->f(1))), $distance, $leave);
+                if ($rt->binary('<', $hit->[0], $rt->f(0))) {
+                    return;
+                }
+                $p = $hit->[1];
+                if ($rt->binary('>', $hit->[0], $distance)) {
+                    @{$normal} = map { $rt->f32($_) } @{($isosurfaceNormal__vec3_vec3->($p, $normal))};
+                }
+                @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $lighting__vec3_vec3_vec3->($rt->swizzle($sampleAtlasCoords__sampler2D_struct1_bool->($_u_volumeCache, $hit->[2], 1), 'rgb'), $normal, $rt->construct(3, $rt->f(0.57735026919999999))), $rt->f(1)))};
+                @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->binary('*', $normal, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'), $rt->component_wise('clamp', $rt->binary('/', $hit->[0], $rt->binary('*', $size, $rt->f(4), 1, 'float'), 1, 'float'), $rt->f(0), $rt->f(1))))};
+                return;
+            }
             $step = $rt->i(0);
-            $_for3_first = 1;
-            for my $_for3 (0 .. 1048575) {
-                if (!$_for3_first) {
+            $_for5_first = 1;
+            for my $_for5 (0 .. 1048575) {
+                if (!$_for5_first) {
                     $step = $rt->binary('+', $step, $rt->i(1), 1, 'int');
                 }
-                $_for3_first = 0;
+                $_for5_first = 0;
                 if (!($rt->binary('<', $step, $rt->binary('*', $_u_volumeSize, $rt->i(3), 1, 'int')))) {
                     last;
                 }

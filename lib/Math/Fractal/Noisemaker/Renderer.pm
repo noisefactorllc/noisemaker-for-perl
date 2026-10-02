@@ -349,7 +349,7 @@ sub _effect_bindings {
 sub _texture_dimension {
     my ($spec, $axis, $params, $width, $height, $resources) = @_;
     my $fallback = $axis eq 'width' ? $width : $height;
-    return $fallback if !defined $spec || (!ref $spec && $spec =~ /\A(?:input|screen|resolution|100%)\z/);
+    return $fallback if !defined $spec || (!ref $spec && $spec =~ /\A(?:input|screen|auto|resolution|100%)\z/);
     if (!ref $spec && $spec =~ /\A\d+(?:\.\d+)?%\z/) {
         (my $percent = $spec) =~ s/%\z//;
         my $value = int($fallback * $percent / 100 + 0.5);
@@ -364,19 +364,39 @@ sub _texture_dimension {
         return $axis eq 'width' ? $input->width : $input->height if defined $input;
     }
     if (ref $spec eq 'HASH' && exists $spec->{param}) {
-        my $value = defined $params->{ $spec->{param} }
-            ? $params->{ $spec->{param} }
-            : defined $spec->{paramDefault} ? $spec->{paramDefault} : $spec->{default};
-        $value = 1 unless defined $value;
+        my $has_transform
+            = defined $spec->{power} || defined $spec->{multiply} ? 1 : 0;
+        my $param_default
+            = defined $spec->{paramDefault} ? $spec->{paramDefault}
+            : defined $spec->{default}      ? $spec->{default}
+            : 64;
+        my $value
+            = defined $params->{ $spec->{param} } ? $params->{ $spec->{param} } : $param_default;
+        $value *= $spec->{multiply} if defined $spec->{multiply};
         $value = $value ** $spec->{power} if defined $spec->{power};
+        # Canonical behavior: a transformed dimension falls back to the plain
+        # authored default when the parameter is absent, bypassing transforms.
+        $value = $spec->{default}
+            if $has_transform && !defined $params->{ $spec->{param} } && defined $spec->{default};
+        $value = 64 unless defined $value;
         $value = int($value + 0.5);
         return $value > 0 ? $value : 1;
     }
     if (ref $spec eq 'HASH' && exists $spec->{screenDivide}) {
         my $divisor = defined $params->{ $spec->{screenDivide} }
-            ? $params->{ $spec->{screenDivide} } : $spec->{default};
+            ? $params->{ $spec->{screenDivide} }
+            : defined $spec->{default} ? $spec->{default} : 1;
         $divisor = 1 unless defined $divisor && $divisor > 0;
         my $value = int(($fallback + $divisor - 1) / $divisor);
+        return $value > 0 ? $value : 1;
+    }
+    if (ref $spec eq 'HASH' && exists $spec->{scale}) {
+        my $value = int($fallback * $spec->{scale});
+        my $clamp = $spec->{clamp};
+        if (ref $clamp eq 'HASH') {
+            $value = $clamp->{min} if defined $clamp->{min} && $value < $clamp->{min};
+            $value = $clamp->{max} if defined $clamp->{max} && $value > $clamp->{max};
+        }
         return $value > 0 ? $value : 1;
     }
     die "Unsupported canonical texture dimension\n";
@@ -387,11 +407,11 @@ sub _destination {
     my $spec = ($eff->{textures} || {})->{$name} || {};
     my $viewport = ($pass || {})->{viewport} || {};
     my $dest_width  = _texture_dimension(
-        $viewport->{width} // $spec->{width},
+        $viewport->{w} // $viewport->{width} // $spec->{width},
         'width', $params, $width, $height, $resources,
     );
     my $dest_height = _texture_dimension(
-        $viewport->{height} // $spec->{height},
+        $viewport->{h} // $viewport->{height} // $spec->{height},
         'height', $params, $width, $height, $resources,
     );
     return Math::Fractal::Noisemaker::Surface->new($dest_width, $dest_height);

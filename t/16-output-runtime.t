@@ -600,4 +600,76 @@ subtest 'Renderer should_defer_render delegates to SinkManager' => sub {
     is($renderer->should_defer_render, 0, 'disposed renderer does not defer');
 };
 
+# --- canonical texture-dimension spec forms (parity with cpu textureDimension) ---
+{
+    my @cases = (
+        [undef, undef,                   7, 'missing spec falls back'],
+        ['auto', undef,                  7, "'auto' falls back"],
+        ['input', undef,                 7, "'input' falls back"],
+        ['screen', undef,                7, "'screen' falls back"],
+        ['resolution', undef,            7, "'resolution' falls back"],
+        ['100%', undef,                  7, "'100%' falls back"],
+        ['50%', undef,                   4, 'percent rounds down'],
+        ['40%', undef,                   3, '40% of 7 is 3'],
+        ['3', undef,                     3, 'literal number'],
+        [{ param => 'n' }, undef,        64, 'param spec without default uses 64'],
+        [{ param => 'n', default => 5 }, undef, 5, 'param spec uses spec default'],
+        [{ param => 'n', paramDefault => 9, default => 5 }, undef, 9, 'paramDefault wins over default'],
+        [{ param => 'n', multiply => 2, default => 5 }, undef, 5,
+            'transformed default discards the transform when param absent'],
+        [{ param => 'n', power => 2, default => 5 }, undef, 5,
+            'powered default discards the transform when param absent'],
+        [{ param => 'n', multiply => 2, default => 5 }, 2, 4, 'multiply applies to provided param'],
+        [{ param => 'n', power => 2, default => 5 }, 2, 4, 'power applies to provided param'],
+        [{ param => 'n', paramDefault => 9, multiply => 2 }, undef, 18,
+            'multiply applies to paramDefault without spec default'],
+        [{ param => 'n', paramDefault => 9 }, undef, 9, 'paramDefault applies when param absent'],
+        [{ param => 'n', multiply => 2 }, 2,  4, 'multiply applies to provided param'],
+        [{ param => 'n', power => 2 },    2,  4, 'power applies to provided param'],
+        [{ param => 'n', paramDefault => 9 }, 2, 2, 'provided param wins over paramDefault'],
+        [{ screenDivide => 'd' }, { d => 0 },    7, 'screenDivide without param or default is 1'],
+        [{ screenDivide => 'd' }, { d => 4 },    2, 'screenDivide uses provided param'],
+        [{ screenDivide => 'd', default => 4 }, {}, 2, 'screenDivide ceil default'],
+        [{ screenDivide => 'd', default => 0 }, {}, 7, 'non-positive screenDivide is 1'],
+        [{ scale => 0.5 }, undef,                 3, 'scale floors'],
+        [{ scale => 0.5, clamp => { min => 6 } }, undef, 6, 'scale clamp min'],
+        [{ scale => 0.5, clamp => { max => 2 } }, undef, 2, 'scale clamp max'],
+    );
+    for my $case (@cases) {
+        my ($spec, $n, $expect, $name) = @$case;
+        my %params = ref $n ? %{ $n } : (defined $n ? (n => $n) : (d => 0));
+        my $got = eval {
+            Math::Fractal::Noisemaker::Renderer::_texture_dimension(
+                $spec, 'width', \%params, 7, 7, {},
+            );
+        };
+        is($got, $expect, $name) or diag("spec: $spec");
+    }
+    eval {
+        Math::Fractal::Noisemaker::Renderer::_texture_dimension(
+            { unsupported => 1 }, 'width', {}, 7, 7, {},
+        );
+    };
+    like($@, qr/Unsupported canonical texture dimension/, 'unknown spec form is rejected');
+}
+
+{
+    package AxisProbe;
+
+    our @calls;
+    sub new { my ($class, $w, $h) = @_; return bless { w => $w, h => $h }, $class }
+    sub width  { my ($s) = @_; push @calls, 'width';  $s->{w} }
+    sub height { my ($s) = @_; push @calls, 'height'; $s->{h} }
+}
+
+{
+    my $resource = AxisProbe->new(12, 34);
+    my $dest = Math::Fractal::Noisemaker::Renderer::_destination(
+        { textures => { out => { width => { inputOverride => 'tex' } } } },
+        'out', {}, 0, 8, undef, { tex => $resource },
+    );
+    is($dest->width, 12, 'inputOverride width comes from the input surface');
+    is($dest->height, 8, 'height falls back to the canvas height');
+}
+
 done_testing();

@@ -1,0 +1,42 @@
+#!/usr/bin/env perl
+# Repository test entrypoint: runs the prove suite under t/.
+#
+# Environment:
+#   NOISEMAKER_CPU_DIR — path to a pinned noisemaker-for-cpu checkout
+#     (revision per scripts/oracle-lock.json). When set, the cross-language
+#     parity harness (scripts/parity.pl) is also run and must pass.
+#     Without it, t/05-parity.t skips and only in-container tests run.
+
+use strict;
+use warnings;
+use Cwd         qw(getcwd);
+use File::Spec;
+use FindBin;
+
+my $fail = 0;
+my $repo = $FindBin::Bin;
+
+chdir(File::Spec->catdir($repo, '..')) or die "cannot cd to repository root: $!\n";
+my $root = getcwd();
+
+print "== prove suite ==\n";
+if (system('prove', '-j2', '-lr', 't') != 0) {
+    print "FAIL: test suite reported failures\n";
+    $fail = 1;
+}
+
+if ($ENV{NOISEMAKER_CPU_DIR}) {
+    print "\n== cross-language parity vs $ENV{NOISEMAKER_CPU_DIR} ==\n";
+    my @parity = ($^X, File::Spec->catfile($repo, 'parity.pl'));
+    push @parity, '--size', $ENV{PARITY_SIZE} if $ENV{PARITY_SIZE};
+    if (system(@parity) != 0) {
+        print "FAIL: cross-language parity harness failed\n";
+        $fail = 1;
+    }
+}
+else {
+    print "\nSKIP: cross-language parity harness (set NOISEMAKER_CPU_DIR to a\n";
+    print "pinned noisemaker-for-cpu checkout to enable it)\n";
+}
+
+exit $fail;

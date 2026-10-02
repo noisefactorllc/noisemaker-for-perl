@@ -330,6 +330,7 @@ scripts/build-bundle.pl
 scripts/ParityOracle.pm
 scripts/oracle-lock.json
 scripts/parity.pl
+scripts/test
 t/01-uintmath.t
 t/02-primitives.t
 t/03-runtime.t

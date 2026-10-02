@@ -1047,7 +1047,7 @@
           "ui": {
             "category": "refract",
             "control": "slider",
-            "label": "refract a \u2192 b"
+            "label": "refract a → b"
           },
           "uniform": "refractAAmt"
         },
@@ -1071,7 +1071,7 @@
           "ui": {
             "category": "refract",
             "control": "slider",
-            "label": "refract b \u2192 a"
+            "label": "refract b → a"
           },
           "uniform": "refractBAmt"
         },
@@ -6015,7 +6015,7 @@
           "type": "float",
           "ui": {
             "control": "slider",
-            "label": "unmatched \u03b1"
+            "label": "unmatched α"
           },
           "uniform": "keepAlpha"
         },
@@ -6027,7 +6027,7 @@
           "type": "float",
           "ui": {
             "control": "slider",
-            "label": "matched \u03b1"
+            "label": "matched α"
           },
           "uniform": "replaceAlpha"
         },
@@ -20450,11 +20450,38 @@
       "textures": {}
     },
     "render/pointsBillboardRender": {
-      "namespace": "render",
-      "func": "pointsBillboardRender",
-      "kind": "filter",
       "domain": "image",
+      "func": "pointsBillboardRender",
       "iterated": true,
+      "kind": "filter",
+      "namespace": "render",
+      "paramOrder": [
+        "shapeMode",
+        "tex",
+        "blendMode",
+        "depositOpacity",
+        "pointSize",
+        "sizeVariation",
+        "rotationVar",
+        "seed",
+        "density",
+        "intensity",
+        "inputIntensity",
+        "viewMode",
+        "rotateX",
+        "rotateY",
+        "rotateZ",
+        "viewScale",
+        "posX",
+        "posY",
+        "posZ",
+        "fieldOfView",
+        "sizeDistance",
+        "brightnessDistance",
+        "aperture",
+        "focalDistance",
+        "iterationCount"
+      ],
       "params": {
         "aperture": {
           "default": 0,
@@ -20520,6 +20547,13 @@
           "min": 0,
           "type": "float",
           "uniform": "intensity"
+        },
+        "iterationCount": {
+          "cpuOnly": true,
+          "default": 60,
+          "max": 10000,
+          "min": 0,
+          "type": "int"
         },
         "pointSize": {
           "default": 8,
@@ -20633,47 +20667,6 @@
           "min": 0.1,
           "type": "float",
           "uniform": "viewScale"
-        },
-        "iterationCount": {
-          "type": "int",
-          "default": 60,
-          "min": 0,
-          "max": 10000,
-          "cpuOnly": true
-        }
-      },
-      "paramOrder": [
-        "shapeMode",
-        "tex",
-        "blendMode",
-        "depositOpacity",
-        "pointSize",
-        "sizeVariation",
-        "rotationVar",
-        "seed",
-        "density",
-        "intensity",
-        "inputIntensity",
-        "viewMode",
-        "rotateX",
-        "rotateY",
-        "rotateZ",
-        "viewScale",
-        "posX",
-        "posY",
-        "posZ",
-        "fieldOfView",
-        "sizeDistance",
-        "brightnessDistance",
-        "aperture",
-        "focalDistance",
-        "iterationCount"
-      ],
-      "textures": {
-        "global_billboard_trail": {
-          "format": "rgba16f",
-          "height": "100%",
-          "width": "100%"
         }
       },
       "passes": [
@@ -20681,6 +20674,7 @@
           "inputs": {
             "trailTex": "global_billboard_trail"
           },
+          "key": "render/pointsBillboardRender:diffuse",
           "name": "diffuse",
           "outputs": {
             "fragColor": "global_billboard_trail"
@@ -20688,20 +20682,19 @@
           "program": "diffuse",
           "uniforms": {
             "intensity": "intensity"
-          },
-          "key": "render/pointsBillboardRender:diffuse"
+          }
         },
         {
           "inputs": {
             "sourceTex": "global_billboard_trail"
           },
+          "key": "render/pointsBillboardRender:copy",
           "name": "copy",
           "outputs": {
             "fragColor": "global_billboard_trail"
           },
           "program": "copy",
-          "uniforms": {},
-          "key": "render/pointsBillboardRender:copy"
+          "uniforms": {}
         },
         {
           "blend": true,
@@ -20803,6 +20796,7 @@
             "inputTex": "inputTex",
             "trailTex": "global_billboard_trail"
           },
+          "key": "render/pointsBillboardRender:blend",
           "name": "blend",
           "outputs": {
             "fragColor": "outputTex"
@@ -20811,10 +20805,16 @@
           "uniforms": {
             "blendMode": "blendMode",
             "inputIntensity": "inputIntensity"
-          },
-          "key": "render/pointsBillboardRender:blend"
+          }
         }
-      ]
+      ],
+      "textures": {
+        "global_billboard_trail": {
+          "format": "rgba16f",
+          "height": "100%",
+          "width": "100%"
+        }
+      }
     },
     "render/pointsEmit": {
       "domain": "image",
@@ -20959,11 +20959,27 @@
       }
     },
     "render/pointsRender": {
-      "namespace": "render",
-      "func": "pointsRender",
-      "kind": "filter",
       "domain": "image",
+      "func": "pointsRender",
       "iterated": true,
+      "kind": "filter",
+      "namespace": "render",
+      "paramOrder": [
+        "density",
+        "intensity",
+        "inputIntensity",
+        "viewMode",
+        "rotateX",
+        "rotateY",
+        "rotateZ",
+        "viewScale",
+        "posX",
+        "posY",
+        "posZ",
+        "fieldOfView",
+        "matteOpacity",
+        "iterationCount"
+      ],
       "params": {
         "density": {
           "default": 50,
@@ -21017,6 +21033,13 @@
             "label": "trail intensity"
           },
           "uniform": "intensity"
+        },
+        "iterationCount": {
+          "cpuOnly": true,
+          "default": 60,
+          "max": 10000,
+          "min": 0,
+          "type": "int"
         },
         "matteOpacity": {
           "default": 1,
@@ -21145,36 +21168,6 @@
             "label": "zoom"
           },
           "uniform": "viewScale"
-        },
-        "iterationCount": {
-          "type": "int",
-          "default": 60,
-          "min": 0,
-          "max": 10000,
-          "cpuOnly": true
-        }
-      },
-      "paramOrder": [
-        "density",
-        "intensity",
-        "inputIntensity",
-        "viewMode",
-        "rotateX",
-        "rotateY",
-        "rotateZ",
-        "viewScale",
-        "posX",
-        "posY",
-        "posZ",
-        "fieldOfView",
-        "matteOpacity",
-        "iterationCount"
-      ],
-      "textures": {
-        "global_points_trail": {
-          "format": "rgba16f",
-          "height": "100%",
-          "width": "100%"
         }
       },
       "passes": [
@@ -21182,6 +21175,7 @@
           "inputs": {
             "trailTex": "global_points_trail"
           },
+          "key": "render/pointsRender:diffuse",
           "name": "diffuse",
           "outputs": {
             "fragColor": "global_points_trail"
@@ -21189,19 +21183,18 @@
           "program": "diffuse",
           "uniforms": {
             "intensity": "intensity"
-          },
-          "key": "render/pointsRender:diffuse"
+          }
         },
         {
           "inputs": {
             "sourceTex": "global_points_trail"
           },
+          "key": "render/pointsRender:copy",
           "name": "copy",
           "outputs": {
             "fragColor": "global_points_trail"
           },
           "program": "copy",
-          "key": "render/pointsRender:copy",
           "uniforms": {}
         },
         {
@@ -21212,6 +21205,7 @@
             "rgbaTex": "global_rgba",
             "xyzTex": "global_xyz"
           },
+          "key": null,
           "name": "deposit",
           "outputs": {
             "fragColor": "global_points_trail"
@@ -21228,14 +21222,14 @@
             "rotateZ": "rotateZ",
             "viewMode": "viewMode",
             "viewScale": "viewScale"
-          },
-          "key": null
+          }
         },
         {
           "inputs": {
             "inputTex": "inputTex",
             "trailTex": "global_points_trail"
           },
+          "key": "render/pointsRender:blend",
           "name": "blend",
           "outputs": {
             "fragColor": "outputTex"
@@ -21244,10 +21238,16 @@
           "uniforms": {
             "inputIntensity": "inputIntensity",
             "matteOpacity": "matteOpacity"
-          },
-          "key": "render/pointsRender:blend"
+          }
         }
-      ]
+      ],
+      "textures": {
+        "global_points_trail": {
+          "format": "rgba16f",
+          "height": "100%",
+          "width": "100%"
+        }
+      }
     },
     "render/render3d": {
       "domain": "volume-renderer",
@@ -21661,7 +21661,8 @@
         "posX",
         "posY",
         "posZ",
-        "fieldOfView"
+        "fieldOfView",
+        "filtering"
       ],
       "params": {
         "ambient": {
@@ -21737,6 +21738,19 @@
             "label": "field of view"
           },
           "uniform": "fieldOfView"
+        },
+        "filtering": {
+          "choices": {
+            "isosurface": 0,
+            "voxel": 1
+          },
+          "default": 1,
+          "define": "FILTERING",
+          "type": "int",
+          "ui": {
+            "control": "dropdown",
+            "label": "filtering"
+          }
         },
         "lightDirection": {
           "default": [

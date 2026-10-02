@@ -38,6 +38,9 @@ my $_JSON = JSON::PP->new->utf8->canonical;
 # Effects whose authored CPU implementations remain pinned in the bundle.
 # Volume effects are generated from the CDN alongside ordinary image effects.
 my %NAMESPACE_EXCLUSIONS = map { $_ => 1 } qw(points);
+# points/heightGrid is a plain image-domain filter: keep it CDN-generated like
+# the volume effects instead of dropping it with the iterated points suite.
+my %NAMESPACE_EXCEPTIONS = map { $_ => 1 } qw(points/heightGrid);
 my %ID_EXCLUSIONS        = map { $_ => 1 } qw(
     filter/convolutionFeedback filter/feedback filter/motionBlur
     filter/temporalAberration synth/cellularAutomata synth/mnca
@@ -514,7 +517,7 @@ sub eligible_ids {
     my @result;
     for my $effect_id (sort keys %$manifest) {
         my ($namespace) = split m{/}, $effect_id, 2;
-        next if $NAMESPACE_EXCLUSIONS{$namespace};
+        next if $NAMESPACE_EXCLUSIONS{$namespace} && !$NAMESPACE_EXCEPTIONS{$effect_id};
         next if index($effect_id, 'mesh') >= 0;
         next if $ID_EXCLUSIONS{$effect_id};
         push @result, $effect_id;
