@@ -40,7 +40,7 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($v);
-        $v = $rt->construct(3, $rt->construct(1, (($rt->binary('>=', $rt->swizzle($p, 'x'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'x'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'x')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))), 'uint'), $rt->construct(1, (($rt->binary('>=', $rt->swizzle($p, 'y'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'y'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'y')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))), 'uint'), $rt->construct(1, $_u_seed, 'uint'), 'uint');
+        $v = $rt->construct(3, $rt->binary('+', $rt->construct(1, $rt->binary('*', $rt->component_wise('abs', $rt->swizzle($p, 'x')), $rt->f(2), 1, 'float'), 'uint'), $rt->construct(1, $rt->binary('<', $rt->swizzle($p, 'x'), $rt->f(0)), 'uint'), 1, 'uint'), $rt->binary('+', $rt->construct(1, $rt->binary('*', $rt->component_wise('abs', $rt->swizzle($p, 'y')), $rt->f(2), 1, 'float'), 'uint'), $rt->construct(1, $rt->binary('<', $rt->swizzle($p, 'y'), $rt->f(0)), 'uint'), 1, 'uint'), $rt->construct(1, $rt->component_wise('abs', $_u_seed), 'uint'), 'uint');
         return $rt->binary('/', $rt->construct(1, $rt->swizzle($pcg__uvec3->($v), 'x')), $rt->construct(1, $rt->i(4294967295)), 1, 'float');
     };
     $noise__vec2 = sub {

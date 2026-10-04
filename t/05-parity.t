@@ -13,6 +13,7 @@ use File::Temp ();
 
 use Math::Fractal::Noisemaker::PNG qw(decode_png encode_png);
 use Math::Fractal::Noisemaker::Renderer qw(render_effect);
+use Math::Fractal::Noisemaker::Surface;
 
 my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
     || File::Spec->rel2abs(File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-for-cpu'));
@@ -93,6 +94,28 @@ my $solid = render_effect('synth/solid', {}, undef, width => 8, height => 8, see
 $pl = render_effect('filter/invert', {}, { inputTex => $solid },
     width => 8, height => 8, seed => 1, time => 0.25);
 is(max_diff($js, $pl), 0, 'filter/invert byte-exact');
+
+# A varying input exercises octaveWarp's coordinate hash conversion; a solid
+# input does not expose a warp difference.
+my @pattern;
+for my $y (0 .. 7) {
+    for my $x (0 .. 7) {
+        push @pattern, ($x * 32) / 255, ($y * 31) / 255,
+            ((($x * 3 + $y * 5) % 8) * 29) / 255, 1;
+    }
+}
+my $pattern = Math::Fractal::Noisemaker::Surface->new(8, 8, \@pattern);
+$js = js_apply('filter/octaveWarp', $pattern,
+    '--seed', '3', '--param', 'displacement=0.35', '--param', 'antialias=false');
+$pl = render_effect('filter/octaveWarp', { seed => 3, displacement => 0.35, antialias => 0 },
+    { inputTex => $pattern }, width => 8, height => 8, seed => 3, time => 0.25);
+is(max_diff($js, $pl), 0, 'filter/octaveWarp varying-input warp is CPU byte-exact');
+
+$js = js_apply('filter/degauss', $pattern,
+    '--param', 'displacement=0.2');
+$pl = render_effect('filter/degauss', { displacement => 0.2 },
+    { inputTex => $pattern }, width => 8, height => 8, seed => 1, time => 0.25);
+is(max_diff($js, $pl), 0, 'filter/degauss varying-input warp is CPU byte-exact');
 
 # seeded generator (uint hash path)
 $js = js_effect('synth/noise');
