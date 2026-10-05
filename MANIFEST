@@ -354,3 +354,7 @@ t/19-distribution.t
 t/20-bundle-build.t
 t/21-parameters.t
 t/22-oracle-integrity.t
+lib/Math/Fractal/Noisemaker/Automation.pm
+lib/Math/Fractal/Noisemaker/JsTrig.pm
+t/23-osc-automation.t
+t/data/osc-automation-golden.json

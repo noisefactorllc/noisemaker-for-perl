@@ -20,6 +20,10 @@ use Scalar::Util qw(looks_like_number);
 use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC);
 
 use Math::Fractal::Noisemaker::CpuFrameExportAdapter;
+use Math::Fractal::Noisemaker::Automation qw(
+    is_automation_value
+    resolve_automation_uniform
+);
 use Math::Fractal::Noisemaker::DSL qw(compile_dsl);
 use Math::Fractal::Noisemaker::FrameExportQueue;
 use Math::Fractal::Noisemaker::KernelCache;
@@ -120,6 +124,13 @@ sub _coerce {
     my ($spec, $value) = @_;
     my $t = $spec->{type} || '';
     $value = $spec->{default} unless defined $value;
+    # An `osc(...)` automation value (numeric params only, matching the JS
+    # EffectDefinition.normalizeValue contract) is kept as-is here and resolved
+    # to a concrete number per render in _run_state_once; other types keep
+    # rejecting it (their validation path runs first and dies).
+    if (($t eq 'float' || $t eq 'int') && is_automation_value($value)) {
+        return $value;
+    }
     if ($t =~ /\A(?:float|int|enum|member|palette)\z/
         && defined $value && !looks_like_number($value)) {
         my $choice = _choice_value($spec, $value);
@@ -160,6 +171,85 @@ sub _finite_number {
         && POSIX::isfinite(0 + $value);
 }
 
+# The consumer-range spec upstream's expander builds for automation scaling
+# (shaders/src/runtime/expander.js uniformSpecs): a float/int parameter without
+# choices scales the 0..1 automation output into its declared min..max (0..100
+# when undeclared); an int parameter with choices (a conditional selector) is
+# only rounded to the selected integer, scaled into its declared range when it
+# declares one. Everything else gets no spec, so an automation value resolves
+# unscaled.
+sub _automation_param_spec {
+    my ($param) = @_;
+    return undef unless ref $param eq 'HASH';
+    my $type = $param->{type} || '';
+    if (($type eq 'float' || $type eq 'int') && !$param->{choices}) {
+        return {
+            min => defined $param->{min} ? $param->{min} : 0,
+            max => defined $param->{max} ? $param->{max} : 100,
+        };
+    }
+    if ($type eq 'int' && $param->{choices}) {
+        my $spec = { type => 'int' };
+        if (_finite_number($param->{min}) && _finite_number($param->{max})) {
+            $spec->{min} = $param->{min};
+            $spec->{max} = $param->{max};
+        }
+        return $spec;
+    }
+    return undef;
+}
+
+# Resolves `osc(...)` automation values in a step's params to concrete numbers
+# for this render, using $time (the normalized 0..1 loop time the canonical
+# kernels receive). Returns undef when no param carries automation, leaving the
+# caller's params object unchanged, so every pre-existing program keeps its
+# exact identity and byte-identical render path. Only float/int params resolve
+# (the JS engine accepts automation on those types alone); other types keep the
+# raw value so validation rejects the program. Resolved floats snap to f32 here
+# because the JS engine packs the resolved double into a Float32Array uniform.
+sub _resolve_effect_automation {
+    my ($eff, $params, $time) = @_;
+    my $has_automation = 0;
+    for my $value (values %$params) {
+        if (is_automation_value($value)) { $has_automation = 1; last }
+    }
+    return undef unless $has_automation;
+    my $specs = ($eff || {})->{params} || {};
+    my %resolved;
+    for my $name (sort keys %$params) {
+        my $value = $params->{$name};
+        my $spec  = $specs->{$name};
+        my $type  = ref $spec eq 'HASH' ? ($spec->{type} || '') : '';
+        if ($type eq 'float' || $type eq 'int') {
+            my $resolved = resolve_automation_uniform($value, $time, _automation_param_spec($spec));
+            $resolved{$name} = $type eq 'float' && !ref $resolved ? f32($resolved) : $resolved;
+        }
+        else {
+            $resolved{$name} = $value;
+        }
+    }
+    return \%resolved;
+}
+
+# The volumeSize inheritance cpu's renderer applies around every effectParams
+# resolution (runtime/renderer.js inheritVolumeSize): a volume-* effect with a
+# volumeSize param adopts the chain input volume's width. Mutates $params in
+# place; callers own a fresh hash on the automation refresh path.
+sub _inherit_volume_size {
+    my ($effect_id, $eff, $params, $input_bundle) = @_;
+    my $volume = ($input_bundle || {})->{volume};
+    my $domain = $eff->{domain} || 'image';
+    return unless defined $volume && exists(($eff->{params} || {})->{volumeSize});
+    return unless $domain =~ /\Avolume-(?:generator|filter|renderer)\z/;
+    my $volume_size     = $volume->width;
+    my $expected_height = $volume_size * $volume_size;
+    die "$effect_id input volume atlas expected ${volume_size}x${expected_height}, received "
+        . $volume->width . 'x' . $volume->height . "\n"
+        if $volume->height != $expected_height;
+    $params->{volumeSize} = $volume_size;
+    return;
+}
+
 # Slider ranges and numeric dropdown choices are UI hints: callers also use
 # small CPU state buffers and seeds outside those ranges. Reject malformed
 # values without clamping or changing valid numeric rendering behavior.
@@ -176,6 +266,14 @@ sub _validate_parameters {
         my $spec = $specs->{$name};
         my $type = $spec->{type} || '';
         my $bad = sub { die "Invalid parameter '$name' for $effect_id: $_[0]\n" };
+        # An `osc(...)` automation value (numeric params only, matching the JS
+        # EffectDefinition.normalizeValue contract) is kept as-is here and
+        # resolved to a concrete number per render in _run_state_once; other
+        # types keep rejecting it.
+        if (is_automation_value($value)) {
+            $bad->('does not accept an osc() automation value') unless $type eq 'float' || $type eq 'int';
+            next;
+        }
         if ($type =~ /\A(?:float|int|enum|member|palette)\z/ && !_finite_number($value)) {
             my $choice = _choice_value($spec, $value);
             $value = $choice if defined $choice;
@@ -425,30 +523,27 @@ sub _format_for {
 }
 
 sub _prepare_state {
-    my ($step, $width, $height, $seed, $owner_state_size, $input_bundle) = @_;
+    my ($step, $width, $height, $seed, $owner_state_size, $input_bundle, $time) = @_;
     my $eff = meta()->{effects}{ $step->{effect_id} }
         or die "unknown effect '$step->{effect_id}' (not in bundle)\n";
     _validate_parameters($step->{effect_id}, $eff, $step->{params});
     my %raw = %{ $step->{params} };
     $raw{stateSize} = $owner_state_size
         if defined $owner_state_size && exists(($eff->{params} || {})->{stateSize});
-    my $normalized = _normalized_params($eff, \%raw, $seed);
+    my $raw_params = _normalized_params($eff, \%raw, $seed);
+    # cpu's initializeGroupStepState resolves automation params once at the
+    # render's normalized time: this init-time view feeds iterationCount,
+    # stateSize, and destination sizing. The per-run view re-resolves in
+    # _run_state_once against each run's own (possibly rewound) time.
+    my $params = _resolve_effect_automation($eff, $raw_params, $time) // $raw_params;
+    _inherit_volume_size($step->{effect_id}, $eff, $params, $input_bundle);
     my $domain = $eff->{domain} || 'image';
-    my $input_volume = ($input_bundle || {})->{volume};
-    if (defined $input_volume && exists(($eff->{params} || {})->{volumeSize})
-        && $domain =~ /\Avolume-(?:generator|filter|renderer)\z/) {
-        my $volume_size = $input_volume->width;
-        my $expected_height = $volume_size * $volume_size;
-        die "$step->{effect_id} input volume atlas expected ${volume_size}x${expected_height}, received "
-            . $input_volume->width . 'x' . $input_volume->height . "\n"
-            if $input_volume->height != $expected_height;
-        $normalized->{volumeSize} = $volume_size;
-    }
     my $state = {
         step        => $step,
         effect_id   => $step->{effect_id},
         eff         => $eff,
-        params      => $normalized,
+        params      => $params,
+        raw_params  => $raw_params,
         attachments => {},
         overlay_initialized => 0,
     };
@@ -458,7 +553,7 @@ sub _prepare_state {
             values %{ $pass->{inputs} || {} };
     } @{ $eff->{passes} || [] };
     if ($uses_self) {
-        $state->{self_tex} = _destination($eff, 'outputTex', $normalized, $width, $height);
+        $state->{self_tex} = _destination($eff, 'outputTex', $params, $width, $height);
         $state->{self_tex}->clear;
     }
     return $state;
@@ -630,6 +725,15 @@ sub _run_state_once {
     my ($width, $height, $seed, $time) = @opt{qw(width height seed time)};
     my $input_bundle = $opt{input_bundle} || _chain_bundle($inputs->{inputTex});
     my $blank = Math::Fractal::Noisemaker::Surface->new(1, 1);
+    # Automation-driven params (`osc(...)`) re-resolve against this run's own
+    # normalized time: the iteration loop rewinds time to emulate the upstream
+    # frames the persistent-texture feedback accumulated, so an osc param must
+    # read the same per-iteration time the kernels receive. Programs without
+    # automation keep their exact params identity and byte-identical path.
+    if (defined(my $refreshed = _resolve_effect_automation($state->{eff}, $state->{raw_params}, $time))) {
+        _inherit_volume_size($state->{effect_id}, $state->{eff}, $refreshed, $input_bundle);
+        $state->{params} = $refreshed;
+    }
     my ($effect_uniforms, $surface_params) =
         _effect_bindings($state->{eff}, $state->{params}, $inputs, $blank);
     my %effective_inputs = (%$inputs, %$surface_params);
@@ -847,7 +951,7 @@ sub render_effect {
         }
         : $inputs->{inputTex};
     my $input_bundle = _chain_bundle($input_value);
-    my $state = _prepare_state($step, $width, $height, $seed, undef, $input_bundle);
+    my $state = _prepare_state($step, $width, $height, $seed, undef, $input_bundle, $time);
     my @states = ($state);
     my %group_resources;
     if (!$state->{eff}{iterated}) {
@@ -860,7 +964,7 @@ sub render_effect {
             input_was_bundle => $input_was_bundle,
         );
     }
-    my $count = defined $state->{params}{iterationCount} ? $state->{params}{iterationCount} : 60;
+    my $count = _group_iteration_count($state);
     return _zero_iteration_output($input_value, $width, $height, $state) unless $count > 0;
     my $result;
     for my $index (0 .. $count - 1) {
@@ -917,6 +1021,27 @@ sub _run_effect_step {
     );
 }
 
+# Upstream (shaders/src/runtime/pipeline.js render()) executes each pass exactly
+# resolveRepeatCount(pass) times per frame — there is no group-level multiplier.
+# For effects whose passes carry a `repeat` (synth/reactionDiffusion,
+# synth/navierStokes, synth3d/reactionDiffusion3d) the pass repeat IS the
+# per-frame iteration count, so the group loop must not multiply it again; the
+# documented iterationCount:0 bypass (zero passes run) is still honored. All
+# other iterated effects keep the established `iterationCount` group loop
+# (filter/temporalAberration requires N=60).
+sub _group_iteration_count {
+    my ($state) = @_;
+    my $requested = $state->{params}{iterationCount};
+    my $has_repeat_pass = 0;
+    for my $pass (@{ $state->{eff}{passes} || [] }) {
+        my $repeat = $pass->{repeat};
+        if (defined $repeat && !ref $repeat && $repeat) { $has_repeat_pass = 1; last }
+    }
+    return $has_repeat_pass
+        ? (!defined($requested) || $requested < 1 ? (defined $requested ? $requested : 1) : 1)
+        : (defined $requested ? $requested : 60);
+}
+
 sub _run_iteration_group {
     my ($group, $group_input, $surfaces, $external_textures, $width, $height, $seed, $time) = @_;
     my $group_input_bundle = _chain_bundle($group_input);
@@ -925,7 +1050,7 @@ sub _run_iteration_group {
     for my $index (0 .. $#{ $group->{steps} }) {
         my $state = _prepare_state(
             $group->{steps}[$index], $width, $height, $seed,
-            $index == 0 ? undef : $owner_state_size, $group_input_bundle,
+            $index == 0 ? undef : $owner_state_size, $group_input_bundle, $time,
         );
         push @states, $state;
         if ($index == 0 && @{ $group->{steps} } > 1
@@ -933,8 +1058,7 @@ sub _run_iteration_group {
             $owner_state_size = $state->{params}{stateSize};
         }
     }
-    my $count = defined $states[0]{params}{iterationCount}
-        ? $states[0]{params}{iterationCount} : 60;
+    my $count = _group_iteration_count($states[0]);
     return _zero_iteration_output($group_input, $width, $height, $states[0]) unless $count > 0;
 
     my %group_resources;

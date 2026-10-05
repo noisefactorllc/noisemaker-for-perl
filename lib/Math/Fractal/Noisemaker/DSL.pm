@@ -36,8 +36,14 @@ package Math::Fractal::Noisemaker::DSL;
 use strict;
 use warnings;
 use JSON::PP     ();
-use Scalar::Util ();
+use Scalar::Util qw(looks_like_number);
 use Exporter 'import';
+
+use Math::Fractal::Noisemaker::Automation qw(
+    is_automation_value
+    is_finite_number
+    MAX_AUTOMATION_DEPTH
+);
 
 our @EXPORT_OK = qw(tokenize_dsl parse_dsl compile_dsl);
 
@@ -464,6 +470,14 @@ sub parse_value_primary {
     if ($token->{type} eq 'identifier') {
         $self->{current}++;
         my $name = $token->{lexeme};
+        # `osc(...)` is the one value-position call the DSL supports (oscillator
+        # automation, matching upstream's parser); it parses as a regular call and
+        # the compiler turns it into an Oscillator automation value. Every other
+        # call in a value position stays a parse error via the dangling "(".
+        if ($name eq 'osc' && $self->peek->{lexeme} eq '(') {
+            $self->{current}--;
+            return $self->parse_call;
+        }
         if ($name eq 'read' && $self->match('(')) {
             if ($self->peek->{type} eq 'identifier' && $self->peek(1)->{lexeme} eq ':') {
                 my $argument_name = $self->identifier->{lexeme};
@@ -533,14 +547,103 @@ sub _is_surface {
     return ref $value eq 'HASH' && defined $value->{kind} && $value->{kind} eq 'surface' ? 1 : 0;
 }
 
+# Mirrors upstream std_enums.js oscKind (sine..noise2d; noise/noise1d alias kind 5,
+# noise2d is the two-stage periodic noise).
+my %_OSC_KINDS = (sine => 0, tri => 1, saw => 2, sawInv => 3, square => 4, noise => 5, noise1d => 5, noise2d => 6);
+my @_OSC_PARAM_ORDER = ('type', 'min', 'max', 'speed', 'offset', 'seed');
+
+# Compiles an `osc(...)` value-position call into the automation value shape the
+# runtime evaluator consumes ({type: 'Oscillator', oscType, min, max, speed,
+# offset, seed}), mirroring upstream's parser transformOscInvocation plus the
+# validator's compileAutomationDescriptor: positional args fill
+# type/min/max/speed/offset/seed in order, kwargs select by name, every field
+# defaults as upstream defaults, min/max clamp into [0,1], nested osc() fields
+# are allowed, and the oscType resolves from an integer 0..6 or an oscKind name
+# (bare or oscKind-qualified). Invalid programs throw DslError, as everywhere
+# else in this compiler.
+sub _compile_oscillator {
+    my ($call, $bindings, $depth) = @_;
+    my $loc = $call->{loc};
+    if ($depth > MAX_AUTOMATION_DEPTH) {
+        _throw("Automation nesting exceeds the maximum depth of " . MAX_AUTOMATION_DEPTH, $loc);
+    }
+    my %fields;
+    my $args = $call->{args};
+    if (($call->{argMode} || '') eq 'named') {
+        for my $arg (@$args) {
+            my $name = $arg->{name};
+            unless (grep { $_ eq $name } @_OSC_PARAM_ORDER) {
+                _throw("osc() unknown parameter '$name'; valid: " . join(', ', @_OSC_PARAM_ORDER), $loc);
+            }
+            $fields{$name} = $arg->{value};
+        }
+    }
+    else {
+        for my $index (0 .. $#$args) {
+            $fields{ $_OSC_PARAM_ORDER[$index] } = $args->[$index]{value} if $index < @_OSC_PARAM_ORDER;
+        }
+    }
+
+    my $raw_type = !exists $fields{type} ? 0 : _evaluate_value($fields{type}, $bindings, $depth + 1);
+    my $osc_type;
+    if (_is_number($raw_type)) {
+        if ($raw_type != int($raw_type) || $raw_type < 0 || $raw_type > 6) {
+            _throw('osc() type must resolve to a supported oscKind value (0-6)', $loc);
+        }
+        $osc_type = 0 + int($raw_type);
+    }
+    elsif (!ref $raw_type && defined $raw_type && !looks_like_number($raw_type) && length($raw_type)) {
+        my $kind_name = $raw_type;
+        $kind_name =~ s/\AoscKind\.//;
+        unless (exists $_OSC_KINDS{$kind_name}) {
+            _throw("osc() type must resolve to a supported oscKind value; got \"$raw_type\"", $loc);
+        }
+        $osc_type = $_OSC_KINDS{$kind_name};
+    }
+    else {
+        _throw('osc() type must resolve to a supported oscKind value', $loc);
+    }
+
+    my $number_field = sub {
+        my ($node, $name, $fallback, $clamp) = @_;
+        return $fallback unless defined $node;
+        my $value = _evaluate_value($node, $bindings, $depth + 1);
+        return $value if is_automation_value($value);
+        return $value if !ref $value && _is_number($value) && is_finite_number($value);
+        _throw("osc() $name must be a number or a nested osc()", $loc);
+    };
+    my $apply_field = sub {
+        my ($node, $name, $fallback, $clamp) = @_;
+        my $value = $number_field->($node, $name, $fallback, $clamp);
+        return $value unless $clamp;
+        return $value < 0 ? 0 : $value > 1 ? 1 : $value if !ref $value;
+        return $value;
+    };
+
+    return {
+        type    => 'Oscillator',
+        oscType => $osc_type,
+        min     => $apply_field->(exists $fields{min}    ? $fields{min}    : undef, 'min',    0, 1),
+        max     => $apply_field->(exists $fields{max}    ? $fields{max}    : undef, 'max',    1, 1),
+        speed   => $apply_field->(exists $fields{speed}  ? $fields{speed}  : undef, 'speed',  1, 0),
+        offset  => $apply_field->(exists $fields{offset} ? $fields{offset} : undef, 'offset', 0, 0),
+        seed    => $apply_field->(exists $fields{seed}   ? $fields{seed}   : undef, 'seed',   1, 0),
+    };
+}
+
 sub _evaluate_value {
-    my ($value, $bindings) = @_;
+    my ($value, $bindings, $osc_depth) = @_;
+    $osc_depth = 0 unless defined $osc_depth;
     if (ref $value eq 'ARRAY') {
-        return [map { _evaluate_value($_, $bindings) } @$value];
+        return [map { _evaluate_value($_, $bindings, $osc_depth) } @$value];
     }
     return $value unless ref $value eq 'HASH';
     my $kind = defined $value->{kind} ? $value->{kind} : '';
     if ($kind eq 'surface') { return $value }
+    if ($kind eq 'Call') {
+        if ($value->{name} eq 'osc') { return _compile_oscillator($value, $bindings, $osc_depth) }
+        _throw("Unsupported DSL value $kind \"$value->{name}\"", $value->{loc});
+    }
     if ($kind eq 'identifier') {
         my $name = $value->{name};
         if (exists $bindings->{$name}) {
@@ -785,7 +888,8 @@ sub compile_dsl {
         _throw("Duplicate binding \"$binding->{name}\"", $binding->{loc})
             if exists $bindings{ $binding->{name} };
         my $value = $binding->{value};
-        if (ref $value eq 'HASH' && defined $value->{kind} && $value->{kind} eq 'Call') {
+        if (ref $value eq 'HASH' && defined $value->{kind} && $value->{kind} eq 'Call'
+            && $value->{name} ne 'osc') {
             $bindings{ $binding->{name} } = {
                 kind => 'partial',
                 call => { %$value, args => _resolve_args($value->{args}, \%bindings) },
@@ -899,6 +1003,13 @@ C<read(o0)> begins a chain from a previously written or seeded image.
 C<render(o0)> selects the final image. Names C<o0> through C<o7> are available.
 Values include numbers, booleans, quoted strings, colors, vectors, and named
 enum choices. C<let> binds reusable values or partial effect calls.
+
+Numeric parameters accept C<osc(kind, min?, max?, speed?, offset?, seed?)>
+automation values, evaluated against the render's normalized C<time> on every
+render: C<kind> is one of C<sine>, C<tri>, C<saw>, C<sawInv>, C<square>,
+C<noise>/C<noise1d>, or C<noise2d>, fields may nest further C<osc(...)> values,
+and the resolved number scales into the parameter's declared range (integer
+choice selectors round, matching the upstream contract).
 
 =head1 ERRORS
 

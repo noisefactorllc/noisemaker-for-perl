@@ -215,6 +215,22 @@ for my $id (qw(render/render3d render/renderCubemap3d render/renderLandscape3d))
     compare_case("$id [filtering: 0]", $id, smoke_program($id, \@extra), $w, $h);
 }
 
+# Extra cases for the osc() parameter-automation DSL layer (evaluator kinds,
+# consumer-range scaling, int-selector rounding, per-iteration re-resolution):
+# both sides run the same program at the harness's shared seed/time, so the
+# comparison pins the resolved automation numbers bit-for-bit through RGBA8.
+my $osc_programs = [
+    ['filter/threshold', "search synth, filter\nnoise().threshold(level: osc(type: sine, min: 0.1, max: 0.4)).write(o0)\nrender(o0)", 4],
+    ['filter/invert',    "search synth, filter\nnoise().invert(mode: osc(sine)).write(o0)\nrender(o0)", 4],
+    ['filter/threshold', "search synth, filter\nnoise().threshold(level: osc(type: noise2d, speed: 2.5)).write(o0)\nrender(o0)", 4],
+    ['filter/threshold', "search synth, filter\nnoise().threshold(level: osc(type: saw, speed: osc(type: sine, min: 0.5, max: 2))).write(o0)\nrender(o0)", 4],
+    ['filter/feedback',  "search synth, filter\nnoise().write(o0)\nread(o0).feedback(mix: osc(tri), iterationCount: 4).write(o1)\nrender(o1)", 8],
+];
+for my $case (@$osc_programs) {
+    my ($id, $program, $w) = @$case;
+    compare_case("osc: $id", $id, $program, $w, $w);
+}
+
 my $err_total = 0;
 $err_total += scalar @{ $errors{$_} } for keys %errors;
 my $total_cases = @ok + @diff + $err_total;

@@ -139,6 +139,21 @@ $pl = render_effect(
 );
 cmp_ok(max_diff($js, $pl), '<=', 2, 'synth/navierStokes nullable input matches CPU');
 
+# e86e1c6-era upstream semantics: for effects whose passes carry `repeat`
+# (synth/navierStokes, synth/reactionDiffusion, synth3d/reactionDiffusion3d)
+# the pass repeat IS the per-frame iteration count, so the group loop must not
+# multiply it again — iterationCount 1 and 4 must render byte-identically
+# (a requested 0 still bypasses all passes).
+my $ns_one = render_effect(
+    'synth/navierStokes', { iterationCount => 1, iterations => 2, zoom => 1 }, {},
+    width => 8, height => 8, seed => 1, time => 0.25,
+);
+my $ns_four = render_effect(
+    'synth/navierStokes', { iterationCount => 4, iterations => 2, zoom => 1 }, {},
+    width => 8, height => 8, seed => 1, time => 0.25,
+);
+is(max_diff($ns_one, $ns_four), 0, 'navierStokes group loop does not multiply pass repeat');
+
 # The pinned generated CPU kernel intentionally leaves empty history slots at
 # zero; this is a source-compatibility check for the canonical artifact.
 my $temporal_input = render_effect(
