@@ -127,7 +127,9 @@ sub _coerce {
     }
     if ($t eq 'color') {
         $value = _parse_hex($value) if defined $value && !ref $value;
-        return [map { f32($_) } @{ $value || [0, 0, 0] }];
+        my @components = @{ $value || [0, 0, 0] };
+        # A color uniform is vec3; the effect's separate alpha parameter owns opacity.
+        return [map { f32($_) } @components[0 .. 2]];
     }
     if ($t eq 'vec2' || $t eq 'vec3' || $t eq 'vec4' || $t eq 'mat3') {
         if (defined $value && !ref $value) {    # CLI --param: "0.1,0.2,0.3"

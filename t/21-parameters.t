@@ -52,6 +52,13 @@ for my $entry (['source', []], ['geoSource', {}], ['source', 'vol99']) {
         'typed resources must be bound through the inputs hash');
 }
 
+my $rgb_solid = render_effect('synth/solid', {color => [1, 0, 0], alpha => 0.6},
+    undef, width => 1, height => 1);
+my $rgba_solid = render_effect('synth/solid', {color => [1, 0, 0, 0.1], alpha => 0.6},
+    undef, width => 1, height => 1);
+is($rgba_solid->to_rgba8, $rgb_solid->to_rgba8,
+    'a fourth color component does not override the separate alpha parameter');
+
 my $base = render_effect('synth/noise', {}, undef, width => 4, height => 4);
 my $rotated = eval { render_effect('filter/palette', {rotation => 'fwd'},
     {inputTex => $base}, width => 4, height => 4, time => 0.25) };

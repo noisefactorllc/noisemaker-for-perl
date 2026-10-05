@@ -88,6 +88,11 @@ my $pl = render_effect('synth/solid', { color => '#4080c0' }, undef,
     width => 8, height => 8, seed => 1, time => 0.25);
 is(max_diff($js, $pl), 0, 'synth/solid byte-exact');
 
+$js = js_effect('synth/solid', '--param', 'color=[1,0,0,0.1]', '--param', 'alpha=0.6');
+$pl = render_effect('synth/solid', { color => [1, 0, 0, 0.1], alpha => 0.6 }, undef,
+    width => 8, height => 8, seed => 1, time => 0.25);
+is(max_diff($js, $pl), 0, 'RGBA color retains the separate alpha parameter and matches CPU bytes');
+
 # filter over the oracle's default solid
 $js = js_effect('filter/invert');
 my $solid = render_effect('synth/solid', {}, undef, width => 8, height => 8, seed => 1, time => 0.25);
