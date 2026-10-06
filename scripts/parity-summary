@@ -8,9 +8,10 @@
 #
 # Classification is computed from the rendered bytes, never hand-assigned:
 #   exact   — byte-identical RGBA8 output against the authority golden.
-#   strict  — rendered not byte-identical, but every channel within
-#             --tolerance (default 2) of the golden.
-#   fail    — rendered beyond tolerance, including runtime render errors.
+#   strict  — 0 under this port's published contract: docs/COMPATIBILITY.md
+#             makes RGBA8 byte equality the strict comparison rule, so no
+#             tolerance-widened mismatch is a pass.
+#   fail    — rendered but not byte-identical, including runtime render errors.
 #   skip    — the authority's explicit no-golden skip policy; the fixture is
 #             compiled but never rendered.
 #   missing — no implementation in this port.
@@ -18,7 +19,7 @@
 # whether the summary ran to completion, not whether the comparisons pass.
 #
 # Usage: perl scripts/parity-summary [--size N] [--seed N] [--time F]
-#                                    [--tolerance N] [case-id ...]
+#                                    [case-id ...]
 #
 # Requires NOISEMAKER_CPU_DIR (or a sibling noisemaker-for-cpu checkout) at the
 # exact revision recorded in scripts/oracle-lock.json.
@@ -40,21 +41,18 @@ use Math::Fractal::Noisemaker::PNG      qw(encode_png decode_png);
 use Math::Fractal::Noisemaker::Renderer qw(render_effect render_dsl meta);
 use Math::Fractal::Noisemaker::Surface;
 
-my $SIZE      = 8;
-my $SEED      = 1;
-my $TIME      = 0.25;
-my $TOLERANCE = 2;
+my $SIZE = 8;
+my $SEED = 1;
+my $TIME = 0.25;
 my @requested;
 for (my $i = 0; $i <= $#ARGV; $i++) {
-    if ($ARGV[$i] eq '--size')         { $SIZE = $ARGV[++$i] }
-    elsif ($ARGV[$i] eq '--seed')      { $SEED = $ARGV[++$i] }
-    elsif ($ARGV[$i] eq '--time')      { $TIME = $ARGV[++$i] }
-    elsif ($ARGV[$i] eq '--tolerance') { $TOLERANCE = $ARGV[++$i] }
-    elsif ($ARGV[$i] =~ /^--/)         { die "Unknown parity-summary option $ARGV[$i]\n" }
-    else                               { push @requested, $ARGV[$i] }
+    if ($ARGV[$i] eq '--size')  { $SIZE = $ARGV[++$i] }
+    elsif ($ARGV[$i] eq '--seed') { $SEED = $ARGV[++$i] }
+    elsif ($ARGV[$i] eq '--time') { $TIME = $ARGV[++$i] }
+    elsif ($ARGV[$i] =~ /^--/)  { die "Unknown parity-summary option $ARGV[$i]\n" }
+    else                        { push @requested, $ARGV[$i] }
 }
-die "--size must be a positive integer\n"          unless $SIZE =~ /^\d+$/ && $SIZE > 0;
-die "--tolerance must be a non-negative integer\n" unless $TOLERANCE =~ /^\d+$/;
+die "--size must be a positive integer\n" unless $SIZE =~ /^\d+$/ && $SIZE > 0;
 
 my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
     || File::Spec->rel2abs(File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-for-cpu'));
@@ -257,20 +255,21 @@ for my $id (@ids) {
     push @rendered, {
         id        => $id,
         exact     => ($diff == 0 ? 1 : 0),
-        pass      => ($diff >= 0 && $diff <= $TOLERANCE ? 1 : 0),
         max_error => $diff,
     };
 }
 
+# docs/COMPATIBILITY.md makes RGBA8 byte equality the strict comparison rule,
+# so a non-identical render is never a pass: the only pass class is exact.
 my $exact  = grep { $_->{exact} } @rendered;
-my $strict = grep { !$_->{exact} && $_->{pass} } @rendered;
-my $fail   = grep { !$_->{pass} } @rendered;
+my $strict = 0;
+my $fail   = grep { !$_->{exact} } @rendered;
 
 printf "%-45s %s\n", $_->{id}, 'skip' for @skipped;
 printf "%-45s %s\n", $_->{id}, 'missing' for @missing;
 for my $r (@rendered) {
     printf "%-45s %-6s max_error=%s%s\n", $r->{id},
-        $r->{exact} ? 'exact' : ($r->{pass} ? 'strict' : 'fail'),
+        $r->{exact} ? 'exact' : 'fail',
         $r->{max_error}, ($r->{reason} ? "  $r->{reason}" : '');
 }
 
@@ -279,7 +278,6 @@ print 'PARITY-SUMMARY ' . encode_json({
     size      => $SIZE,
     time      => $TIME,
     seed      => $SEED,
-    tolerance => $TOLERANCE,
     expected  => scalar(@rendered) + scalar(@skipped) + scalar(@missing),
     executed  => scalar(@rendered),
     exact     => $exact,
