@@ -282,6 +282,11 @@ like(
         width => 2, height => 2);
     my @px = unpack 'C4', $surface->to_rgba8;
     is_deeply([@px[0 .. 2]], [51, 102, 153], 'array color value renders');
+    my $alpha_surface = render_dsl(
+        "search synth\nsolid(color: [0.2, 0.4, 0.6, 0.3], alpha: 0.8).write(o0)\nrender(o0)",
+        width => 2, height => 2);
+    is_deeply([unpack 'C4', $alpha_surface->to_rgba8], [41, 82, 122, 204],
+        'a four-component DSL color does not consume the separate alpha parameter');
 }
 
 done_testing();
