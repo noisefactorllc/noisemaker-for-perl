@@ -3,6 +3,7 @@ use warnings;
 use Test::More;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
+use POSIX qw(strtod);
 use JSON::PP qw(decode_json);
 
 use Math::Fractal::Noisemaker::Automation qw(
@@ -23,12 +24,45 @@ use Math::Fractal::Noisemaker::Renderer qw(render_dsl);
 # recorded sourceRevision. The JS port additionally re-proves the fixture live
 # against NM_REFERENCE_ROOT with the upstream JavaScript evaluator; that leg
 # needs a JS runtime and stays in noisemaker-for-cpu's own suite.
+#
+# JS number semantics come from correctly-rounded strtod. Perl's string-to-NV
+# conversion (what JSON::PP numification uses) is not correctly rounded on all
+# supported perl versions — 17-digit literals can land 1 ulp off, which would
+# flip bit-exact comparisons per perl build. So the fixture's numbers are
+# re-read through libc strtod: each unquoted numeric literal is wrapped in a
+# sentinel string before decoding, then converted with strtod (the fixture is
+# machine-generated with one `"key": value` per line, so only genuine numbers
+# match).
+
+sub _strtod_number {
+    my ($value) = @_;
+    return $value unless defined $value && !ref $value && $value =~ /\A__N__(.+)\z/s;
+    my $literal = $1;
+    return int(strtod($literal)) if $literal =~ /\A-?\d+\z/;
+    return strtod($literal);
+}
+
+sub _hydrate_numbers {
+    my ($node) = @_;
+    if (ref $node eq 'HASH') {
+        $_ = _hydrate_numbers($_) for values %$node;
+    }
+    elsif (ref $node eq 'ARRAY') {
+        $_ = _hydrate_numbers($_) for @$node;
+    }
+    else {
+        return _strtod_number($node);
+    }
+    return $node;
+}
 
 my $FIXTURE = do {
     open my $fh, '<:raw', "$FindBin::Bin/data/osc-automation-golden.json"
         or die "cannot read osc-automation-golden.json: $!";
     local $/;
-    decode_json(<$fh>);
+    my $text = <$fh>;
+    $text =~ s/("[A-Za-z0-9_]+"[ \t]*:[ \t]*)((?:-?)(?:\d+)(?:\.\d+)?(?:[eE][+-]?\d+)?)[ \t]*(?=\n|$)/$1"__N__$2"/g;
+    _hydrate_numbers(decode_json($text));
 };
 my @SPECS = (
     undef,
