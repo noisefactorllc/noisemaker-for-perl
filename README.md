@@ -13,7 +13,7 @@ Current qualification limits: [completion gaps](https://github.com/noisefactorll
 
 **Math::Fractal::Noisemaker v1.000** — a software runtime for shaders, in pure Perl.
 
-This is the Perl home of the [Noisemaker](https://noisemaker.app) rendering engine. It runs a bundled catalog of 205 generators, filters, mixers, and typed effects entirely on the CPU. The parity evidence and its limits are described below.
+This is the Perl home of the [Noisemaker](https://noisemaker.app) rendering engine. It runs a bundled catalog of 210 generators, filters, mixers, and typed effects entirely on the CPU. The parity evidence and its limits are described below.
 Rendering works offline. During development, a pure-Perl GLSL ES 3.00 front end transpiles source from the Noisemaker shader CDN into the bundled kernels. The runtime implements:
 
 - Float32 register rounding.
@@ -100,12 +100,18 @@ is distributed under the MIT license in `LICENSE`.
 
 ## Parity
 
-`scripts/parity.pl` compares all 167 non-iterated image effects with the
-reference JS CPU engine at 8×8, seed 1, time 0.25, with default parameters.
-It requires exact RGBA8 bytes and fails on differences or errors. The 38 iterated
-and typed effects are excluded from this sweep and have focused DSL/runtime tests.
-Those tests do not establish parity for all parameter combinations, resolutions,
-platforms, or GPU drivers. A passing default sweep is not full-catalog parity.
+`scripts/parity-summary` renders every effect of the reference's current
+manifest (210 at the pinned commit) with this port and with the reference JS CPU
+engine at 8×8, seed 1, time 0.25, with default parameters, and requires exact
+RGBA8 bytes. Iterated effects run one iteration (a 64-point state where they
+declare one), particle effects run behind the same emitter, and volume and loop
+effects run inside the same DSL program on both sides. The reactive and mesh
+effects (`synth/roll`, `synth/scope`, `synth/spectrum`, `render/meshLoader` and
+`render/meshRender`) run with the same deterministic MIDI, audio and mesh
+inputs on both sides (`scripts/ReactiveFixtures.pm`). `scripts/parity.pl` runs
+the same comparison for any subset of the bundled effects. Default-parameter
+comparisons do not establish parity for all parameter combinations,
+resolutions, platforms, or floating-point configurations.
 
 The exact reference commit and runtime digest are recorded in
 `scripts/oracle-lock.json`. Check out that commit of `noisemaker-for-cpu` and set
@@ -114,7 +120,7 @@ The harness hashes the reference's `bin/`, `src/`, `package.json`, and upstream
 source-lock file before rendering, so local reference edits fail verification.
 
     RELEASE_TESTING=1 NOISEMAKER_CPU_DIR=/path/to/pinned-reference prove -l t/05-parity.t
-    NOISEMAKER_CPU_DIR=/path/to/pinned-reference perl scripts/parity.pl
+    NOISEMAKER_CPU_DIR=/path/to/pinned-reference perl scripts/parity-summary
 
 Normal installation tests skip the external reference when unavailable.
 `RELEASE_TESTING=1` makes a missing reference a failure. CI tests the source and

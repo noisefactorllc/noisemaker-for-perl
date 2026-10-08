@@ -337,6 +337,7 @@ lib/Math/Fractal/Noisemaker/bundle/metadata.json
 scripts/ReactiveFixtures.pm
 scripts/build-bundle.pl
 scripts/ParityOracle.pm
+scripts/oracle-external-input.mjs
 scripts/oracle-lock.json
 scripts/parity-full.pl
 scripts/parity-summary

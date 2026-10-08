@@ -1,292 +1,118 @@
 #!/usr/bin/env perl
 
-# Whole-port parity summary for noisemaker-for-perl. Renders every case of the
-# current authority's manifest (the pinned noisemaker-for-cpu checkout's
-# upstream-snapshot effect ids) with this port and compares each rendered RGBA8
-# image against the retained authority golden. Positional case ids
+# Whole-port parity summary for noisemaker-for-perl. The authority's cases are
+# the pinned noisemaker-for-cpu checkout's upstream-snapshot effect ids (the
+# current authority manifest). Every case this port bundles is rendered by both
+# engines through scripts/parity.pl and compared byte for byte; an authority
+# id the port does not bundle counts as missing. Positional case ids
 # (`synth/solid` or `synth__solid`) restrict the run to those cases.
 #
-# Classification is computed from the rendered bytes, never hand-assigned:
-#   exact   — byte-identical RGBA8 output against the authority golden.
-#   strict  — 0 under this port's published contract: docs/COMPATIBILITY.md
-#             makes RGBA8 byte equality the strict comparison rule, so no
-#             tolerance-widened mismatch is a pass.
-#   fail    — rendered but not byte-identical, including runtime render errors.
-#   skip    — the authority's explicit no-golden skip policy; the fixture is
-#             compiled but never rendered.
-#   missing — no implementation in this port.
-# The last output line is the PARITY-SUMMARY JSON; the exit code reports
-# whether the summary ran to completion, not whether the comparisons pass.
+# The last output line is:
+#   PARITY-SUMMARY {"expected":N,"executed":N,"exact":N,"strict":N,"near":N,"defer":N,"skip":N,"fail":N,"missing":N}
 #
-# Usage: perl scripts/parity-summary [--size N] [--seed N] [--time F]
-#                                    [case-id ...]
+#   expected  the authority's cases (manifest ids, or the requested subset)
+#   executed  cases rendered by both engines and compared
+#   exact     byte-identical RGBA8
+#   strict    passes within the published numerical contract other than
+#             exact: always 0, because the contract is byte-exact RGBA8
+#   near, defer, skip
+#             always 0: no case is tolerated, deferred or skipped
+#   fail      rendered but not byte-identical, a port runtime error, or an
+#             oracle error
+#   missing   authority cases this port does not bundle
+#
+# Exit 0 iff expected > 0 and every expected case is exact.
+#
+# Usage: perl scripts/parity-summary [--size N] [case-id ...]
 #
 # Requires NOISEMAKER_CPU_DIR (or a sibling noisemaker-for-cpu checkout) at the
 # exact revision recorded in scripts/oracle-lock.json.
 
 use strict;
 use warnings;
-$| = 1;    # per-case progress must survive a killed long run
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use lib $FindBin::Bin;
 use ParityOracle qw(verify_oracle);
-use JSON::PP       qw(decode_json encode_json);
-use Scalar::Util   qw(blessed);
+use JSON::PP qw(decode_json);
 use File::Spec;
 use File::Temp ();
 
-use Math::Fractal::Noisemaker::DSL      qw(compile_dsl);
-use Math::Fractal::Noisemaker::PNG      qw(encode_png decode_png);
-use Math::Fractal::Noisemaker::Renderer qw(render_effect render_dsl meta);
-use Math::Fractal::Noisemaker::Surface;
+use Math::Fractal::Noisemaker::Renderer qw(meta);
 
-my $SIZE = 8;
-my $SEED = 1;
-my $TIME = 0.25;
 my @requested;
+my @pass_through;
 for (my $i = 0; $i <= $#ARGV; $i++) {
-    if ($ARGV[$i] eq '--size')  { $SIZE = $ARGV[++$i] }
-    elsif ($ARGV[$i] eq '--seed') { $SEED = $ARGV[++$i] }
-    elsif ($ARGV[$i] eq '--time') { $TIME = $ARGV[++$i] }
-    elsif ($ARGV[$i] =~ /^--/)  { die "Unknown parity-summary option $ARGV[$i]\n" }
-    else                        { push @requested, $ARGV[$i] }
+    if ($ARGV[$i] eq '--size') { push @pass_through, '--size', $ARGV[++$i] }
+    elsif ($ARGV[$i] =~ /^--/) { die "Unknown parity-summary option $ARGV[$i]\n" }
+    else { (my $id = $ARGV[$i]) =~ s{__}{/}; push @requested, $id }
 }
-die "--size must be a positive integer\n" unless $SIZE =~ /^\d+$/ && $SIZE > 0;
 
 my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
     || File::Spec->rel2abs(File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-for-cpu'));
-my $oracle_pin = verify_oracle($CPU_DIR);
-print "Reference: $oracle_pin->{revision} (runtime SHA-256 verified)\n";
+my $pin = verify_oracle($CPU_DIR);
+print "Reference: $pin->{revision} (runtime SHA-256 verified)\n";
 
+# The authority manifest is read from the pinned checkout itself, so a pin bump
+# cannot leave a stale copy of it in this repository.
 my $TMP = File::Temp::tempdir(CLEANUP => 1);
-
-# The authority manifest (the pinned upstream source's effect ids) and its
-# no-golden skip policy are read from the pinned checkout itself through node,
-# so a pin bump cannot leave a stale copy of either in this repository.
-my $authority = decode_json(_authority_manifest(
-    File::Spec->catfile($CPU_DIR, 'src', 'effects', 'generated', 'upstream-snapshot.js'),
-    File::Spec->catfile($CPU_DIR, 'scripts', 'parity', 'lib.js'),
-));
-die "Authority manifest is empty\n" unless @{ $authority->{ids} };
-
-my %SKIP_POLICY = map { $_ => 1 } @{ $authority->{skips} };
-my %FIXTURE;
-{
-    my $manifest = File::Spec->catfile($CPU_DIR, 'parity', 'upstream-defaults', 'manifest.tsv');
-    open my $fh, '<', $manifest or die "Authority fixture manifest is missing: $manifest\n";
-    while (my $line = <$fh>) {
-        chomp $line;
-        next unless $line =~ /\S/;
-        my ($case, $fixture) = split /\t/, $line;
-        $FIXTURE{ _case_id($case) } = $fixture;
-    }
-}
-
-sub _authority_manifest {
-    my ($snapshot, $lib) = @_;
-    my $probe = File::Spec->catfile($TMP, 'authority-manifest.mjs');
-    open my $fh, '>', $probe or die "cannot write $probe: $!\n";
-    print {$fh} <<'JS';
-const [snapshotPath, libPath] = process.argv.slice(2)
-const snapshot = await import(snapshotPath)
-const lib = await import(libPath)
-process.stdout.write(JSON.stringify({
-  ids: snapshot.sourceEffectIds,
-  revision: snapshot.UPSTREAM_REVISION,
-  skips: [...lib.NEW_CPU_EFFECT_IDS, ...lib.ITERATED_SKIP_IDS],
-}))
+my $probe = File::Spec->catfile($TMP, 'authority-manifest.mjs');
+open my $pfh, '>', $probe or die "cannot write $probe: $!\n";
+print {$pfh} <<'JS';
+const snapshot = await import(process.argv[2])
+process.stdout.write(JSON.stringify({ ids: snapshot.sourceEffectIds, revision: snapshot.UPSTREAM_REVISION }))
 JS
-    close $fh;
-    my $out = `node "$probe" "$snapshot" "$lib"`;
-    die "Failed to read the authority manifest from $snapshot\n" if $? != 0 || !$out;
-    return $out;
-}
+close $pfh;
+my $snapshot = File::Spec->catfile($CPU_DIR, 'src', 'effects', 'generated', 'upstream-snapshot.js');
+my $manifest_json = `node "$probe" "$snapshot"`;
+die "Failed to read the authority manifest from $snapshot\n" if $? != 0 || !$manifest_json;
+my $authority = decode_json($manifest_json);
+my @authority_ids = sort @{ $authority->{ids} };
+die "Authority manifest is empty\n" unless @authority_ids;
 
-my $registry = meta()->{effects};
-my @ids = sort @{ $authority->{ids} };
-if (@requested) {
-    my %known = map { $_ => 1 } @ids;
-    my @unknown = grep {
-        (my $norm = $_) =~ s{__}{/};
-        !$known{$norm};
-    } @requested;
+my %known = map { $_ => 1 } @authority_ids;
+if (my @unknown = grep { !$known{$_} } @requested) {
     die "Unknown parity-summary case @unknown: not one of the "
-        . scalar(@ids) . " authority-manifest effect IDs\n" if @unknown;
-    my %want = map { (my $norm = $_) =~ s{__}{/}; $norm => 1 } @requested;
-    @ids = grep { $want{$_} } @ids;
+        . scalar(@authority_ids) . " authority-manifest effect IDs\n";
 }
+my %want = map { $_ => 1 } @requested;
+my @ids = @requested ? grep { $want{$_} } @authority_ids : @authority_ids;
+my $bundle = meta()->{effects};
+my @executable = grep { $bundle->{$_} } @ids;
+my @missing = grep { !$bundle->{$_} } @ids;
 
-# Deterministic non-uniform texture for external-texture effects.
-my ($EXT_PNG, $EXT_TEX);
-sub ext_texture {
-    return $EXT_TEX if $EXT_TEX;
-    $EXT_PNG = File::Spec->catfile($TMP, 'ext.png');
-    my @d;
-    for my $y (0 .. $SIZE - 1) {
-        for my $x (0 .. $SIZE - 1) {
-            push @d, $x / ($SIZE - 1), $y / ($SIZE - 1), (($x + $y) % $SIZE) / ($SIZE - 1), 1.0;
-        }
-    }
-    my $surf = Math::Fractal::Noisemaker::Surface->new($SIZE, $SIZE, \@d);
-    open my $fh, '>:raw', $EXT_PNG or die $!;
-    print {$fh} encode_png($surf);
+my ($exact, $fail) = (0, 0);
+if (@executable) {
+    my @cmd = ($^X, File::Spec->catfile($FindBin::Bin, 'parity.pl'),
+        '--only', join(',', @executable), @pass_through);
+    open my $fh, '-|', @cmd or die "cannot run scripts/parity.pl: $!\n";
+    my $output = do { local $/; <$fh> };
     close $fh;
-    open my $rf, '<:raw', $EXT_PNG or die $!;
-    local $/;
-    $EXT_TEX = decode_png(scalar <$rf>);
-    return $EXT_TEX;
+    print $output;
+    my ($passed, $total, $diffs, $errors, $oracle) = $output =~
+        /^=== PARITY: (\d+)\/(\d+) pass \(byte-exact\)  \|  (\d+) diff  \|  (\d+) runtime-error  \|  (\d+) oracle-error ===$/m
+        or die "parity-summary: could not parse scripts/parity.pl output\n";
+    $exact = $passed;
+    $fail = $diffs + $errors + $oracle;
 }
+printf "%-45s missing (not in this port's bundle)\n", $_ for @missing;
 
-sub solid {
-    my ($color) = @_;
-    return render_effect('synth/solid', (defined $color ? { color => $color } : {}), undef,
-        width => $SIZE, height => $SIZE, seed => $SEED, time => $TIME);
-}
-
-# Render a no-fixture case from the registry, replicating the JS `effect` CLI
-# input conventions (same as scripts/parity.pl).
-sub default_render {
-    my ($id) = @_;
-    my $eff    = $registry->{$id};
-    my $params = $eff->{params};
-    my @order  = @{ $eff->{paramOrder} || [sort keys %$params] };
-    if (($eff->{kind} || '') eq 'generator') {
-        my $inputs = {};
-        $inputs->{ $eff->{externalTexture} } = ext_texture() if $eff->{externalTexture};
-        return render_effect($id, {}, $inputs,
-            width => $SIZE, height => $SIZE, seed => $SEED, time => $TIME);
-    }
-    my %inputs = (inputTex => solid());
-    my @surf = grep { ref $params->{$_} eq 'HASH' && ($params->{$_}{type} || '') eq 'surface' } @order;
-    for my $i (0 .. $#surf) {
-        my $pname = $surf[$i];
-        my $src   = solid($i % 2 ? '#0cf' : '#f30');
-        my $spec  = $params->{$pname};
-        my %names = map { $_ => 1 } grep { defined } $spec->{uniform}, $spec->{texture}, $pname;
-        $inputs{$_} = $src for keys %names;
-    }
-    return render_effect($id, {}, \%inputs,
-        width => $SIZE, height => $SIZE, seed => $SEED, time => $TIME);
-}
-
-sub _case_id {
-    my ($case) = @_;
-    $case =~ s{__}{/};
-    return $case;
-}
-
-sub suite_for {
-    my ($id) = @_;
-    return $id =~ /^classicNoisedeck\// ? 'classic' : 'defaults';
-}
-
-sub golden_path {
-    my ($id) = @_;
-    (my $name = $id) =~ s{/}{__};
-    return File::Spec->catfile($CPU_DIR, 'parity', 'goldens', suite_for($id), "$name.golden.png");
-}
-
-sub _slurp {
-    my $path = shift;
-    open my $fh, '<', $path or die "cannot read $path: $!\n";
-    local $/;
-    return scalar <$fh>;
-}
-
-sub max_channel_diff {
-    my ($a, $b) = @_;
-    return -1 if length($a) != length($b);
-    my $d = 0;
-    for my $i (0 .. length($a) - 1) {
-        my $v = abs(ord(substr($a, $i, 1)) - ord(substr($b, $i, 1)));
-        $d = $v if $v > $d;
-    }
-    return $d;
-}
-
-sub fixture_source {
-    my ($id) = @_;
-    my $fixture = $FIXTURE{$id}
-        or die "$id has no authority fixture program\n";
-    return _slurp(File::Spec->catfile($CPU_DIR, split m{/}, $fixture));
-}
-
-my (@rendered, @skipped, @missing);
-for my $id (@ids) {
-    my $golden = golden_path($id);
-    if (!$registry->{$id}) {
-        push @missing, { id => $id, reason => 'no implementation in this port' };
-        next;
-    }
-    if (!-e $golden) {
-        die "$id has no authority golden and is not in the authority skip policy\n"
-            unless $SKIP_POLICY{$id};
-        my $plan = eval { compile_dsl(fixture_source($id), $registry) };
-        die "$id skip fixture does not compile: $@\n" if $@ || !$plan;
-        push @skipped, {
-            id     => $id,
-            reason => 'no captured authority golden (explicit authority skip policy)',
-        };
-        next;
-    }
-    open my $gf, '<:raw', $golden or die "cannot read $golden: $!\n";
-    my $reference = do { local $/; decode_png(scalar <$gf>)->to_rgba8 };
-    close $gf;
-
-    my $got = eval {
-        my $surface = $FIXTURE{$id}
-            ? render_dsl(fixture_source($id),
-                width => $SIZE, height => $SIZE, seed => $SEED, time => $TIME)
-            : default_render($id);
-        die sprintf("unsupported output: %s", blessed($surface) || 'plain value')
-            unless blessed($surface) && $surface->can('to_rgba8');
-        $surface->to_rgba8;
-    };
-    if (!defined $got) {
-        (my $reason = $@ || 'unknown error') =~ s/\s+/ /g;
-        push @rendered, {
-            id => $id, pass => 0, exact => 0, max_error => -1,
-            reason => substr("render error: $reason", 0, 120),
-        };
-        next;
-    }
-    my $diff = max_channel_diff($got, $reference);
-    push @rendered, {
-        id        => $id,
-        exact     => ($diff == 0 ? 1 : 0),
-        max_error => $diff,
-    };
-}
-
-# docs/COMPATIBILITY.md makes RGBA8 byte equality the strict comparison rule,
-# so a non-identical render is never a pass: the only pass class is exact.
-my $exact  = grep { $_->{exact} } @rendered;
-my $strict = 0;
-my $fail   = grep { !$_->{exact} } @rendered;
-
-printf "%-45s %s\n", $_->{id}, 'skip' for @skipped;
-printf "%-45s %s\n", $_->{id}, 'missing' for @missing;
-for my $r (@rendered) {
-    printf "%-45s %-6s max_error=%s%s\n", $r->{id},
-        $r->{exact} ? 'exact' : 'fail',
-        $r->{max_error}, ($r->{reason} ? "  $r->{reason}" : '');
-}
-
-print 'PARITY-SUMMARY ' . encode_json({
+my @summary = (
+    expected => scalar(@ids),
+    executed => $exact + $fail,
+    exact    => $exact,
+    strict   => 0,
+    near     => 0,
+    defer    => 0,
+    skip     => 0,
+    fail     => $fail,
+    missing  => scalar(@missing),
     authorityRevision => $authority->{revision},
-    size      => $SIZE,
-    time      => $TIME,
-    seed      => $SEED,
-    expected  => scalar(@rendered) + scalar(@skipped) + scalar(@missing),
-    executed  => scalar(@rendered),
-    exact     => $exact,
-    strict    => $strict,
-    near      => 0,
-    defer     => 0,
-    skip      => scalar(@skipped),
-    fail      => $fail,
-    missing   => scalar(@missing),
-}) . "\n";
-
-exit 0;
+);
+# The documented key order, which a hash would not keep.
+my $json = JSON::PP->new->allow_nonref;
+print 'PARITY-SUMMARY {'
+    . join(',', map { $json->encode($summary[ 2 * $_ ]) . ':' . $json->encode($summary[ 2 * $_ + 1 ]) }
+        0 .. $#summary / 2)
+    . "}\n";
+exit(@ids && $exact == @ids ? 0 : 1);

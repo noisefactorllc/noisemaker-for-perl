@@ -9,7 +9,7 @@ use File::Spec;
 use Digest::SHA;
 use JSON::PP qw(decode_json);
 
-our @EXPORT_OK = qw(verify_oracle);
+our @EXPORT_OK = qw(verify_oracle particle_program);
 
 sub read_file {
     my ($path) = @_;
@@ -45,6 +45,28 @@ sub verify_oracle {
     die "Reference runtime differs from oracle-lock.json; check out $pin->{revision} in $root\n"
         unless $sha->hexdigest eq $pin->{runtime_sha256};
     return $pin;
+}
+
+# Both engines receive this exact scene. The reference `effect` CLI inserts an
+# emitter for particle consumers; comparing it to a bare Perl effect would
+# compare different inputs and different iteration counts. Returns undef when
+# the effect reads no particle state before writing it.
+sub particle_program {
+    my ($effect, $params) = @_;
+    my %written;
+    my $needs_emitter = 0;
+    for my $pass (@{ $effect->{passes} || [] }) {
+        for my $name (values %{ $pass->{inputs} || {} }) {
+            $needs_emitter = 1
+                if $name =~ /\Aglobal_(?:xyz|vel|rgba|points_trail)\z/ && !$written{$name};
+        }
+        last if $needs_emitter;
+        $written{$_} = 1 for values %{ $pass->{outputs} || {} };
+    }
+    return undef unless $needs_emitter;
+    my $args = join ', ', map { "$_: $params->{$_}" } sort keys %$params;
+    return "search points, render, synth\n"
+        . "solid().pointsEmit(stateSize: x64, iterationCount: 1).$effect->{func}($args).write(o0)\nrender(o0)";
 }
 
 1;
