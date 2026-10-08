@@ -255,6 +255,18 @@ sub _inherit_volume_size {
 # Slider ranges and numeric dropdown choices are UI hints: callers also use
 # small CPU state buffers and seeds outside those ranges. Reject malformed
 # values without clamping or changing valid numeric rendering behavior.
+# The reference rejects a numeric parameter outside its declared min/max
+# (src/effects/definition.js: `Parameter "<name>" must be at most <max>`).
+sub _check_range {
+    my ($spec, $value, $bad) = @_;
+    my ($min, $max) = @$spec{qw(min max)};
+    my $range = join ' to ', map { defined $_ ? 0 + $_ : $_ } grep { defined } $min, $max;
+    $bad->("must be at least " . (0 + $min) . " (declared range $range)")
+        if _finite_number($min) && $value < $min;
+    $bad->("must be at most " . (0 + $max) . " (declared range $range)")
+        if _finite_number($max) && $value > $max;
+}
+
 sub _validate_parameters {
     my ($effect_id, $effect, $params) = @_;
     die "Parameters for $effect_id must be a hash reference\n" unless ref $params eq 'HASH';
@@ -282,10 +294,12 @@ sub _validate_parameters {
         }
         if ($type eq 'float') {
             $bad->('expected a finite number') unless _finite_number($value);
+            _check_range($spec, $value, $bad);
         }
         elsif ($type =~ /\A(?:int|enum|member|palette)\z/) {
             if (_finite_number($value)) {
                 $bad->('expected an integer') unless $value == int($value);
+                _check_range($spec, $value, $bad);
             }
             else {
                 my $choices = ref $spec->{choices} eq 'HASH' ? $spec->{choices} : {};
@@ -1346,9 +1360,9 @@ Failures throw exceptions. Underscore-prefixed functions are private.
 C<$id> is a catalog ID such as C<synth/noise> or C<filter/invert>.
 C<$parameters> is a hash reference of effect parameters; C<undef> means defaults.
 Unknown names and malformed values are errors. An individual C<undef> value
-also requests its catalog default. Numbers must be finite; integers must be
-integral. Numeric dropdown values and values outside UI slider ranges remain
-allowed. Named dropdown choices must exist in the metadata; qualified names
+also requests its catalog default. Numbers must be finite and within the
+parameter's declared C<min> and C<max>; integers must be integral. Named
+dropdown choices must exist in the metadata; qualified names
 such as C<noise.simplex> use their final component. Booleans accept 0, 1,
 JSON booleans, or the strings true/false, yes/no, and on/off. Colors accept
 C<#RGB>, C<#RRGGBB>, C<#RRGGBBAA>, or arrays of three or four finite components.

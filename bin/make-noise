@@ -432,11 +432,28 @@ sub _resolve_effect {
     return $effect;
 }
 
+# An unseeded run draws inside the selected effect's declared seed range; the
+# reference rejects seeds outside it, and many renders degenerate there.
+sub _draw_seed {
+    my ($effect) = @_;
+    my $spec = meta()->{effects}{$effect}{params}{seed};
+    if ($spec && defined $spec->{max}) {
+        my $low = defined $spec->{min} ? int($spec->{min}) : 1;
+        return $low + int(rand(int($spec->{max}) - $low + 1));
+    }
+    return 1 + int(rand(MAX_SEED_VALUE));
+}
+
 # Shared command entry: resolve the effect, default the seed, echo the id.
 sub _prologue {
     my ($effect, $seed, $kind) = @_;
     $effect = _resolve_effect($effect, $kind);
-    $seed = 1 + int(rand(MAX_SEED_VALUE)) unless defined $seed;
+    # An explicit --seed is the effect's seed parameter, so it must fall in
+    # the declared range as an explicit DSL seed does.
+    Math::Fractal::Noisemaker::Renderer::_validate_parameters(
+        $effect, meta()->{effects}{$effect}, { seed => $seed })
+        if defined $seed && meta()->{effects}{$effect}{params}{seed};
+    $seed = _draw_seed($effect) unless defined $seed;
     print "$effect\n";
     return ($effect, $seed);
 }

@@ -88,9 +88,43 @@ my $false = render_effect('synth/noise', {ridges => 0, seed => 10},
     undef, width => 2, height => 2);
 is($string_false->to_rgba8, $false->to_rgba8, 'numeric strings and whitespace around booleans normalize correctly');
 
-# Catalog min/max and numeric choices describe UI controls, not API limits.
-# Tiny state buffers and seeds outside slider ranges are supported CPU uses.
-my $small = render_effect('synth/noise', {seed => 1000, scaleX => 0.5}, undef, width => 2, height => 2);
-ok($small, 'finite numeric values outside slider bounds remain supported');
+# As in the reference (src/effects/definition.js), a numeric value outside the
+# parameter's declared min/max is rejected; the bounds themselves are valid.
+for my $case (
+    ['an int above its maximum', 'synth/curl', {seed => 1001},
+        qr/Invalid parameter 'seed' for synth\/curl: must be at most 1000 \(declared range 0 to 1000\)/],
+    ['an int below its minimum', 'synth/noise', {seed => 0},
+        qr/Invalid parameter 'seed' for synth\/noise: must be at least 1 \(declared range 1 to 100\)/],
+    ['a float below its minimum', 'synth/noise', {scaleX => 0.5},
+        qr/Invalid parameter 'scaleX' for synth\/noise: must be at least 1/],
+) {
+    eval { render_effect($case->[1], $case->[2], undef, width => 2, height => 2) };
+    like($@, $case->[3], "$case->[0] is rejected");
+}
+for my $seed (0, 1000) {
+    ok(render_effect('synth/curl', {seed => $seed}, undef, width => 2, height => 2),
+        "seed $seed, a declared bound, renders");
+}
+eval { render_dsl("search synth\ncurl(seed: 5000).write(o0)\nrender(o0)", width => 2, height => 2) };
+like($@, qr/'seed' for synth\/curl: must be at most 1000/, 'an explicit DSL seed is range-checked');
+ok(render_effect('synth/curl', {}, undef, width => 2, height => 2, seed => 5000),
+    'the render seed is not a parameter value and is not range-checked, as in the reference');
+
+# A four-component color keeps the separate alpha parameter (reference bytes).
+for my $case ([1, [51, 102, 153, 255]], [undef, [51, 102, 153, 255]], [0.8, [41, 82, 122, 204]]) {
+    my %params = (color => [0.2, 0.4, 0.6, 0.3]);
+    $params{alpha} = $case->[0] if defined $case->[0];
+    is_deeply([unpack 'C4', render_effect('synth/solid', \%params, undef, width => 2, height => 2)->to_rgba8],
+        $case->[1], 'RGBA color with alpha ' . ($case->[0] // 'omitted') . ' keeps the alpha parameter');
+}
+
+# renderLandscape3d accepts its filtering parameter by value and by name.
+my %landscape;
+for my $filtering (0, 1, 'voxel') {
+    $landscape{$filtering} = render_dsl("search synth3d, render\nnoise3d(volumeSize: x16)"
+        . ".renderLandscape3d(filtering: $filtering).write(o0)\nrender(o0)", width => 4, height => 4)->to_rgba8;
+}
+isnt($landscape{0}, $landscape{1}, 'the isosurface and voxel filtering choices render differently');
+is($landscape{voxel}, $landscape{1}, 'a named filtering choice selects its value');
 
 done_testing();

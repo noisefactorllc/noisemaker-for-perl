@@ -79,8 +79,8 @@ Inspect an effect's parameter types, defaults, named choices, and UI ranges:
     perl -MJSON::PP -MMath::Fractal::Noisemaker::Renderer=meta -e 'print JSON::PP->new->pretty->canonical->encode(meta()->{effects}{"synth/noise"}{params})'
 
 Pass values using `--param NAME=VALUE`, or a parameter hash in Perl. Unknown
-names and malformed values are errors. UI ranges are hints: finite numeric
-values outside sliders remain supported. Surface inputs go in the renderer's
+names, malformed values and numbers outside a parameter's declared `min` and
+`max` are errors, as in the reference. Surface inputs go in the renderer's
 inputs hash; the CLI accepts PNG inputs. PNG support is limited to 8-bit,
 non-interlaced images; JPEG and interlaced PNG are unsupported.
 

@@ -349,6 +349,50 @@ for my $param ('seeed=3', 'type=not_a_noise_type', 'scaleX=banana') {
     ok(!-e $filename, 'invalid parameters do not write an image');
 }
 
+# An explicit --seed outside the effect's declared range is a usage error.
+for my $seed (1001, 5000) {
+    my $filename = File::Spec->catfile($TMPDIR, 'seed-range.png');
+    my ($rc, $out, $err) = run_cli([
+        'generate', 'synth/curl', '--width', 8, '--height', 8, '--seed', $seed, '--filename', $filename,
+    ]);
+    is($rc, 2, "--seed $seed exits with a usage error");
+    like($err, qr/'seed' for synth\/curl: must be at most 1000 \(declared range 0 to 1000\)/,
+        'the diagnostic names the declared seed range');
+    ok(!-e $filename, 'an out-of-range seed writes no image');
+}
+
+# An unseeded run draws inside the effect's declared seed range: with rand at
+# both ends of its range, the draw lands on the declared bounds.
+{
+    my $probe = <<'PERL';
+my $edge;
+BEGIN {
+    *CORE::GLOBAL::exit = sub { die "exit\n" };
+    *CORE::GLOBAL::rand = sub { my $n = @_ ? $_[0] : 1; return $edge eq 'high' ? $n * (1 - 2**-40) : 0 };
+}
+my $script = shift;
+{
+    local @ARGV = ('--version');
+    open my $null, '>', File::Spec->devnull;
+    my $out = select $null;
+    eval { do $script };
+    select $out;
+}
+for my $effect (@ARGV) {
+    for ('low', 'high') { $edge = $_; print "$effect $edge ", main::_draw_seed($effect), "\n" }
+}
+PERL
+    my $lib = File::Spec->catdir($DIST_ROOT, 'lib');
+    open my $fh, '-|', $PERL, "-I$lib", '-MFile::Spec', '-e', $probe, $MAKE_NOISE, 'synth/curl', 'synth/noise'
+        or die "cannot run make-noise: $!";
+    my %drawn = map { /^(\S+ \S+) (\d+)$/ ? ($1 => $2) : () } <$fh>;
+    close $fh;
+    is_deeply(\%drawn, {
+        'synth/curl low' => 0, 'synth/curl high' => 1000,
+        'synth/noise low' => 1, 'synth/noise high' => 100,
+    }, 'unseeded draws stay inside each effect\'s declared seed range');
+}
+
 # --- installed (INSTALL_BASE) layout --------------------------------------
 # An INSTALL_BASE install places modules under <prefix>/lib/perl5 while the
 # script stays at <prefix>/bin/make-noise; the script must find them there

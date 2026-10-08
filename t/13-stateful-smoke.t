@@ -50,7 +50,11 @@ for my $effect_id (qw(
     synth/reactionDiffusion
 )) {
     my %params = (iterationCount => 1);
-    $params{$_} = 1 for grep { exists meta()->{effects}{$effect_id}{params}{$_} } qw(iterations zoom);
+    # The smallest declared values keep the smoke test fast.
+    for my $name (qw(iterations zoom)) {
+        my $spec = meta()->{effects}{$effect_id}{params}{$name} or next;
+        $params{$name} = $spec->{min} // 1;
+    }
     my $surface = render_effect(
         $effect_id, \%params, {},
         width => 4, height => 4, seed => 1, time => 0.25,
@@ -60,7 +64,7 @@ for my $effect_id (qw(
 
 for my $name (qw(attractor buddhabrot dla flock flow hydraulic lenia life physarum physical)) {
     my $program = "search synth, render, points\n"
-        . "solid().pointsEmit(stateSize: 2, iterationCount: 1)"
+        . "solid().pointsEmit(stateSize: 64, iterationCount: 1)"
         . ".$name(iterationCount: 1)"
         . ".pointsRender(iterationCount: 1).write(o0)\n"
         . "render(o0)\n";
@@ -76,7 +80,7 @@ for my $case (
         'render/pointsBillboardRender'],
 ) {
     my $program = "search synth, render\n"
-        . "solid().pointsEmit(stateSize: 2, iterationCount: 1).$case->[0].write(o0)\n"
+        . "solid().pointsEmit(stateSize: 64, iterationCount: 1).$case->[0].write(o0)\n"
         . "render(o0)\n";
     assert_surface(
         render_dsl($program, width => 4, height => 4, seed => 1, time => 0.25),

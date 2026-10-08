@@ -12,7 +12,7 @@ use File::Temp ();
 # on a fast subset (the full 167-image-effect sweep lives in scripts/parity.pl).
 
 use Math::Fractal::Noisemaker::PNG qw(decode_png encode_png);
-use Math::Fractal::Noisemaker::Renderer qw(render_effect);
+use Math::Fractal::Noisemaker::Renderer qw(render_effect render_dsl);
 use Math::Fractal::Noisemaker::Surface;
 
 my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
@@ -68,6 +68,24 @@ sub js_apply {
         '--output', $out, @extra,
     );
     system(join(' ', map { quotemeta } @cmd) . ' >/dev/null 2>&1') == 0 or die "oracle failed\n";
+    open my $output_fh, '<:raw', $out or die $!;
+    local $/;
+    return decode_png(scalar <$output_fh>);
+}
+
+sub js_dsl {
+    my ($source) = @_;
+    my $in  = File::Spec->catfile($TMP, 'program.dsl');
+    my $out = File::Spec->catfile($TMP, 'js-dsl.png');
+    open my $program_fh, '>', $in or die $!;
+    print {$program_fh} $source;
+    close $program_fh;
+    my @cmd = (
+        'node', $CLI, 'render', '-',
+        '--width', 8, '--height', 8, '--seed', 1, '--time', 0.25,
+        '--output', $out,
+    );
+    system(join(' ', map { quotemeta } @cmd) . " <\Q$in\E >/dev/null 2>&1") == 0 or die "oracle failed\n";
     open my $output_fh, '<:raw', $out or die $!;
     local $/;
     return decode_png(scalar <$output_fh>);
@@ -145,11 +163,11 @@ cmp_ok(max_diff($js, $pl), '<=', 2, 'synth/navierStokes nullable input matches C
 # multiply it again — iterationCount 1 and 4 must render byte-identically
 # (a requested 0 still bypasses all passes).
 my $ns_one = render_effect(
-    'synth/navierStokes', { iterationCount => 1, iterations => 2, zoom => 1 }, {},
+    'synth/navierStokes', { iterationCount => 1, iterations => 4, zoom => 1 }, {},
     width => 8, height => 8, seed => 1, time => 0.25,
 );
 my $ns_four = render_effect(
-    'synth/navierStokes', { iterationCount => 4, iterations => 2, zoom => 1 }, {},
+    'synth/navierStokes', { iterationCount => 4, iterations => 4, zoom => 1 }, {},
     width => 8, height => 8, seed => 1, time => 0.25,
 );
 is(max_diff($ns_one, $ns_four), 0, 'navierStokes group loop does not multiply pass repeat');
@@ -175,6 +193,16 @@ for my $effect_id (qw(filter/mosaicTiles filter/stipple filter/strokes)) {
     $pl = render_effect($effect_id, {}, { inputTex => $solid },
         width => 8, height => 8, seed => 1, time => 0.25);
     is(max_diff($js, $pl), 0, "$effect_id canonical rounding byte-exact");
+}
+
+# renderLandscape3d accepts both filtering choices and renders each as the
+# reference does.
+for my $filtering (qw(isosurface voxel)) {
+    my $source = "search synth3d, render\nnoise3d(volumeSize: x16)"
+        . ".renderLandscape3d(filtering: $filtering).write(o0)\nrender(o0)";
+    $js = js_dsl($source);
+    $pl = render_dsl($source, width => 8, height => 8, seed => 1, time => 0.25);
+    is(max_diff($js, $pl), 0, "renderLandscape3d filtering: $filtering is CPU byte-exact");
 }
 
 done_testing();
