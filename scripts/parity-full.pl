@@ -2,16 +2,13 @@
 # Full-catalog byte-parity harness: renders EVERY effect in the bundled
 # catalog (iterated and typed domains included) on both this port and the
 # pinned noisemaker-for-cpu oracle through each side's `run` DSL CLI, and
-# compares the decoded RGBA8 output bytes. scripts/parity.pl covers the
-# published 167-image-effect contract; this entrypoint extends the same
-# methodology to the whole catalog plus explicit `filtering: 0` isosurface
-# variants of the volume renderers.
+# compares the decoded RGBA8 output bytes. Alongside scripts/parity.pl, it
+# renders every effect through the CLIs and adds explicit `filtering: 0`
+# isosurface variants of the volume renderers.
 #
 # Requires a noisemaker-for-cpu checkout at the revision pinned in
 # scripts/oracle-lock.json (NOISEMAKER_CPU_DIR or the first argument).
-# Exits nonzero on any diff, runtime error, or oracle error. The current
-# expected result against oracle bfbe54764eee is documented in
-# docs/COMPATIBILITY.md ("Full-catalog sweep").
+# Exits nonzero on any diff, runtime error, or oracle error.
 
 use strict;
 use warnings;
