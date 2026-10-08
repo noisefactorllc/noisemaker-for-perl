@@ -432,7 +432,9 @@ PERL
         {
             wanted => sub {
                 return unless -f $_;
-                (my $rel = $File::Find::name) =~ s/^\Q$lib_src\E//;
+                # abs2rel, not a prefix strip: File::Find reports `/`
+                # separators on Windows while catdir builds `\` ones.
+                my $rel = File::Spec->abs2rel($File::Find::name, $lib_src);
                 my $dest = File::Spec->catfile($lib5, $rel);
                 File::Path::make_path(File::Basename::dirname($dest));
                 File::Copy::copy($File::Find::name, $dest)

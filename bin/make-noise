@@ -548,8 +548,10 @@ sub _bind_input {
 
 sub _write_png {
     my ($surface, $filename) = @_;
-    my (undef, $dir, undef) = File::Spec->splitpath($filename);
-    make_path($dir) if length $dir;
+    # Keep the volume: on Windows a parent directory without its drive letter
+    # would be created on the current drive.
+    my ($volume, $dir) = File::Spec->splitpath($filename);
+    make_path(File::Spec->catpath($volume, $dir, '')) if length $dir;
     open my $fh, '>:raw', $filename or die "cannot write $filename: $!\n";
     print {$fh} encode_png($surface);
     close $fh or die "cannot write $filename: $!\n";
