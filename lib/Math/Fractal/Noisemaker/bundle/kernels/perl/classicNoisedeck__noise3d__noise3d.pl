@@ -352,7 +352,7 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($fp, $ip, $q, $r1);
-        $q = $p;
+        $q = $rt->fresh($p);
         @{$p} = map { $rt->f32($_) } @{($rt->binary('-', $p, $rt->component_wise('round', $p), 3, 'float'))};
         $ip = $rt->component_wise('floor', $q);
         $fp = $rt->component_wise('fract', $p);

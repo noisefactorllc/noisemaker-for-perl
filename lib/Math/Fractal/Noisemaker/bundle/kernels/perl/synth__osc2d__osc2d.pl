@@ -77,7 +77,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($freq, $globalCoord, $res, $rotRad, $scaledTime, $scrollOffset, $scrolledPos, $spatialPhase, $spatialPos, $st, $t, $timeNoise, $timePhase, $val, $valueNoise);
         $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $res = $_u_fullResolution;
+        $res = $rt->fresh($_u_fullResolution);
         if ($rt->binary('<', $rt->swizzle($res, 'x'), $rt->f(1))) {
             @{$res} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(1024), $rt->f(1024)))};
         }

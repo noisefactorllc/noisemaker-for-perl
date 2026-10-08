@@ -55,6 +55,49 @@ sub _canonical_compatibility {
         die "temporalAberration canonical compatibility pattern changed\n"
             unless $rewritten == 8;
     }
+    elsif (defined $canonical_key && $canonical_key eq 'synth3d/flythrough3d:precompute') {
+        # FractalResult holds exactly three floats. The canonical kernel
+        # lowers it to a vec3 (dist, trap, iterRatio as x, y, z), so the Perl
+        # kernel follows the same lowering.
+        my $struct = ($source =~ s{struct\s+FractalResult\s*\{.*?\n\};\n}{}s);
+        die "flythrough3d canonical FractalResult pattern changed\n" unless $struct == 1;
+        $source =~ s{\bFractalResult\b}{vec3}g;
+        $source =~ s{\.dist\b}{.x}g;
+        $source =~ s{\.trap\b}{.y}g;
+        $source =~ s{\.iterRatio\b}{.z}g;
+    }
+    elsif (defined $canonical_key && $canonical_key eq 'synth3d/cell3d:precompute') {
+        # As in noise3d's hash4: the canonical kernel stores the seeded `p` and
+        # `p * 1000.0` in Float32Arrays before the int conversion.
+        my $p = ($source =~ s{
+            \bp\s*=\s*p\s*\+\s*float\(seed\)\s*\*\s*0\.1\s*;
+        }{p = vec3(p + float(seed) * 0.1);}gx);
+        my $q = ($source =~ s{
+            uvec3\s+q\s*=\s*uvec3\(\s*ivec3\(\s*p\s*\*\s*1000\.0\s*\)\s*\+\s*65536\s*\)\s*;
+        }{uvec3 q = uvec3(ivec3(vec3(p * 1000.0)) + 65536);}gx);
+        die "cell3d canonical hash3 pattern changed\n" unless $p == 1 && $q == 1;
+        # The canonical kernel adds the cell point with vec3.add, which rounds
+        # each component to f32, and stores diff in a Float32Array; the Perl
+        # codegen defers both roundings.
+        my $point = ($source =~ s{
+            vec3\s+cellPoint\s*=\s*(neighbor\s*\+\s*mix\(vec3\(0\.5\),\s*randomOffset,\s*jitter\))\s*;
+        }{vec3 cellPoint = vec3($1);}gx);
+        my $diff = ($source =~ s{vec3\s+diff\s*=\s*cellPoint\s*-\s*f\s*;}{vec3 diff = vec3(cellPoint - f);}g);
+        die "cell3d canonical cell-point pattern changed\n" unless $point == 1 && $diff == 1;
+    }
+    elsif (defined $canonical_key && $canonical_key eq 'synth3d/noise3d:precompute') {
+        # The canonical kernel stores hash4's `ps` and `ps * 1000.0` in
+        # Float32Arrays, so both round to f32 before the int conversion; the
+        # Perl codegen defers that rounding, which moves the truncation of
+        # values such as 0.45 * 1000. The vec4() casts restore the stores.
+        my $ps = ($source =~ s{
+            vec4\s+ps\s*=\s*p\s*\+\s*float\(seed\)\s*\*\s*0\.1\s*;
+        }{vec4 ps = vec4(p + float(seed) * 0.1);}gx);
+        my $q = ($source =~ s{
+            uvec4\s+q\s*=\s*uvec4\(\s*ivec4\(\s*ps\s*\*\s*1000\.0\s*\)\s*\+\s*65536\s*\)\s*;
+        }{uvec4 q = uvec4(ivec4(vec4(ps * 1000.0)) + 65536);}gx);
+        die "noise3d canonical hash4 pattern changed\n" unless $ps == 1 && $q == 1;
+    }
     elsif (defined $canonical_key && $canonical_key eq 'synth/navierStokes:nsSplat') {
         # The pinned CPU artifact lowers this vector assignment as two
         # left-to-right component stores, so the second dot product observes

@@ -27,7 +27,7 @@ my $run_pixel = sub {
         $zoom = (($rt->binary('<', $_u_lensDisplacement, $rt->f(0))) ? ($rt->binary('*', $_u_lensDisplacement, $rt->unary('-', $rt->f(0.25)), 1, 'float')) : ($rt->f(0)));
         $aspect = $rt->binary('/', $rt->swizzle($dims, 'x'), $rt->swizzle($dims, 'y'), 1, 'float');
         $dist = $rt->binary('-', $uv, $g->{HALF_FRAME}, 2, 'float');
-        $aDist = $dist;
+        $aDist = $rt->fresh($dist);
         if ($_u_aspectLens) {
             $aDist = $rt->assign_swizzle($aDist, 'x', $rt->binary('*', $rt->swizzle($aDist, 'x'), $aspect, 1, 'float'));
         }
@@ -52,7 +52,7 @@ my $run_pixel = sub {
         }
         $warpedGlobalUV = (($isTileRendering) ? ($rt->binary('-', $uv, $displacement, 2, 'float')) : ($rt->component_wise('fract', $rt->binary('-', $uv, $displacement, 2, 'float'))));
         $offset = $rt->binary('/', $rt->binary('-', $rt->binary('*', $warpedGlobalUV, $dims, 2, 'float'), $_u_tileOffset, 2, 'float'), $tileDims, 2, 'float');
-        $sampledUV = $offset;
+        $sampledUV = $rt->fresh($offset);
         $col = $rt->construct(4, 0.0);
         $dx = $rt->construct(2, 0.0);
         $dy = $rt->construct(2, 0.0);

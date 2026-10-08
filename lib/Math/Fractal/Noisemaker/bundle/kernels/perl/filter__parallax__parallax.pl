@@ -72,7 +72,7 @@ my $run_pixel = sub {
                     last;
                 }
                 $prevF = $f;
-                $prevUV = $rayUV;
+                $prevUV = $rt->fresh($rayUV);
                 $t = $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->construct(1, $i), $stepSize, 1, 'float'), 1, 'float');
                 @{$rayUV} = map { $rt->f32($_) } @{($rt->binary('+', $uv, $rt->binary('*', $shift, $rt->binary('-', $t, $_u_pivot, 1, 'float'), 2, 'float'), 2, 'float'))};
                 $f = $rt->binary('-', $t, $getHeight__vec2->($rayUV), 1, 'float');

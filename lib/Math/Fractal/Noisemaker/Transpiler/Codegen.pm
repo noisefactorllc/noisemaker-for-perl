@@ -364,6 +364,14 @@ sub stmt {
             # name is defined (GLSL `float time = time;` reads the outer time).
             my $init_code;
             ($init_code) = $self->expr($dc->{init}, $scope) if defined $dc->{init};
+            # A vector declared from another variable gets its own array, as
+            # the canonical kernels' `var z = pos instanceof Float32Array ?
+            # copy(pos) : pos` does: later in-place stores to one must not
+            # reach the other (mandelbulb's `vec3 z = pos;` would otherwise
+            # add z to itself). The components keep their values.
+            $init_code = "\$rt->fresh($init_code)"
+                if defined $init_code && $dc->{init}{k} eq 'id' && !defined $dc->{array}
+                && width_of($t) > 1 && base_of($t) ne 'struct';
             my $e = $scope->define($dc->{name}, $t);
             $self->_local($e->{py});
             if (defined $init_code) {

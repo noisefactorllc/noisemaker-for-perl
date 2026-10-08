@@ -82,7 +82,7 @@ my $run_pixel = sub {
                         $thresholded = $rt->component_wise('step', $_u_threshold, $getChannel__vec4_int->($maskSample, $_u_sourceChannel));
                     }
                 } else {
-                    $wrappedUV = $localUV;
+                    $wrappedUV = $rt->fresh($localUV);
                     if ($rt->binary('==', $_u_wrap, $rt->i(1))) {
                         @{$wrappedUV} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $localUV, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
                     } else {

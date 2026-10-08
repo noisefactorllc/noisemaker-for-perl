@@ -36,8 +36,8 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($q);
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.10000000000000001), 1, 'float'), 3, 'float'))};
-        $q = $rt->construct(3, $rt->binary('+', $rt->construct(3, $rt->binary('*', $p, $rt->f(1000), 3, 'float'), 'int'), $rt->i(65536), 3, 'int'), 'uint');
+        @{$p} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $p, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.10000000000000001), 1, 'float'), 3, 'float')))};
+        $q = $rt->construct(3, $rt->binary('+', $rt->construct(3, $rt->construct(3, $rt->binary('*', $p, $rt->f(1000), 3, 'float')), 'int'), $rt->i(65536), 3, 'int'), 'uint');
         @{$q} = @{($rt->pcg3d($q))};
         return $rt->binary('/', $rt->construct(3, $q), $rt->f(4294967295), 3, 'float');
     };
@@ -83,8 +83,8 @@ my $run_pixel = sub {
                     $cellPos = $rt->binary('+', $i, $neighbor, 3, 'float');
                     $randomOffset = $hash3__vec3->($cellPos);
                     $jitter = $rt->binary('*', $_u_cellVariation, $rt->f(0.01), 1, 'float');
-                    $cellPoint = $rt->binary('+', $neighbor, $rt->component_wise('mix', $rt->construct(3, $rt->f(0.5)), $randomOffset, $jitter), 3, 'float');
-                    $diff = $rt->binary('-', $cellPoint, $f, 3, 'float');
+                    $cellPoint = $rt->construct(3, $rt->binary('+', $neighbor, $rt->component_wise('mix', $rt->construct(3, $rt->f(0.5)), $randomOffset, $jitter), 3, 'float'));
+                    $diff = $rt->construct(3, $rt->binary('-', $cellPoint, $f, 3, 'float'));
                     $dist = $rt->f(0.0);
                     if ($rt->binary('==', $_u_metric, $rt->i(0))) {
                         $dist = $rt->length($diff);

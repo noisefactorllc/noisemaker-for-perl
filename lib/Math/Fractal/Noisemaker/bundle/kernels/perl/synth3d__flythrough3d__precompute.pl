@@ -122,8 +122,8 @@ my $run_pixel = sub {
         my ($pos, $n, $maxIter, $bail) = @_;
         $pos = $rt->copy($pos, 'float');
         my ($_for0_first, $dr, $i, $iter, $newPhi, $newTheta, $phi, $r, $result, $theta, $trap, $z, $zr);
-        $result = [$rt->f(0.0), $rt->f(0.0), $rt->f(0.0)];
-        $z = $pos;
+        $result = $rt->construct(3, 0.0);
+        $z = $rt->fresh($pos);
         $dr = $rt->f(1);
         $r = $rt->f(0);
         $trap = $rt->f(10000000000);
@@ -153,9 +153,9 @@ my $run_pixel = sub {
             @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $z, $pos, 3, 'float'))};
             $iter = $rt->binary('+', $iter, $rt->f(1), 1, 'float');
         }
-        $result->[0] = $rt->binary('/', $rt->binary('*', $rt->binary('*', $rt->f(0.5), $rt->component_wise('log', $r), 1, 'float'), $r, 1, 'float'), $dr, 1, 'float');
-        $result->[1] = $trap;
-        $result->[2] = $rt->binary('/', $iter, $rt->construct(1, $maxIter), 1, 'float');
+        $result = $rt->assign_swizzle($result, 'x', $rt->binary('/', $rt->binary('*', $rt->binary('*', $rt->f(0.5), $rt->component_wise('log', $r), 1, 'float'), $r, 1, 'float'), $dr, 1, 'float'));
+        $result = $rt->assign_swizzle($result, 'y', $trap);
+        $result = $rt->assign_swizzle($result, 'z', $rt->binary('/', $iter, $rt->construct(1, $maxIter), 1, 'float'));
         return $result;
     };
     $boxFold__vec3_float = sub {
@@ -167,8 +167,8 @@ my $run_pixel = sub {
         my ($pos, $scale, $maxIter, $bail) = @_;
         $pos = $rt->copy($pos, 'float');
         my ($_for1_first, $dr, $factor, $fixedRadius2, $foldLimit, $i, $iter, $minRadius2, $planeTrap, $r, $r2, $result, $trap, $z);
-        $result = [$rt->f(0.0), $rt->f(0.0), $rt->f(0.0)];
-        $z = $pos;
+        $result = $rt->construct(3, 0.0);
+        $z = $rt->fresh($pos);
         $dr = $rt->f(1);
         $trap = $rt->f(10000000000);
         $iter = $rt->f(0);
@@ -209,9 +209,9 @@ my $run_pixel = sub {
             }
         }
         $r = $rt->length($z);
-        $result->[0] = $rt->binary('/', $r, $rt->component_wise('abs', $dr), 1, 'float');
-        $result->[1] = $trap;
-        $result->[2] = $rt->binary('/', $iter, $rt->construct(1, $maxIter), 1, 'float');
+        $result = $rt->assign_swizzle($result, 'x', $rt->binary('/', $r, $rt->component_wise('abs', $dr), 1, 'float'));
+        $result = $rt->assign_swizzle($result, 'y', $trap);
+        $result = $rt->assign_swizzle($result, 'z', $rt->binary('/', $iter, $rt->construct(1, $maxIter), 1, 'float'));
         return $result;
     };
     $computeFractal__vec3 = sub {
@@ -227,10 +227,10 @@ my $run_pixel = sub {
         my ($p, $eps) = @_;
         $p = $rt->copy($p, 'float');
         my ($d0, $dx, $dy, $dz);
-        $d0 = $computeFractal__vec3->($p)->[0];
-        $dx = $computeFractal__vec3->($rt->binary('+', $p, $rt->construct(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float'))->[0];
-        $dy = $computeFractal__vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float'))->[0];
-        $dz = $computeFractal__vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $eps), 3, 'float'))->[0];
+        $d0 = $rt->swizzle($computeFractal__vec3->($p), 'x');
+        $dx = $rt->swizzle($computeFractal__vec3->($rt->binary('+', $p, $rt->construct(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float')), 'x');
+        $dy = $rt->swizzle($computeFractal__vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float')), 'x');
+        $dz = $rt->swizzle($computeFractal__vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $eps), 3, 'float')), 'x');
         return $rt->binary('/', $rt->construct(3, $rt->binary('-', $dx, $d0, 1, 'float'), $rt->binary('-', $dy, $d0, 1, 'float'), $rt->binary('-', $dz, $d0, 1, 'float')), $eps, 3, 'float');
     };
     $applyCollisionAvoidance__vec3 = sub {
@@ -241,10 +241,10 @@ my $run_pixel = sub {
         $grad = $rt->construct(3, 0.0);
         $pushDir = $rt->construct(3, 0.0);
         $pushDist = $rt->f(0.0);
-        if ($rt->binary('<', $fr->[0], $g->{SAFETY_RADIUS})) {
+        if ($rt->binary('<', $rt->swizzle($fr, 'x'), $g->{SAFETY_RADIUS})) {
             $grad = $computeGradient__vec3_float->($pos, $rt->f(0.01));
             $pushDir = $rt->normalize($rt->binary('+', $grad, $rt->construct(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
-            $pushDist = $rt->binary('-', $g->{SAFETY_RADIUS}, $fr->[0], 1, 'float');
+            $pushDist = $rt->binary('-', $g->{SAFETY_RADIUS}, $rt->swizzle($fr, 'x'), 1, 'float');
             @{$pos} = map { $rt->f32($_) } @{($rt->binary('+', $pos, $rt->binary('*', $rt->binary('*', $pushDir, $pushDist, 3, 'float'), $rt->f(1.5), 3, 'float'), 3, 'float'))};
         }
         return $pos;
@@ -275,10 +275,10 @@ my $run_pixel = sub {
         $voiOffset = $rt->binary('*', $camDir, $halfExtent, 3, 'float');
         $worldPos = $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('+', $camPos, $voiOffset, 3, 'float'), $rt->binary('*', $rt->binary('*', $camRight, $rt->swizzle($normalizedCoord, 'x'), 3, 'float'), $halfExtent, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->binary('*', $camUp, $rt->swizzle($normalizedCoord, 'y'), 3, 'float'), $halfExtent, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->binary('*', $camDir, $rt->swizzle($normalizedCoord, 'z'), 3, 'float'), $halfExtent, 3, 'float'), 3, 'float');
         $fr = $computeFractal__vec3->($worldPos);
-        $dist = $fr->[0];
+        $dist = $rt->swizzle($fr, 'x');
         $normalizedDist = $rt->binary('-', $rt->f(1), $rt->component_wise('clamp', $rt->binary('+', $rt->binary('*', $dist, $rt->f(2), 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->f(0), $rt->f(1)), 1, 'float');
-        $trap = $rt->component_wise('clamp', $rt->binary('*', $fr->[1], $rt->f(0.5), 1, 'float'), $rt->f(0), $rt->f(1));
-        $iterRatio = $fr->[2];
+        $trap = $rt->component_wise('clamp', $rt->binary('*', $rt->swizzle($fr, 'y'), $rt->f(0.5), 1, 'float'), $rt->f(0), $rt->f(1));
+        $iterRatio = $rt->swizzle($fr, 'z');
         $eps = $rt->f(0.02);
         $gradient = $computeGradient__vec3_float->($worldPos, $eps);
         $normal = $rt->normalize($rt->binary('+', $gradient, $rt->construct(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));

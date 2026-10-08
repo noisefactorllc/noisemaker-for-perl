@@ -65,7 +65,7 @@ my $run_pixel = sub {
             return;
         }
         $texSize = $rt->texture_size($_u_inputTex);
-        $tileOrigin = $fragCoord;
+        $tileOrigin = $rt->fresh($fragCoord);
         $minValue = $g->{F32_MAX};
         $maxValue = $g->{F32_MIN};
         $oy = $rt->i(0);

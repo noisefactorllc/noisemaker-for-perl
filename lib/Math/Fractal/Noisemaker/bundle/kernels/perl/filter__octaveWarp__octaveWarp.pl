@@ -92,7 +92,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_for0_first, $aspect, $baseFreq, $col, $dims, $displaceBase, $displaceScale, $dx, $dy, $finalUV, $freq, $freqScaled, $fullRes, $height, $multiplier, $noiseCoord, $numOctaves, $octave, $offset, $phase, $radius, $refX, $refY, $sampleCoord, $uv, $width);
         $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution));
-        $dims = $fullRes;
+        $dims = $rt->fresh($fullRes);
         $width = $rt->swizzle($dims, 'x');
         $height = $rt->swizzle($dims, 'y');
         $baseFreq = $rt->binary('-', $rt->f(11), $_u_frequency, 1, 'float');

@@ -31,9 +31,9 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         $center = $rt->copy($center, 'float');
         my ($c, $co, $p, $s);
-        $p = $uv;
+        $p = $rt->fresh($uv);
         $p = $rt->assign_swizzle($p, 'x', $rt->binary('*', $rt->swizzle($p, 'x'), $aspectRatio, 1, 'float'));
-        $c = $center;
+        $c = $rt->fresh($center);
         $c = $rt->assign_swizzle($c, 'x', $rt->binary('*', $rt->swizzle($c, 'x'), $aspectRatio, 1, 'float'));
         @{$p} = map { $rt->f32($_) } @{($rt->binary('-', $p, $c, 2, 'float'))};
         $s = $rt->component_wise('sin', $angle);

@@ -697,10 +697,10 @@ my $run_pixel = sub {
     $pal__float = sub {
         my ($t) = @_;
         my ($a, $b, $c, $color, $d);
-        $a = $_u_paletteOffset;
-        $b = $_u_paletteAmp;
-        $c = $_u_paletteFreq;
-        $d = $_u_palettePhase;
+        $a = $rt->fresh($_u_paletteOffset);
+        $b = $rt->fresh($_u_paletteAmp);
+        $c = $rt->fresh($_u_paletteFreq);
+        $d = $rt->fresh($_u_palettePhase);
         $t = $rt->binary('+', $rt->binary('*', $t, $_u_repeatPalette, 1, 'float'), $rt->binary('*', $_u_rotatePalette, $rt->f(0.01), 1, 'float'), 1, 'float');
         $color = $rt->binary('+', $a, $rt->binary('*', $b, $rt->component_wise('cos', $rt->binary('*', $rt->f(6.2831799999999998), $rt->binary('+', $rt->binary('*', $c, $t, 3, 'float'), $d, 3, 'float'), 3, 'float')), 3, 'float'), 3, 'float');
         if ($rt->binary('==', $_u_paletteMode, $rt->i(1))) {

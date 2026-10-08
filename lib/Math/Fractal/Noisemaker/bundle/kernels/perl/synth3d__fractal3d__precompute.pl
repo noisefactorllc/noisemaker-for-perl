@@ -27,7 +27,7 @@ my $run_pixel = sub {
         my ($pos, $n, $maxIter, $bail) = @_;
         $pos = $rt->copy($pos, 'float');
         my ($_for0_first, $dist, $dr, $i, $iter, $newPhi, $newTheta, $phi, $r, $theta, $trap, $z, $zr);
-        $z = $pos;
+        $z = $rt->fresh($pos);
         $dr = $rt->f(1);
         $r = $rt->f(0);
         $trap = $rt->f(10000000000);
@@ -65,7 +65,7 @@ my $run_pixel = sub {
         $pos = $rt->copy($pos, 'float');
         $c = $rt->copy($c, 'float');
         my ($_for1_first, $dist, $dr, $i, $iter, $newPhi, $newTheta, $phi, $r, $theta, $trap, $z, $zr);
-        $z = $pos;
+        $z = $rt->fresh($pos);
         $dr = $rt->f(1);
         $r = $rt->f(0);
         $trap = $rt->f(10000000000);
@@ -107,7 +107,7 @@ my $run_pixel = sub {
         my ($pos, $scale, $maxIter, $bail) = @_;
         $pos = $rt->copy($pos, 'float');
         my ($_for2_first, $dist, $dr, $factor, $fixedR2, $fixedRadius, $foldingLimit, $i, $iter, $minR2, $minRadius, $r, $r2, $trap, $z);
-        $z = $pos;
+        $z = $rt->fresh($pos);
         $dr = $rt->f(1);
         $trap = $rt->f(10000000000);
         $iter = $rt->f(0);
@@ -157,7 +157,7 @@ my $run_pixel = sub {
         $pos = $rt->copy($pos, 'float');
         $c = $rt->copy($c, 'float');
         my ($_for3_first, $dist, $dr, $factor, $fixedR2, $fixedRadius, $foldingLimit, $i, $iter, $minR2, $minRadius, $r, $r2, $trap, $z);
-        $z = $pos;
+        $z = $rt->fresh($pos);
         $dr = $rt->f(1);
         $trap = $rt->f(10000000000);
         $iter = $rt->f(0);

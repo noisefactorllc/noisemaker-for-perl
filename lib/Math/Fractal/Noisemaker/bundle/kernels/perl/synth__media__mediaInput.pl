@@ -33,7 +33,7 @@ my $run_pixel = sub {
         my ($angle, $aspect, $size);
         $rot = $map__float_float_float_float_float->($rot, $rt->unary('-', $rt->f(180)), $rt->f(180), $rt->f(0.5), $rt->unary('-', $rt->f(0.5)));
         $angle = $rt->binary('*', $rt->binary('*', $rot, $rt->f(6.2831853071800001), 1, 'float'), $rt->unary('-', $rt->f(1)), 1, 'float');
-        $size = $_u_imageSize;
+        $size = $rt->fresh($_u_imageSize);
         $aspect = $rt->binary('/', $rt->swizzle($size, 'x'), $rt->swizzle($size, 'y'), 1, 'float');
         @{$st} = map { $rt->f32($_) } @{($rt->binary('-', $st, $rt->construct(2, $rt->binary('*', $rt->f(0.5), $aspect, 1, 'float'), $rt->f(0.5)), 2, 'float'))};
         @{$st} = map { $rt->f32($_) } @{($rt->matrix_mult($rt->construct(4, $rt->component_wise('cos', $angle), $rt->unary('-', $rt->component_wise('sin', $angle)), $rt->component_wise('sin', $angle), $rt->component_wise('cos', $angle)), $st, 2))};
@@ -82,7 +82,7 @@ my $run_pixel = sub {
         my ($st) = @_;
         $st = $rt->copy($st, 'float');
         my ($scale, $size, $text);
-        $size = $_u_imageSize;
+        $size = $rt->fresh($_u_imageSize);
         @{$st} = map { $rt->f32($_) } @{($rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $size, 2, 'float'))};
         $st = $rt->assign_swizzle($st, 'y', $rt->binary('-', $rt->f(1), $rt->swizzle($st, 'y'), 1, 'float'));
         $scale = $rt->binary('/', $rt->f(100), $_u_scaleAmt, 1, 'float');

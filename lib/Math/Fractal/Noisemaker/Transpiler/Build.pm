@@ -99,6 +99,29 @@ sub infer_kind {
 }
 
 sub _key  { my ($eid, $program) = @_; "$eid:$program" }
+
+# Behaviour of the pinned CPU oracle's generated kernels that their GLSL does
+# not state; rendered parity is defined by those kernels.
+#
+# render3d and renderCubemap3d: the oracle's voxel march computes
+# voxelToWorld([voxel[k] + max(step, ivec3(0))]), a number plus an int array,
+# which JavaScript concatenates as strings and stores as NaN. tMaxVec starts
+# all NaN and every comparison against it is false, so the march always takes
+# its z branch with a NaN distance and only the starting voxel can produce a
+# hit. voxelToWorld maps NaN to NaN, so the Perl kernels start from the same
+# NaN bounds.
+my $VOXEL_BOUNDS_SITE = q{$voxelBounds = $voxelToWorld__ivec3->($rt->binary('+', $voxel, }
+    . q{$rt->component_wise('max', $step, $rt->construct(3, $rt->i(0), 'int')), 3, 'int'));};
+my $VOXEL_BOUNDS_NAN = q{$voxelBounds = $rt->construct(3, 9**9**9 - 9**9**9);};
+
+sub _oracle_compatibility {
+    my ($key, $perl) = @_;
+    if ($key eq 'render/render3d:render3d' || $key eq 'render/renderCubemap3d:renderCubemap3d') {
+        my $count = ($perl =~ s{\Q$VOXEL_BOUNDS_SITE\E}{$VOXEL_BOUNDS_NAN}g);
+        die "$key voxel-bounds site changed\n" unless $count == 1;
+    }
+    return $perl;
+}
 sub _file { my ($key) = @_; (my $f = $key) =~ s{[/:]}{__}g; "$f.pl" }
 
 sub _read_json {
@@ -239,7 +262,7 @@ sub build {
             my $perl = eval {
                 my $norm = normalize($glsl, $defines, $key);
                 my $ast  = parse($norm->{source});
-                emit_perl($ast, $norm->{outputs}, $norm->{varyings});
+                _oracle_compatibility($key, emit_perl($ast, $norm->{outputs}, $norm->{varyings}));
             };
             if (!defined $perl) {
                 die "cannot compile $key: $@";

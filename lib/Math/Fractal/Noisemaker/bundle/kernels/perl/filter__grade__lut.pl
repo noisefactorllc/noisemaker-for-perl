@@ -427,7 +427,7 @@ my $run_pixel = sub {
             return;
         }
         $rgb = $srgbToLinear__vec3->($rt->swizzle($color, 'rgb'));
-        $graded = $rgb;
+        $graded = $rt->fresh($rgb);
         if ($rt->binary('==', $_u_preset, $rt->i(1))) {
             @{$graded} = map { $rt->f32($_) } @{($lutTealOrange__vec3->($rgb))};
         } else {

@@ -48,7 +48,7 @@ my $run_pixel = sub {
         my ($globalCoord, $grad, $gradLen, $hashCoord, $offset, $perp, $result, $rnd, $samp, $sampleUV, $src, $uv);
         $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
         $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $hashCoord = $globalCoord;
+        $hashCoord = $rt->fresh($globalCoord);
         if ($rt->binary('==', $_u_MODE, $rt->i(4))) {
             @{$hashCoord} = map { $rt->f32($_) } @{($rt->binary('*', $rt->component_wise('floor', $rt->binary('/', $globalCoord, $rt->f(3), 2, 'float')), $rt->f(3), 2, 'float'))};
         }
@@ -68,7 +68,7 @@ my $run_pixel = sub {
         $sampleUV = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $offset, 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
         $src = $rt->texture($_u_inputTex, $uv);
         $samp = $rt->texture($_u_inputTex, $sampleUV);
-        $result = $samp;
+        $result = $rt->fresh($samp);
         if ($rt->binary('==', $_u_MODE, $rt->i(1))) {
             @{$result} = map { $rt->f32($_) } @{($rt->component_wise('min', $src, $samp))};
         } else {

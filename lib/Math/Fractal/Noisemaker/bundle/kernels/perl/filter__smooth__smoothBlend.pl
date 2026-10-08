@@ -174,7 +174,7 @@ my $run_pixel = sub {
         if ((($rt->binary('<', $edgeH, $rt->f(0.5))) && ($rt->binary('<', $edgeV, $rt->f(0.5))) ? 1 : 0)) {
             return $center;
         }
-        $blended = $center;
+        $blended = $rt->fresh($center);
         $distLeft = $rt->f(0.0);
         $distRight = $rt->f(0.0);
         $edgeLength = $rt->f(0.0);
@@ -214,7 +214,7 @@ my $run_pixel = sub {
         $r = $rt->construct(1, $rt->component_wise('ceil', $_u_radius), 'int');
         $sigma = $rt->binary('*', $_u_radius, $rt->f(0.5), 1, 'float');
         $sigma2 = $rt->binary('*', $rt->binary('*', $rt->f(2), $sigma, 1, 'float'), $sigma, 1, 'float');
-        $sum = $center;
+        $sum = $rt->fresh($center);
         $totalWeight = $rt->f(1);
         $dy = $rt->unary('-', $rt->i(4));
         $_for2_first = 1;

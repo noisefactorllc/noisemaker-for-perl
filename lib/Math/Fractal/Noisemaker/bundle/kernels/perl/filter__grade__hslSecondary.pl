@@ -153,7 +153,7 @@ my $run_pixel = sub {
         my ($hsl, $hueShift, $satAdjust, $lumAdjust) = @_;
         $hsl = $rt->copy($hsl, 'float');
         my ($corrected);
-        $corrected = $hsl;
+        $corrected = $rt->fresh($hsl);
         $corrected = $rt->assign_swizzle($corrected, 'x', $rt->component_wise('fract', $rt->binary('+', $rt->swizzle($corrected, 'x'), $hueShift, 1, 'float')));
         $corrected = $rt->assign_swizzle($corrected, 'y', $rt->component_wise('clamp', $rt->binary('+', $rt->swizzle($corrected, 'y'), $satAdjust, 1, 'float'), $rt->f(0), $rt->f(1)));
         $corrected = $rt->assign_swizzle($corrected, 'z', $rt->component_wise('clamp', $rt->binary('+', $rt->swizzle($corrected, 'z'), $rt->binary('*', $lumAdjust, $rt->f(0.5), 1, 'float'), 1, 'float'), $rt->f(0), $rt->f(1)));

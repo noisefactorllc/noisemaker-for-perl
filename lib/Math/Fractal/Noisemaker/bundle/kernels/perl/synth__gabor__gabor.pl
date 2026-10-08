@@ -121,7 +121,7 @@ my $run_pixel = sub {
         $value = $rt->f(0);
         $amplitude = $rt->f(1);
         $totalAmp = $rt->f(0);
-        $pOct = $p;
+        $pOct = $rt->fresh($p);
         $i = $rt->i(0);
         $_for3_first = 1;
         for my $_for3 (0 .. 1048575) {

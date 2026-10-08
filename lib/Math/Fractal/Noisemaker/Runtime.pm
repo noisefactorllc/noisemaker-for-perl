@@ -22,6 +22,7 @@ package Math::Fractal::Noisemaker::Runtime;
 
 use strict;
 use warnings;
+use Scalar::Util ();
 use POSIX ();
 
 use Math::Fractal::Noisemaker::UintMath qw(
@@ -226,6 +227,13 @@ sub construct {
 # parameter's element type. Float params force float32 (GLSL implicit
 # conversion at the call boundary); int/uint params stay integer so a uvecN
 # hash seed keeps full precision.
+# A new array holding the same components: breaks aliasing without rounding.
+sub fresh {
+    my ($self, $vec) = @_;
+    return $vec unless _is_vec($vec);
+    return Scalar::Util::blessed($vec) ? bless([@$vec], ref $vec) : [@$vec];
+}
+
 sub copy {
     my ($self, $vec, $base) = @_;
     return f32($vec) unless _is_vec($vec);

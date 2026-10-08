@@ -88,7 +88,7 @@ my $run_pixel = sub {
         $neighborIdx = $rt->construct(2, 0.0);
         $signTerm = $rt->f(0.0);
         if ($rt->binary('<', $dMin, $rimPx)) {
-            $neighborIdx = $cellIdxF;
+            $neighborIdx = $rt->fresh($cellIdxF);
             $edgeNormal = $rt->construct(2, 0.0);
             if ($rt->binary('==', $dMin, $dLeft)) {
                 $neighborIdx = $rt->assign_swizzle($neighborIdx, 'x', $rt->binary('-', $rt->swizzle($neighborIdx, 'x'), $rt->f(1), 1, 'float'));

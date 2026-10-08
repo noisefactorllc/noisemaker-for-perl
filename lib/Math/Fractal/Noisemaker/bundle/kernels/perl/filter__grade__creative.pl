@@ -117,7 +117,7 @@ my $run_pixel = sub {
         $balancePoint = $rt->binary('+', $rt->f(0.5), $rt->binary('*', $balance, $rt->f(0.29999999999999999), 1, 'float'), 1, 'float');
         $shadowWeight = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $rt->f(0), $balancePoint, $luma), 1, 'float');
         $highlightWeight = $rt->component_wise('smoothstep', $balancePoint, $rt->f(1), $luma);
-        $tintedRgb = $rgb;
+        $tintedRgb = $rt->fresh($rgb);
         @{$tintedRgb} = map { $rt->f32($_) } @{($rt->binary('+', $tintedRgb, $rt->binary('*', $rt->binary('*', $shadowShift, $shadowWeight, 3, 'float'), $rt->f(0.29999999999999999), 3, 'float'), 3, 'float'))};
         @{$tintedRgb} = map { $rt->f32($_) } @{($rt->binary('+', $tintedRgb, $rt->binary('*', $rt->binary('*', $highlightShift, $highlightWeight, 3, 'float'), $rt->f(0.29999999999999999), 3, 'float'), 3, 'float'))};
         return $tintedRgb;

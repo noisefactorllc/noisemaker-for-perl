@@ -27,8 +27,8 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($ps, $q);
-        $ps = $rt->binary('+', $p, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.10000000000000001), 1, 'float'), 4, 'float');
-        $q = $rt->construct(4, $rt->binary('+', $rt->construct(4, $rt->binary('*', $ps, $rt->f(1000), 4, 'float'), 'int'), $rt->i(65536), 4, 'int'), 'uint');
+        $ps = $rt->construct(4, $rt->binary('+', $p, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.10000000000000001), 1, 'float'), 4, 'float'));
+        $q = $rt->construct(4, $rt->binary('+', $rt->construct(4, $rt->construct(4, $rt->binary('*', $ps, $rt->f(1000), 4, 'float')), 'int'), $rt->i(65536), 4, 'int'), 'uint');
         @{$q} = @{($rt->binary('+', $rt->binary('*', $q, $rt->i(1664525), 4, 'uint'), $rt->i(1013904223), 4, 'uint'))};
         $q = $rt->assign_swizzle($q, 'x', $rt->binary('+', $rt->swizzle($q, 'x'), $rt->binary('*', $rt->swizzle($q, 'y'), $rt->swizzle($q, 'z'), 1, 'uint'), 1, 'uint'));
         $q = $rt->assign_swizzle($q, 'y', $rt->binary('+', $rt->swizzle($q, 'y'), $rt->binary('*', $rt->swizzle($q, 'z'), $rt->swizzle($q, 'w'), 1, 'uint'), 1, 'uint'));

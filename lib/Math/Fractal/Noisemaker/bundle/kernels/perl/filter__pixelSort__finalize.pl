@@ -52,8 +52,8 @@ my $run_pixel = sub {
         $originalColor = $rt->texture($_u_originalTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $wrappedUV = $applyWrap__vec2_vec2->($srcCoord, $texSize);
         $sortedColor = $rt->texture($_u_inputTex, $wrappedUV);
-        $working_source = $originalColor;
-        $working_sorted = $sortedColor;
+        $working_source = $rt->fresh($originalColor);
+        $working_sorted = $rt->fresh($sortedColor);
         if ($_u_darkest) {
             @{$working_source} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct(3, $rt->f(1)), $rt->swizzle($working_source, 'rgb'), 3, 'float'), $rt->swizzle($working_source, 'a')))};
             @{$working_sorted} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct(3, $rt->f(1)), $rt->swizzle($working_sorted, 'rgb'), 3, 'float'), $rt->swizzle($working_sorted, 'a')))};

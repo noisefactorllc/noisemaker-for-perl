@@ -230,7 +230,7 @@ my $run_pixel = sub {
         my ($_for2_first, $disp, $fi, $i, $nx, $ny, $p, $wFreq);
         $wFreq = $rt->component_wise('max', $rt->f(0.10000000000000001), $rt->binary('/', $rt->f(100), $rt->component_wise('max', $wScale, $rt->f(0.01)), 1, 'float'));
         $disp = $rt->binary('*', $wIntensity, $rt->f(0.02), 1, 'float');
-        $p = $st;
+        $p = $rt->fresh($st);
         $i = $rt->i(0);
         $_for2_first = 1;
         for my $_for2 (0 .. 1048575) {
@@ -262,7 +262,7 @@ my $run_pixel = sub {
         my ($_for3_first, $disp, $fi, $i, $nx, $ny, $p, $wFreq);
         $wFreq = $rt->component_wise('max', $rt->f(0.10000000000000001), $rt->binary('/', $rt->f(100), $rt->component_wise('max', $wScale, $rt->f(0.01)), 1, 'float'));
         $disp = $rt->binary('*', $wIntensity, $rt->f(0.02), 1, 'float');
-        $p = $st;
+        $p = $rt->fresh($st);
         $i = $rt->i(0);
         $_for3_first = 1;
         for my $_for3 (0 .. 1048575) {
@@ -286,7 +286,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_g, $b, $col, $freq, $globalCoord, $r, $res, $st, $timeAngle, $zWarp);
         $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $res = $_u_fullResolution;
+        $res = $rt->fresh($_u_fullResolution);
         if ($rt->binary('<', $rt->swizzle($res, 'x'), $rt->f(1))) {
             @{$res} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(1024), $rt->f(1024)))};
         }

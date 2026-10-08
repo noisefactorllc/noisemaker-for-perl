@@ -89,7 +89,7 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         $base_freq = $rt->copy($base_freq, 'float');
         my ($_for0_first, $accum, $amp, $freq, $i, $off, $os, $total);
-        $freq = $base_freq;
+        $freq = $rt->fresh($base_freq);
         $amp = $rt->f(0.5);
         $total = $rt->f(0);
         $accum = $rt->f(0);

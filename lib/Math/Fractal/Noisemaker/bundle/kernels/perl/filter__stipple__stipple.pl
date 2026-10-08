@@ -159,7 +159,7 @@ my $run_pixel = sub {
             @{$result} = map { $rt->f32($_) } @{($rt->component_wise('mix', $_u_paperColor, $seedColor, $inside))};
         } else {
             if ((((($rt->binary('==', $_u_MODE, $rt->i(1))) || ($rt->binary('==', $_u_MODE, $rt->i(2))) ? 1 : 0)) || ($rt->binary('==', $_u_MODE, $rt->i(3))) ? 1 : 0)) {
-                $gc = $globalCoord;
+                $gc = $rt->fresh($globalCoord);
                 if ($rt->binary('==', $_u_MODE, $rt->i(3))) {
                     @{$gc} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($gc, $rt->f(45)))};
                 }

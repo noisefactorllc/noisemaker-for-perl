@@ -164,12 +164,12 @@ my $run_pixel = sub {
         $borderMask = $rt->f(0.0);
         $modeResult = $rt->construct(3, 0.0);
         if ((($rt->binary('>', $_u_LP_BORDER, $rt->i(0))) || ($rt->binary('>', $_u_LP_LIGHT, $rt->i(0))) ? 1 : 0)) {
-            $modeResult = $result;
+            $modeResult = $rt->fresh($result);
             $borderMask = $rt->f(0);
         }
         if ($rt->binary('>', $_u_LP_BORDER, $rt->i(0))) {
-            $borderNearestPoint = $nearestPoint;
-            $borderNearestCell = $nearestCell;
+            $borderNearestPoint = $rt->fresh($nearestPoint);
+            $borderNearestCell = $rt->fresh($nearestCell);
             $borderNearestDist = $minDist;
             $dy = $rt->unary('-', $rt->i(2));
             $_for2_first = 1;

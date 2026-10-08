@@ -458,7 +458,7 @@ my $run_pixel = sub {
         my ($color, $globalCoord, $st);
         $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
         $color = $rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(1));
-        $st = $globalCoord;
+        $st = $rt->fresh($globalCoord);
         if ($rt->binary('==', $_u_MODE, $rt->i(0))) {
             $color = $rt->assign_swizzle($color, 'rgb', $bitField__vec2->($st));
         } else {
