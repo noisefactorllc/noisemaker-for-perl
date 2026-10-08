@@ -123,11 +123,12 @@ source-lock file before rendering, so local reference edits fail verification.
     NOISEMAKER_CPU_DIR=/path/to/pinned-reference perl scripts/parity-summary
 
 Normal installation tests skip the external reference when unavailable.
-`RELEASE_TESTING=1` makes a missing reference a failure. CI tests the source and
-`make disttest` distribution on Linux Perl 5.22/5.42 and macOS Perl 5.42, and
-runs the pinned parity checks before dispatching export-kit publication.
-Windows, 32-bit Perl, and alternative floating-point configurations are not
-currently covered by this release matrix.
+`RELEASE_TESTING=1` makes a missing reference a failure. Every push tests the
+source and the `make disttest` distribution on Linux Perl 5.22/5.42 and macOS
+Perl 5.42. The weekly run and manual dispatch also run the pinned parity tests
+and the whole-port summary on Linux and on Windows (Strawberry Perl 5.42), and
+only then dispatch export-kit publication, once per commit. 32-bit Perl and
+alternative floating-point configurations are not covered.
 
 ## Regenerating the bundle
 

@@ -1,12 +1,19 @@
-name: Export kit
+name: Perl CI and export kit
 
 # Public repo: holds NO deploy credentials. Dispatches scaffold's
 # export-kit-release.yml, which builds this repo's export kit at this exact
 # SHA and ships it to kits.noisedeck.app. See scaffold
 # docs/runbook/export-kits.md.
+#
+# Pushes run the fast prove suite. The weekly run and workflow_dispatch also
+# run the oracle parity tests and the whole-port PARITY-SUMMARY against the
+# pinned noisemaker-for-cpu (on Linux and Windows), then release a kit, unless
+# the SHA already carries a kit tag.
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '41 7 * * 1'
   push:
     branches: [main]
     paths:
@@ -26,12 +33,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: export-kit-${{ github.ref }}
+  group: export-kit-${{ github.ref }}-${{ github.event_name == 'push' && 'gate' || 'full' }}
   cancel-in-progress: false
 
 jobs:
   test:
     name: Perl ${{ matrix.perl }} on ${{ matrix.os }}
+    timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -58,7 +66,9 @@ jobs:
           perl -MPod::Checker=podchecker -e 'my $bad=0; for (@ARGV) { $bad++ if podchecker($_) > 0 } exit($bad ? 1 : 0)' lib/Math/Fractal/Noisemaker.pm lib/Math/Fractal/Noisemaker/*.pm lib/Math/Fractal/Noisemaker/Transpiler/Build.pm
 
   parity:
-    name: Pinned CPU reference
+    name: Pinned CPU reference and PARITY-SUMMARY
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 120
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
@@ -81,21 +91,83 @@ jobs:
           ref: ${{ steps.oracle.outputs.revision }}
           path: oracle
           persist-credentials: false
-      - name: Verify reference and rendered bytes
+      - name: Oracle parity tests
         working-directory: port
         env:
           NOISEMAKER_CPU_DIR: ${{ github.workspace }}/oracle
           RELEASE_TESTING: '1'
+        run: prove -l t/05-parity.t
+      - name: Whole-port PARITY-SUMMARY, exact RGBA8 comparison
+        working-directory: port
+        env:
+          NOISEMAKER_CPU_DIR: ${{ github.workspace }}/oracle
+        run: perl scripts/parity-summary
+
+  windows:
+    name: Windows (Strawberry Perl) prove suite and PARITY-SUMMARY
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 240
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          path: port
+          persist-credentials: false
+      - uses: shogo82148/actions-setup-perl@ac3202722f5744e62a8fa3af3e1aaaebb08861f3 # v1
+        with:
+          perl-version: '5.42'
+          distribution: strawberry
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '22'
+      - name: Read reference revision
+        id: oracle
         run: |
-          prove -l t/05-parity.t
-          perl scripts/parity.pl
+          perl -MJSON::PP -e 'local $/; my $p=decode_json(<>); die "Invalid oracle revision" unless $p->{revision} =~ /\A[0-9a-f]{40}\z/; print "revision=$p->{revision}\n"' port/scripts/oracle-lock.json >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          repository: noisefactorllc/noisemaker-for-cpu
+          ref: ${{ steps.oracle.outputs.revision }}
+          path: oracle
+          persist-credentials: false
+      - name: Prove suite
+        working-directory: port
+        run: prove -lr t
+      - name: Whole-port PARITY-SUMMARY, exact RGBA8 comparison
+        working-directory: port
+        env:
+          NOISEMAKER_CPU_DIR: ${{ github.workspace }}/oracle
+        run: perl scripts/parity-summary
 
   dispatch:
-    needs: [test, parity]
-    if: github.ref == 'refs/heads/main'
+    needs: [test, parity, windows]
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
+      # scaffold mints a new kit version for every dispatch, so a weekly run on
+      # an unchanged main must not release the same SHA again. A tag listing
+      # names the commit itself (lightweight or peeled annotated tag).
+      - name: Skip a SHA that is already released
+        id: released
+        timeout-minutes: 5
+        env:
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          tags=$(git ls-remote --tags "https://github.com/$REPO.git" 'refs/tags/kit-*')
+          if printf '%s\n' "$tags" | awk '{ print $1 }' | grep -qx "$SHA"; then
+            echo "$SHA already carries a kit tag; nothing to release."
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Mint scaffold-dispatch token
+        if: steps.released.outputs.released == 'false'
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
@@ -105,6 +177,7 @@ jobs:
           repositories: scaffold
 
       - name: Dispatch export-kit-release
+        if: steps.released.outputs.released == 'false'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
