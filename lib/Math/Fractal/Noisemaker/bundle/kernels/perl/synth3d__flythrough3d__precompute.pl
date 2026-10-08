@@ -35,7 +35,7 @@ my $run_pixel = sub {
         $p = $rt->f(2);
         $q = $rt->f(3);
         $r = $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->f(0.20000000000000001), $rt->component_wise('cos', $rt->binary('*', $q, $t, 1, 'float')), 1, 'float'), 1, 'float');
-        return $rt->binary('*', $scale, $rt->construct(3, $rt->binary('*', $r, $rt->component_wise('cos', $rt->binary('*', $p, $t, 1, 'float')), 1, 'float'), $rt->binary('*', $r, $rt->component_wise('sin', $rt->binary('*', $p, $t, 1, 'float')), 1, 'float'), $rt->binary('*', $rt->f(0.29999999999999999), $rt->component_wise('sin', $rt->binary('*', $q, $t, 1, 'float')), 1, 'float')), 3, 'float');
+        return $rt->construct(3, $rt->binary('*', $scale, $rt->construct_raw(3, $rt->binary('*', $r, $rt->component_wise('cos', $rt->binary('*', $p, $t, 1, 'float')), 1, 'float'), $rt->binary('*', $r, $rt->component_wise('sin', $rt->binary('*', $p, $t, 1, 'float')), 1, 'float'), $rt->binary('*', $rt->f(0.29999999999999999), $rt->component_wise('sin', $rt->binary('*', $q, $t, 1, 'float')), 1, 'float')), 3, 'float'));
     };
     $tiltedOrbit__float_float = sub {
         my ($t, $scale) = @_;
@@ -47,7 +47,7 @@ my $run_pixel = sub {
         $c = $rt->component_wise('cos', $tilt);
         $s = $rt->component_wise('sin', $tilt);
         @{$pos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($pos, 'x'), $rt->binary('-', $rt->binary('*', $rt->swizzle($pos, 'y'), $c, 1, 'float'), $rt->binary('*', $rt->swizzle($pos, 'z'), $s, 1, 'float'), 1, 'float'), $rt->binary('+', $rt->binary('*', $rt->swizzle($pos, 'y'), $s, 1, 'float'), $rt->binary('*', $rt->swizzle($pos, 'z'), $c, 1, 'float'), 1, 'float')))};
-        return $rt->binary('*', $scale, $pos, 3, 'float');
+        return $rt->construct(3, $rt->binary('*', $scale, $pos, 3, 'float'));
     };
     $lissajousOrbit__float_float = sub {
         my ($t, $scale) = @_;
@@ -58,7 +58,7 @@ my $run_pixel = sub {
         $px = $rt->f(0);
         $py = $rt->binary('*', $g->{PI}, $rt->f(0.5), 1, 'float');
         $pz = $rt->binary('*', $g->{PI}, $rt->f(0.25), 1, 'float');
-        return $rt->binary('*', $scale, $rt->construct(3, $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $fx, $t, 1, 'float'), $px, 1, 'float')), $rt->binary('*', $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $fy, $t, 1, 'float'), $py, 1, 'float')), $rt->f(0.59999999999999998), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $fz, $t, 1, 'float'), $pz, 1, 'float')), $rt->f(0.40000000000000002), 1, 'float')), 3, 'float');
+        return $rt->construct(3, $rt->binary('*', $scale, $rt->construct_raw(3, $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $fx, $t, 1, 'float'), $px, 1, 'float')), $rt->binary('*', $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $fy, $t, 1, 'float'), $py, 1, 'float')), $rt->f(0.59999999999999998), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $fz, $t, 1, 'float'), $pz, 1, 'float')), $rt->f(0.40000000000000002), 1, 'float')), 3, 'float'));
     };
     $getOrbitPosition__float = sub {
         my ($t) = @_;
@@ -96,7 +96,7 @@ my $run_pixel = sub {
         $wobbleAmp = $rt->f(0.14999999999999999);
         $wx = $rt->binary('*', $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $t, $rt->f(2.7000000000000002), 1, 'float'), $rt->binary('*', $_u_seed, $g->{PI}, 1, 'float'), 1, 'float')), $wobbleAmp, 1, 'float');
         $wy = $rt->binary('*', $rt->binary('*', $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $t, $rt->f(1.8999999999999999), 1, 'float'), $rt->binary('*', $_u_seed, $g->{TAU}, 1, 'float'), 1, 'float')), $wobbleAmp, 1, 'float'), $rt->f(0.69999999999999996), 1, 'float');
-        return $rt->binary('+', $rt->binary('*', $right, $wx, 3, 'float'), $rt->binary('*', $realUp, $wy, 3, 'float'), 3, 'float');
+        return $rt->construct(3, $rt->binary('+', $rt->binary('*', $right, $wx, 3, 'float'), $rt->binary('*', $realUp, $wy, 3, 'float'), 3, 'float'));
     };
     $getCameraState__float_vec3_vec3_vec3 = sub {
         my ($t, $pos, $dir, $up) = @_;
@@ -114,7 +114,7 @@ my $run_pixel = sub {
         $right = $rt->normalize($rt->cross($worldUp, $dir));
         @{$up} = map { $rt->f32($_) } @{($rt->normalize($rt->cross($dir, $right)))};
         $roll = $rt->binary('*', $rt->component_wise('sin', $rt->binary('*', $orbitTime, $rt->f(0.5), 1, 'float')), $rt->f(0.10000000000000001), 1, 'float');
-        $rollRight = $rt->binary('+', $rt->binary('*', $right, $rt->component_wise('cos', $roll), 3, 'float'), $rt->binary('*', $up, $rt->component_wise('sin', $roll), 3, 'float'), 3, 'float');
+        $rollRight = $rt->construct(3, $rt->binary('+', $rt->binary('*', $right, $rt->component_wise('cos', $roll), 3, 'float'), $rt->binary('*', $up, $rt->component_wise('sin', $roll), 3, 'float'), 3, 'float'));
         @{$up} = map { $rt->f32($_) } @{($rt->normalize($rt->cross($rollRight, $dir)))};
         return (undef, $pos, $dir, $up);
     };
@@ -149,7 +149,7 @@ my $run_pixel = sub {
             $zr = $rt->component_wise('pow', $r, $n);
             $newTheta = $rt->binary('*', $theta, $n, 1, 'float');
             $newPhi = $rt->binary('*', $phi, $n, 1, 'float');
-            @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $zr, $rt->construct(3, $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('cos', $newPhi), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('sin', $newPhi), 1, 'float'), $rt->component_wise('cos', $newTheta)), 3, 'float'))};
+            @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $zr, $rt->construct_raw(3, $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('cos', $newPhi), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('sin', $newPhi), 1, 'float'), $rt->component_wise('cos', $newTheta)), 3, 'float'))};
             @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $z, $pos, 3, 'float'))};
             $iter = $rt->binary('+', $iter, $rt->f(1), 1, 'float');
         }
@@ -161,7 +161,7 @@ my $run_pixel = sub {
     $boxFold__vec3_float = sub {
         my ($z, $foldLimit) = @_;
         $z = $rt->copy($z, 'float');
-        return $rt->binary('-', $rt->binary('*', $rt->component_wise('clamp', $z, $rt->unary('-', $foldLimit), $foldLimit), $rt->f(2), 3, 'float'), $z, 3, 'float');
+        return $rt->construct(3, $rt->binary('-', $rt->construct(3, $rt->binary('*', $rt->component_wise('clamp', $z, $rt->unary('-', $foldLimit), $foldLimit), $rt->f(2), 3, 'float')), $z, 3, 'float'));
     };
     $mandelbox__vec3_float_int_float = sub {
         my ($pos, $scale, $maxIter, $bail) = @_;
@@ -228,10 +228,10 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($d0, $dx, $dy, $dz);
         $d0 = $rt->swizzle($computeFractal__vec3->($p), 'x');
-        $dx = $rt->swizzle($computeFractal__vec3->($rt->binary('+', $p, $rt->construct(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float')), 'x');
-        $dy = $rt->swizzle($computeFractal__vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float')), 'x');
-        $dz = $rt->swizzle($computeFractal__vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $eps), 3, 'float')), 'x');
-        return $rt->binary('/', $rt->construct(3, $rt->binary('-', $dx, $d0, 1, 'float'), $rt->binary('-', $dy, $d0, 1, 'float'), $rt->binary('-', $dz, $d0, 1, 'float')), $eps, 3, 'float');
+        $dx = $rt->swizzle($computeFractal__vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float'))), 'x');
+        $dy = $rt->swizzle($computeFractal__vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float'))), 'x');
+        $dz = $rt->swizzle($computeFractal__vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $eps), 3, 'float'))), 'x');
+        return $rt->construct(3, $rt->binary('/', $rt->construct_raw(3, $rt->binary('-', $dx, $d0, 1, 'float'), $rt->binary('-', $dy, $d0, 1, 'float'), $rt->binary('-', $dz, $d0, 1, 'float')), $eps, 3, 'float'));
     };
     $applyCollisionAvoidance__vec3 = sub {
         my ($pos) = @_;
@@ -243,7 +243,7 @@ my $run_pixel = sub {
         $pushDist = $rt->f(0.0);
         if ($rt->binary('<', $rt->swizzle($fr, 'x'), $g->{SAFETY_RADIUS})) {
             $grad = $computeGradient__vec3_float->($pos, $rt->f(0.01));
-            $pushDir = $rt->normalize($rt->binary('+', $grad, $rt->construct(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
+            $pushDir = $rt->normalize($rt->binary('+', $grad, $rt->construct_raw(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
             $pushDist = $rt->binary('-', $g->{SAFETY_RADIUS}, $rt->swizzle($fr, 'x'), 1, 'float');
             @{$pos} = map { $rt->f32($_) } @{($rt->binary('+', $pos, $rt->binary('*', $rt->binary('*', $pushDir, $pushDist, 3, 'float'), $rt->f(1.5), 3, 'float'), 3, 'float'))};
         }
@@ -251,7 +251,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($camDir, $camPos, $camRight, $camUp, $dist, $eps, $fr, $globalCoord, $gradient, $halfExtent, $iterRatio, $normal, $normalizedCoord, $normalizedDist, $pixelCoord, $trap, $voiOffset, $volSize, $volSizeF, $vx, $vy, $vz, $worldPos);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $volSize = $_u_volumeSize;
         $volSizeF = $rt->construct(1, $volSize);
         $pixelCoord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
@@ -270,10 +270,10 @@ my $run_pixel = sub {
         @{$camPos} = map { $rt->f32($_) } @{($applyCollisionAvoidance__vec3->($camPos))};
         $camRight = $rt->normalize($rt->cross($camDir, $camUp));
         @{$camUp} = map { $rt->f32($_) } @{($rt->normalize($rt->cross($camRight, $camDir)))};
-        $normalizedCoord = $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->construct(3, $rt->construct(1, $vx), $rt->construct(1, $vy), $rt->construct(1, $vz)), $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float'), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float');
+        $normalizedCoord = $rt->construct(3, $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->construct_raw(3, $rt->construct(1, $vx), $rt->construct(1, $vy), $rt->construct(1, $vz)), $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float'), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'));
         $halfExtent = $rt->binary('*', $_u_voiSize, $rt->f(0.5), 1, 'float');
-        $voiOffset = $rt->binary('*', $camDir, $halfExtent, 3, 'float');
-        $worldPos = $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('+', $camPos, $voiOffset, 3, 'float'), $rt->binary('*', $rt->binary('*', $camRight, $rt->swizzle($normalizedCoord, 'x'), 3, 'float'), $halfExtent, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->binary('*', $camUp, $rt->swizzle($normalizedCoord, 'y'), 3, 'float'), $halfExtent, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->binary('*', $camDir, $rt->swizzle($normalizedCoord, 'z'), 3, 'float'), $halfExtent, 3, 'float'), 3, 'float');
+        $voiOffset = $rt->construct(3, $rt->binary('*', $camDir, $halfExtent, 3, 'float'));
+        $worldPos = $rt->construct(3, $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('+', $camPos, $voiOffset, 3, 'float'), $rt->binary('*', $rt->binary('*', $camRight, $rt->swizzle($normalizedCoord, 'x'), 3, 'float'), $halfExtent, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->binary('*', $camUp, $rt->swizzle($normalizedCoord, 'y'), 3, 'float'), $halfExtent, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->binary('*', $camDir, $rt->swizzle($normalizedCoord, 'z'), 3, 'float'), $halfExtent, 3, 'float'), 3, 'float'));
         $fr = $computeFractal__vec3->($worldPos);
         $dist = $rt->swizzle($fr, 'x');
         $normalizedDist = $rt->binary('-', $rt->f(1), $rt->component_wise('clamp', $rt->binary('+', $rt->binary('*', $dist, $rt->f(2), 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->f(0), $rt->f(1)), 1, 'float');
@@ -281,7 +281,7 @@ my $run_pixel = sub {
         $iterRatio = $rt->swizzle($fr, 'z');
         $eps = $rt->f(0.02);
         $gradient = $computeGradient__vec3_float->($worldPos, $eps);
-        $normal = $rt->normalize($rt->binary('+', $gradient, $rt->construct(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
+        $normal = $rt->normalize($rt->binary('+', $gradient, $rt->construct_raw(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalizedDist, $trap, $iterRatio, $rt->f(1)))};
         @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->binary('*', $normal, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'), $normalizedDist))};
     };

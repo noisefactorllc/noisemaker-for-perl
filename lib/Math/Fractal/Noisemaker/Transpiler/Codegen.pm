@@ -318,8 +318,10 @@ sub _emit_func {
     my @out_pynames = map { $pynames[$_] } @{ $fn->{out_idxs} || [] };
     my $prev_out    = $self->{cur_out};
     my $prev_decl   = $self->{declared};
+    my $prev_ret    = $self->{cur_ret};
     $self->{cur_out}  = \@out_pynames;
     $self->{declared} = { map { $_ => 1 } @pynames };
+    $self->{cur_ret}  = $fn->{ret};
     my $body = $self->block($fn->{node}{body}, $scope, $indent + 1);
     if (@out_pynames) {    # out/inout params: every exit returns (retval, outs...)
         push @$body, "$pad    return (undef, " . join(', ', @out_pynames) . ');';
@@ -328,6 +330,7 @@ sub _emit_func {
     @locals = grep { !/^\$/ ? 0 : 1 } @locals;
     $self->{cur_out}  = $prev_out;
     $self->{declared} = $prev_decl;
+    $self->{cur_ret}  = $prev_ret;
     push @$L, "$pad\$$fn->{mangled} = sub {";
     push @$L, @body_head;
     push @$L, "$pad    my (" . join(', ', @locals) . ');' if @locals;
@@ -362,8 +365,10 @@ sub stmt {
             my $t = $self->type_of_name($s->{type}, $dc->{array});
             # Resolve the initializer in the ENCLOSING scope, before the new
             # name is defined (GLSL `float time = time;` reads the outer time).
+            # A float vector initializer is stored the way the oracle stores
+            # it: an inline value as a Float32Array (see _materialized_operand).
             my $init_code;
-            ($init_code) = $self->expr($dc->{init}, $scope) if defined $dc->{init};
+            $init_code = $self->_materialized_operand($dc->{init}, $scope) if defined $dc->{init};
             # A vector declared from another variable gets its own array, as
             # the canonical kernels' `var z = pos instanceof Float32Array ?
             # copy(pos) : pos` does: later in-place stores to one must not
@@ -433,15 +438,17 @@ sub stmt {
             push @$out, "$pad$stmt_code;";
             $val_node = $val_node->{target};
         }
+        # A vector-valued function returns a Float32Array in the oracle's JS,
+        # so an inline return value rounds there (see _materialized_operand).
         if (@{ $self->{cur_out} }) {
-            my $val = defined $val_node ? ($self->expr($val_node, $scope))[0] : 'undef';
+            my $val = defined $val_node ? $self->_materialized_operand($val_node, $scope) : 'undef';
             push @$out, "${pad}return ($val, " . join(', ', @{ $self->{cur_out} }) . ');';
         }
         elsif (!defined $val_node) {
             push @$out, "${pad}return;";
         }
         else {
-            my ($code) = $self->expr($val_node, $scope);
+            my $code = $self->_materialized_operand($val_node, $scope);
             push @$out, "${pad}return $code;";
         }
     }
@@ -678,10 +685,150 @@ sub _e_binary {
     if ($lb eq 'uint' || $rb eq 'uint') { $base = 'uint' }
     elsif (($lb eq 'int' && $rb eq 'int') || $op =~ /^(?:&|\||\^|<<|>>|%)$/) { $base = 'int' }
     else { $base = 'float' }
-    return (
-        '$rt->binary(' . pq($op) . ", $l_code, $r_code, $width, " . pq($base) . ')',
-        { base => $base, width => $width }
-    );
+    my $code = '$rt->binary(' . pq($op) . ", $l_code, $r_code, $width, " . pq($base) . ')';
+    # Round where the oracle's compiled JS rounds (see _vec_kind); otherwise
+    # the result stays raw until its next consumption boundary.
+    if ($base eq 'float' && $width > 1 && $op =~ m{^[-+*/]$}) {
+        if ($self->_vec_binary_rounds($node, $scope)) {
+            $code = "\$rt->construct($width, \$rt->binary(" . pq($op) . ', '
+                . $self->_materialized_operand($node->{l}, $scope) . ', '
+                . $self->_materialized_operand($node->{r}, $scope) . ", $width, 'float'))";
+        }
+        else {
+            $code = '$rt->binary(' . pq($op) . ', '
+                . $self->_fused_operand($node->{l}, $scope) . ', '
+                . $self->_fused_operand($node->{r}, $scope) . ", $width, 'float')";
+        }
+    }
+    return ($code, { base => $base, width => $width });
+}
+
+# An inline operand of fused arithmetic. Its constructors keep float
+# components raw (see Runtime::construct_raw), including under a negation;
+# an int or uint component still rounds, as the oracle's cpu_float
+# conversion does.
+sub _fused_operand {
+    my ($self, $node, $scope) = @_;
+    my ($code, $t) = $self->expr($node, $scope);
+    return $code unless base_of($t) eq 'float' && width_of($t) > 1 && !$t->{mat};
+    my $k = $node->{k} // q{};
+    if ($k eq 'construct' && !defined $node->{array}) {
+        return $code if $self->_vec_kind($node, $scope) eq 'typed';    # a new Float32Array
+        my @args;
+        for my $arg (@{ $node->{args} }) {
+            my ($a_code, $a_t) = $self->expr($arg, $scope);
+            push @args, base_of($a_t) eq 'float'
+                ? $self->_fused_operand($arg, $scope)
+                : '$rt->construct(' . width_of($a_t) . ", $a_code)";
+        }
+        return "\$rt->construct_raw($t->{width}, " . join(', ', @args) . ')';
+    }
+    if ($k eq 'unary' && $node->{op} eq '-') {
+        return '$rt->unary(' . pq('-') . ', ' . $self->_fused_operand($node->{x}, $scope) . ')';
+    }
+    return $code;
+}
+
+# An operand of vecN.add/subtract/multiply/divide, or the vector of a
+# Float32Array#map. The oracle materializes an inline operand as a pooled
+# Float32Array, which rounds each component before the op reads it; typed and
+# plain operands reach the op as they are.
+sub _materialized_operand {
+    my ($self, $node, $scope) = @_;
+    my ($code, $t) = $self->expr($node, $scope);
+    return $code unless base_of($t) eq 'float' && width_of($t) > 1 && !$t->{mat};
+    my $k    = $node->{k} // q{};
+    my $kind = $self->_vec_kind($node, $scope);
+    if ($kind eq 'plain') {    # a single-vector constructor passes the Array through
+        return $code unless $k eq 'construct';
+        return "\$rt->construct_raw($t->{width}, " . ($self->expr($node->{args}[0], $scope))[0] . ')';
+    }
+    return $code if $kind eq 'typed' || $k eq 'id' || $k eq 'construct';
+    return $code if ($k eq 'member' || $k eq 'index') && ($node->{obj}{k} // q{}) eq 'id';
+    return "\$rt->construct($t->{width}, $code)";
+}
+
+# The oracle's compiled JS holds a float vector in one of three forms, which
+# decides where its arithmetic rounds to f32:
+#   inline - per-component slot expressions (variables, swizzles, literals,
+#            constructors and arithmetic on them): raw f64, rounded once
+#            where the value is stored;
+#   typed  - a pooled Float32Array: a vector-valued call (builtin, user
+#            function or sampler read) or a scalar operation on a typed
+#            value, which compiles to Float32Array#map and rounds each
+#            component (simplex `1.0 - abs(x)`);
+#   plain  - the [] filled by vecN.add/subtract/multiply/divide, which round
+#            each component; a scalar .map over a plain Array stays raw.
+# Vector-vector arithmetic compiles to vecN.op as soon as either operand is
+# not inline. The kinds follow the GLSL operand types, before any splat:
+# `call * vec2(64.0)` is vec2.multiply, not a map. A swizzle of a non-inline
+# vector (`texture(t, uv).rgb`) and a constructor that has to spread one
+# (`vec4(call(), 1.0)`) compile to new Float32Arrays, so they are typed; a
+# single-vector constructor (`vec3(call())`) passes its argument through.
+sub _vec_kind {
+    my ($self, $node, $scope) = @_;
+    my $k = $node->{k} // q{};
+    if ($k eq 'call') {
+        my (undef, $t) = $self->expr($node, $scope);
+        return (base_of($t) eq 'float' && width_of($t) > 1 && !$t->{mat}) ? 'typed' : 'inline';
+    }
+    if ($k eq 'member' || $k eq 'index') {
+        my (undef, $t) = $self->expr($node, $scope);
+        return 'inline' unless width_of($t) > 1 && !$t->{mat};
+        return $self->_spreads($node->{obj}, $scope) ? 'typed' : 'inline';
+    }
+    if ($k eq 'unary' && $node->{op} eq '-') {
+        return $self->_vec_kind($node->{x}, $scope);
+    }
+    if ($k eq 'construct' && !defined $node->{array}) {
+        my $args = $node->{args};
+        if (@$args == 1) {
+            my (undef, $a_t) = $self->expr($args->[0], $scope);
+            if (width_of($a_t) > 1 && !$a_t->{mat}) {
+                return 'typed' if ($args->[0]{k} // q{}) eq 'call';
+                return base_of($a_t) eq 'float' ? $self->_vec_kind($args->[0], $scope) : 'inline';
+            }
+        }
+        for my $arg (@$args) {
+            return 'typed' if $self->_spreads($arg, $scope);
+            my $ak = $arg->{k} // q{};
+            return 'typed' if ($ak eq 'member' || $ak eq 'index') && $self->_spreads($arg->{obj}, $scope);
+        }
+        return 'inline';
+    }
+    if ($k eq 'binary' && $node->{op} =~ m{^[-+*/]$}) {
+        my (undef, $l_t) = $self->expr($node->{l}, $scope);
+        my (undef, $r_t) = $self->expr($node->{r}, $scope);
+        return 'inline' if $l_t->{mat} || $r_t->{mat} || base_of($l_t) ne 'float' || base_of($r_t) ne 'float';
+        my ($lk, $rk) = ($self->_vec_kind($node->{l}, $scope), $self->_vec_kind($node->{r}, $scope));
+        if (width_of($l_t) > 1 && width_of($r_t) > 1) {
+            return ($lk eq 'inline' && $rk eq 'inline') ? 'inline' : 'plain';
+        }
+        return width_of($l_t) > 1 ? $lk : $rk;
+    }
+    return 'inline';
+}
+
+# A vector the oracle cannot expand per component: a vector-valued call of
+# any base, or a float vector that is typed or plain.
+sub _spreads {
+    my ($self, $node, $scope) = @_;
+    my (undef, $t) = $self->expr($node, $scope);
+    return 0 unless width_of($t) > 1 && !$t->{mat};
+    return 1 if ($node->{k} // q{}) eq 'call';
+    return base_of($t) eq 'float' && $self->_vec_kind($node, $scope) ne 'inline';
+}
+
+sub _vec_binary_rounds {
+    my ($self, $node, $scope) = @_;
+    my (undef, $l_t) = $self->expr($node->{l}, $scope);
+    my (undef, $r_t) = $self->expr($node->{r}, $scope);
+    return 0 if $l_t->{mat} || $r_t->{mat};
+    my ($lk, $rk) = ($self->_vec_kind($node->{l}, $scope), $self->_vec_kind($node->{r}, $scope));
+    if (width_of($l_t) > 1 && width_of($r_t) > 1) {
+        return !($lk eq 'inline' && $rk eq 'inline');    # vecN.op
+    }
+    return (width_of($l_t) > 1 ? $lk : $rk) eq 'typed';    # Float32Array#map
 }
 
 sub _e_assign {
@@ -711,6 +858,18 @@ sub _e_assign {
                 return ("\@{$tcode} = \@{($rhs)}", $tt);
             }
             return ("\@{$tcode} = map { \$rt->f32(\$_) } \@{($rhs)}", $tt);
+        }
+        # An element of a float vector, or of an array of float vectors, is a
+        # Float32Array slot in the oracle's JS, so the store rounds; a float
+        # array is a plain Array and keeps the value.
+        if ($target->{k} eq 'index' && base_of($tt) eq 'float' && !$tt->{mat}) {
+            my (undef, $obj_t) = $self->expr($target->{obj}, $scope);
+            if (width_of($tt) > 1 && !$obj_t->{mat}) {
+                return ("\@{$tcode} = map { \$rt->f32(\$_) } \@{($rhs)}", $tt);
+            }
+            if (width_of($tt) == 1 && width_of($obj_t) > 1 && !$obj_t->{array} && !$obj_t->{mat}) {
+                return ("$tcode = \$rt->f32($rhs)", $tt);
+            }
         }
         return ("$tcode = $rhs", $tt);
     }
@@ -781,6 +940,7 @@ my %ROUTED = (
     cpu_umul  => sub { my ($g, $c, $a) = @_; ("\$rt->binary('*', $c->[0], $c->[1], 1, 'uint')", $TYPE{uint}) },
     hashUint  => sub { my ($g, $c, $a) = @_; ("\$rt->hash_uint($c->[0])",               $TYPE{uint}) },
     hash_uint => sub { my ($g, $c, $a) = @_; ("\$rt->hash_uint($c->[0])",               $TYPE{uint}) },
+    hash_uint_lcg => sub { my ($g, $c, $a) = @_; ("\$rt->hash_uint_lcg($c->[0])",       $TYPE{uint}) },
     floatBitsToUint => sub { my ($g, $c, $a) = @_; ("\$rt->float_bits_to_uint($c->[0])", $TYPE{uint}) },
     uintBitsToFloat => sub { my ($g, $c, $a) = @_; ("\$rt->uint_bits_to_float($c->[0])", $FLOAT) },
     packHalf2x16    => sub { my ($g, $c, $a) = @_; ("\$rt->pack_half_2x16($c->[0])",     $TYPE{uint}) },
@@ -806,6 +966,9 @@ sub _e_call {
     }
     if ($self->{overloads}{$name}) {
         my $fn = $self->_resolve_overload($name, [map { $_->[1] } @args]);
+        # A vector argument reaches the function as the oracle passes it: an
+        # inline value materialized as a Float32Array, typed and plain as is.
+        @codes = map { $self->_materialized_operand($node->{args}[$_], $scope) } 0 .. $#{ $node->{args} };
         if (@{ $fn->{out_idxs} || [] }) {    # out/inout: unpack outputs
             my @targets = map { ($self->expr($node->{args}[$_], $scope))[0] } @{ $fn->{out_idxs} };
             my $result = $discard ? q{} : ' $_retc';

@@ -42,7 +42,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($v);
         $v = $pcg__uvec3->($rt->construct(3, $rt->construct(1, (($rt->binary('>=', $rt->swizzle($p, 'x'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'x'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'x')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))), 'uint'), $rt->construct(1, (($rt->binary('>=', $rt->swizzle($p, 'y'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'y'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'y')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))), 'uint'), $rt->construct(1, (($rt->binary('>=', $s, $rt->f(0))) ? ($rt->binary('*', $s, $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $s), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))), 'uint'), 'uint'));
-        return $rt->binary('/', $rt->construct(2, $rt->swizzle($v, 'xy')), $rt->construct(1, $rt->i(4294967295)), 2, 'float');
+        return $rt->construct(2, $rt->binary('/', $rt->construct_raw(2, $rt->construct(2, $rt->swizzle($v, 'xy'))), $rt->construct(1, $rt->i(4294967295)), 2, 'float'));
     };
     $lowPolySite__ivec2_float_float_float = sub {
         my ($siteCell, $n, $s, $spd) = @_;
@@ -57,24 +57,24 @@ my $run_pixel = sub {
             $animRand = $hash2__vec2_float->($siteCellF, $rt->binary('+', $s, $rt->f(100), 1, 'float'));
             $angle = $rt->binary('+', $rt->binary('*', $_u_time, $g->{TAU}, 1, 'float'), $rt->binary('*', $rt->swizzle($animRand, 'x'), $g->{TAU}, 1, 'float'), 1, 'float');
             $radius = $rt->binary('*', $rt->swizzle($animRand, 'y'), $spd, 1, 'float');
-            @{$offset} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('+', $offset, $rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $radius, 2, 'float'), 2, 'float'), $rt->f(0), $rt->f(1)))};
+            @{$offset} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('+', $offset, $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $radius, 2, 'float'), 2, 'float'), $rt->f(0), $rt->f(1)))};
         }
-        return $rt->binary('/', $rt->binary('+', $siteCellF, $offset, 2, 'float'), $n, 2, 'float');
+        return $rt->construct(2, $rt->binary('/', $rt->binary('+', $siteCellF, $offset, 2, 'float'), $n, 2, 'float'));
     };
     $main__void = sub {
         my ($_for0_first, $_for1_first, $_for2_first, $_for3_first, $_for4_first, $_for5_first, $angle, $animRand, $aspect, $auv, $bisectorDistance, $borderFeather, $borderHalfWidth, $borderMask, $borderNearestCell, $borderNearestDist, $borderNearestPoint, $candidateCell, $candidateDist, $candidatePoint, $cell, $cellColor, $cellRadius, $d, $distField, $distToEdge, $dx, $dy, $edgeDist, $edgeFactor, $exposure, $globalCoord, $globalUV, $globalUV_sample, $intensity, $litMode, $litValue, $localUV_sample, $minDist, $modeResult, $n, $nearestCell, $nearestPoint, $neighbor, $neighborF, $offset, $original, $paneValue, $point, $radius, $raw, $resolution, $result, $s, $scaled, $secondDist, $selectedDist, $siteDistance, $siteVector, $spd, $texSize, $thirdDist, $tileDims, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
         $tileDims = $rt->construct(2, $texSize);
-        $resolution = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims));
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $tileDims, 2, 'float');
-        $globalUV = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $resolution, 2, 'float');
+        $resolution = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims)));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $tileDims, 2, 'float'));
+        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $resolution, 2, 'float'));
         $n = $rt->component_wise('max', $rt->binary('-', $rt->f(102), $_u_scale, 1, 'float'), $rt->f(2));
         $s = $_u_seed;
         $spd = $rt->binary('*', $_u_speed, $rt->f(0.29999999999999999), 1, 'float');
         $aspect = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
         $auv = $rt->construct(2, $rt->binary('*', $rt->swizzle($globalUV, 'x'), $aspect, 1, 'float'), $rt->swizzle($globalUV, 'y'));
-        $scaled = $rt->binary('*', $auv, $n, 2, 'float');
+        $scaled = $rt->construct(2, $rt->binary('*', $auv, $n, 2, 'float'));
         $cell = $rt->construct(2, $rt->component_wise('floor', $scaled), 'int');
         $minDist = $rt->f(10000000000);
         $secondDist = $rt->f(10000000000);
@@ -114,9 +114,9 @@ my $run_pixel = sub {
                     $animRand = $hash2__vec2_float->($neighborF, $rt->binary('+', $s, $rt->f(100), 1, 'float'));
                     $angle = $rt->binary('+', $rt->binary('*', $_u_time, $g->{TAU}, 1, 'float'), $rt->binary('*', $rt->swizzle($animRand, 'x'), $g->{TAU}, 1, 'float'), 1, 'float');
                     $radius = $rt->binary('*', $rt->swizzle($animRand, 'y'), $spd, 1, 'float');
-                    @{$offset} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('+', $offset, $rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $radius, 2, 'float'), 2, 'float'), $rt->f(0), $rt->f(1)))};
+                    @{$offset} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('+', $offset, $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $radius, 2, 'float'), 2, 'float'), $rt->f(0), $rt->f(1)))};
                 }
-                $point = $rt->binary('/', $rt->binary('+', $neighborF, $offset, 2, 'float'), $n, 2, 'float');
+                $point = $rt->construct(2, $rt->binary('/', $rt->binary('+', $neighborF, $offset, 2, 'float'), $n, 2, 'float'));
                 $d = $rt->distance($auv, $point);
                 if ($rt->binary('<', $d, $minDist)) {
                     $thirdDist = $secondDist;
@@ -139,7 +139,7 @@ my $run_pixel = sub {
             }
         }
         $globalUV_sample = $rt->construct(2, $rt->binary('/', $rt->swizzle($nearestPoint, 'x'), $aspect, 1, 'float'), $rt->swizzle($nearestPoint, 'y'));
-        $localUV_sample = $rt->binary('/', $rt->binary('-', $rt->binary('*', $globalUV_sample, $resolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $tileDims, 2, 'float');
+        $localUV_sample = $rt->construct(2, $rt->binary('/', $rt->binary('-', $rt->binary('*', $globalUV_sample, $resolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $tileDims, 2, 'float'));
         $cellColor = $rt->texture($_u_inputTex, $localUV_sample);
         $result = $rt->construct(3, 0.0);
         $distField = $rt->f(0.0);
@@ -229,7 +229,7 @@ my $run_pixel = sub {
                     $siteVector = $rt->construct(2, 0.0);
                     if ($rt->component_wise('any', $rt->component_wise('notEqual', $candidateCell, $borderNearestCell))) {
                         $candidatePoint = $lowPolySite__ivec2_float_float_float->($candidateCell, $n, $s, $spd);
-                        $siteVector = $rt->binary('-', $candidatePoint, $borderNearestPoint, 2, 'float');
+                        $siteVector = $rt->construct(2, $rt->binary('-', $candidatePoint, $borderNearestPoint, 2, 'float'));
                         $siteDistance = $rt->component_wise('max', $rt->length($siteVector), $rt->f(1e-08));
                         $bisectorDistance = $rt->dot($rt->binary('-', $rt->binary('*', $rt->binary('+', $borderNearestPoint, $candidatePoint, 2, 'float'), $rt->f(0.5), 2, 'float'), $auv, 2, 'float'), $rt->binary('/', $siteVector, $siteDistance, 2, 'float'));
                         $distToEdge = $rt->component_wise('min', $distToEdge, $bisectorDistance);
@@ -247,7 +247,7 @@ my $run_pixel = sub {
             $paneValue = $rt->component_wise('max', $rt->component_wise('max', $rt->swizzle($modeResult, 'r'), $rt->swizzle($modeResult, 'g')), $rt->swizzle($modeResult, 'b'));
             $exposure = $rt->component_wise('mix', $rt->f(1), $rt->f(2.25), $intensity);
             $litValue = $rt->binary('-', $rt->f(1), $rt->component_wise('pow', $rt->component_wise('max', $rt->binary('-', $rt->f(1), $paneValue, 1, 'float'), $rt->f(0)), $exposure), 1, 'float');
-            $litMode = (($rt->binary('>', $paneValue, $rt->f(9.9999999999999995e-07))) ? ($rt->binary('*', $modeResult, $rt->binary('/', $litValue, $paneValue, 1, 'float'), 3, 'float')) : ($modeResult));
+            $litMode = $rt->construct(3, (($rt->binary('>', $paneValue, $rt->f(9.9999999999999995e-07))) ? ($rt->binary('*', $modeResult, $rt->binary('/', $litValue, $paneValue, 1, 'float'), 3, 'float')) : ($modeResult)));
             @{$result} = map { $rt->f32($_) } @{($rt->component_wise('mix', $litMode, $_u_edgeColor, $borderMask))};
         }
         $original = $rt->texture($_u_inputTex, $uv);

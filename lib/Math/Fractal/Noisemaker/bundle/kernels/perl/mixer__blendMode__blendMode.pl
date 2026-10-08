@@ -37,7 +37,7 @@ my $run_pixel = sub {
             return $rt->component_wise('min', $rt->binary('+', $color1, $color2, 4, 'float'), $rt->construct(4, $rt->f(1)));
         }
         if ($rt->binary('==', $m, $rt->i(1))) {
-            return $rt->binary('-', $rt->f(1), $rt->component_wise('min', $rt->binary('/', $rt->binary('-', $rt->f(1), $color1, 4, 'float'), $rt->component_wise('max', $color2, $rt->construct(4, $rt->f(0.001))), 4, 'float'), $rt->construct(4, $rt->f(1))), 4, 'float');
+            return $rt->construct(4, $rt->binary('-', $rt->f(1), $rt->component_wise('min', $rt->construct(4, $rt->binary('/', $rt->construct(4, $rt->binary('-', $rt->f(1), $color1, 4, 'float')), $rt->component_wise('max', $color2, $rt->construct(4, $rt->f(0.001))), 4, 'float')), $rt->construct(4, $rt->f(1))), 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(2))) {
             return $rt->component_wise('min', $color1, $color2);
@@ -46,10 +46,10 @@ my $run_pixel = sub {
             return $rt->component_wise('abs', $rt->binary('-', $color1, $color2, 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(4))) {
-            return $rt->component_wise('min', $rt->binary('/', $color1, $rt->component_wise('max', $rt->binary('-', $rt->f(1), $color2, 4, 'float'), $rt->construct(4, $rt->f(0.001))), 4, 'float'), $rt->construct(4, $rt->f(1)));
+            return $rt->component_wise('min', $rt->construct(4, $rt->binary('/', $color1, $rt->component_wise('max', $rt->binary('-', $rt->f(1), $color2, 4, 'float'), $rt->construct(4, $rt->f(0.001))), 4, 'float')), $rt->construct(4, $rt->f(1)));
         }
         if ($rt->binary('==', $m, $rt->i(5))) {
-            return $rt->binary('-', $rt->binary('+', $color1, $color2, 4, 'float'), $rt->binary('*', $rt->binary('*', $rt->f(2), $color1, 4, 'float'), $color2, 4, 'float'), 4, 'float');
+            return $rt->construct(4, $rt->binary('-', $rt->binary('+', $color1, $color2, 4, 'float'), $rt->binary('*', $rt->binary('*', $rt->f(2), $color1, 4, 'float'), $color2, 4, 'float'), 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(6))) {
             return $rt->construct(4, $blendOverlay__float_float->($rt->swizzle($color2, 'r'), $rt->swizzle($color1, 'r')), $blendOverlay__float_float->($rt->swizzle($color2, 'g'), $rt->swizzle($color1, 'g')), $blendOverlay__float_float->($rt->swizzle($color2, 'b'), $rt->swizzle($color1, 'b')), $rt->f(1));
@@ -58,22 +58,22 @@ my $run_pixel = sub {
             return $rt->component_wise('max', $color1, $color2);
         }
         if ($rt->binary('==', $m, $rt->i(8))) {
-            return $rt->binary('*', $rt->binary('+', $color1, $color2, 4, 'float'), $rt->f(0.5), 4, 'float');
+            return $rt->construct(4, $rt->binary('*', $rt->binary('+', $color1, $color2, 4, 'float'), $rt->f(0.5), 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(9))) {
-            return $rt->binary('*', $color1, $color2, 4, 'float');
+            return $rt->construct(4, $rt->binary('*', $color1, $color2, 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(10))) {
-            return $rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->component_wise('abs', $rt->binary('-', $rt->binary('-', $rt->construct(4, $rt->f(1)), $color1, 4, 'float'), $color2, 4, 'float')), 4, 'float');
+            return $rt->construct(4, $rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->component_wise('abs', $rt->binary('-', $rt->binary('-', $rt->construct_raw(4, $rt->f(1)), $color1, 4, 'float'), $color2, 4, 'float')), 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(11))) {
             return $rt->construct(4, $blendOverlay__float_float->($rt->swizzle($color1, 'r'), $rt->swizzle($color2, 'r')), $blendOverlay__float_float->($rt->swizzle($color1, 'g'), $rt->swizzle($color2, 'g')), $blendOverlay__float_float->($rt->swizzle($color1, 'b'), $rt->swizzle($color2, 'b')), $rt->f(1));
         }
         if ($rt->binary('==', $m, $rt->i(12))) {
-            return $rt->binary('+', $rt->binary('-', $rt->component_wise('min', $color1, $color2), $rt->component_wise('max', $color1, $color2), 4, 'float'), $rt->construct(4, $rt->f(1)), 4, 'float');
+            return $rt->construct(4, $rt->binary('+', $rt->construct(4, $rt->binary('-', $rt->component_wise('min', $color1, $color2), $rt->component_wise('max', $color1, $color2), 4, 'float')), $rt->construct(4, $rt->f(1)), 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(13))) {
-            return $rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->binary('*', $rt->binary('-', $rt->construct(4, $rt->f(1)), $color1, 4, 'float'), $rt->binary('-', $rt->construct(4, $rt->f(1)), $color2, 4, 'float'), 4, 'float'), 4, 'float');
+            return $rt->construct(4, $rt->binary('-', $rt->construct_raw(4, $rt->f(1)), $rt->binary('*', $rt->binary('-', $rt->construct_raw(4, $rt->f(1)), $color1, 4, 'float'), $rt->binary('-', $rt->construct_raw(4, $rt->f(1)), $color2, 4, 'float'), 4, 'float'), 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(14))) {
             return $rt->construct(4, $blendSoftLight__float_float->($rt->swizzle($color1, 'r'), $rt->swizzle($color2, 'r')), $blendSoftLight__float_float->($rt->swizzle($color1, 'g'), $rt->swizzle($color2, 'g')), $blendSoftLight__float_float->($rt->swizzle($color1, 'b'), $rt->swizzle($color2, 'b')), $rt->f(1));
@@ -82,14 +82,14 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($amt, $baseColor, $blended, $color1, $color2, $globalCoord, $opacity, $source, $sourceAlpha, $sourceColor, $st);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $st = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $color1 = $rt->texture($_u_inputTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
-        $color2 = $rt->texture($_u_tex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float'));
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $st = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $color1 = $rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
+        $color2 = $rt->texture($_u_tex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float')));
         $amt = $map__float_float_float_float_float->($_u_mixAmt, $rt->unary('-', $rt->f(100)), $rt->f(100), $rt->f(0), $rt->f(1));
         $opacity = (($rt->binary('==', $_u_mode, $rt->i(8))) ? ($amt) : ($rt->component_wise('min', $rt->binary('*', $amt, $rt->f(2), 1, 'float'), $rt->f(1))));
         $sourceAlpha = $rt->binary('*', $rt->swizzle($color2, 'a'), $opacity, 1, 'float');
-        $source = $rt->binary('*', $rt->swizzle($color2, 'rgb'), $opacity, 3, 'float');
+        $source = $rt->construct(3, $rt->binary('*', $rt->swizzle($color2, 'rgb'), $opacity, 3, 'float'));
         $baseColor = $rt->construct(4, 0.0);
         $blended = $rt->construct(3, 0.0);
         $sourceColor = $rt->construct(4, 0.0);

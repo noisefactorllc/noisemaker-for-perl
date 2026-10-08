@@ -23,10 +23,10 @@ my $run_pixel = sub {
         $coord = $rt->copy($coord, 'float');
         $size = $rt->copy($size, 'float');
         my ($mode, $uv);
-        $uv = $rt->binary('/', $coord, $size, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $coord, $size, 2, 'float'));
         $mode = $rt->construct(1, $_u_wrap, 'int');
         if ($rt->binary('==', $mode, $rt->i(0))) {
-            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
+            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
         } else {
             if ($rt->binary('==', $mode, $rt->i(1))) {
                 @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('fract', $uv))};
@@ -39,8 +39,8 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($angle, $blended, $c, $center, $originalColor, $pixelCoord, $rad, $s, $sortedColor, $srcCoord, $texSize, $working_sorted, $working_source, $wrappedUV);
         $texSize = $rt->construct(2, $rt->texture_size($_u_inputTex));
-        $center = $rt->binary('*', $texSize, $rt->f(0.5), 2, 'float');
-        $pixelCoord = $rt->binary('-', $rt->swizzle($ctx->{frag_coord}, 'xy'), $center, 2, 'float');
+        $center = $rt->construct(2, $rt->binary('*', $texSize, $rt->f(0.5), 2, 'float'));
+        $pixelCoord = $rt->construct(2, $rt->binary('-', $rt->swizzle($ctx->{frag_coord}, 'xy'), $center, 2, 'float'));
         $angle = $_u_angled;
         $rad = $rt->binary('/', $rt->binary('*', $angle, $g->{PI}, 1, 'float'), $rt->f(180), 1, 'float');
         $c = $rt->component_wise('cos', $rad);
@@ -55,14 +55,14 @@ my $run_pixel = sub {
         $working_source = $rt->fresh($originalColor);
         $working_sorted = $rt->fresh($sortedColor);
         if ($_u_darkest) {
-            @{$working_source} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct(3, $rt->f(1)), $rt->swizzle($working_source, 'rgb'), 3, 'float'), $rt->swizzle($working_source, 'a')))};
-            @{$working_sorted} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct(3, $rt->f(1)), $rt->swizzle($working_sorted, 'rgb'), 3, 'float'), $rt->swizzle($working_sorted, 'a')))};
+            @{$working_source} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->swizzle($working_source, 'rgb'), 3, 'float'), $rt->swizzle($working_source, 'a')))};
+            @{$working_sorted} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->swizzle($working_sorted, 'rgb'), 3, 'float'), $rt->swizzle($working_sorted, 'a')))};
         }
         $blended = $rt->component_wise('max', $rt->binary('*', $working_source, $_u_alpha, 4, 'float'), $working_sorted);
         @{$blended} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $blended, $rt->f(0), $rt->f(1)))};
         $blended = $rt->assign_swizzle($blended, 'a', $rt->swizzle($working_source, 'a'));
         if ($_u_darkest) {
-            @{$blended} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct(3, $rt->f(1)), $rt->swizzle($blended, 'rgb'), 3, 'float'), $rt->swizzle($originalColor, 'a')))};
+            @{$blended} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->swizzle($blended, 'rgb'), 3, 'float'), $rt->swizzle($originalColor, 'a')))};
         } else {
             $blended = $rt->assign_swizzle($blended, 'a', $rt->swizzle($originalColor, 'a'));
         }

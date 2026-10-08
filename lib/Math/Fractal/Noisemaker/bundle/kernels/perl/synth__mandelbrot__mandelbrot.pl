@@ -168,7 +168,7 @@ my $run_pixel = sub {
         $re_df = $rt->copy($re_df, 'float');
         $im_df = $rt->copy($im_df, 'float');
         my ($angle, $c, $s, $scale, $uv);
-        $uv = $rt->binary('/', $rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float'));
         $angle = $rt->binary('/', $rt->binary('*', $rt->unary('-', $rot), $g->{TAU}, 1, 'float'), $rt->f(360), 1, 'float');
         $c = $rt->component_wise('cos', $angle);
         $s = $rt->component_wise('sin', $angle);
@@ -349,8 +349,8 @@ my $run_pixel = sub {
         my ($diffuse, $eps, $h0, $hx, $hy, $lightDir, $normal, $rad);
         $eps = $rt->binary('/', $rt->f(1), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 1, 'float');
         $h0 = $computeValueAt_df64__vec2_vec2_vec2_float_float_int->($fragCoord, $cX_df, $cY_df, $z_zoom, $rot, $maxIter);
-        $hx = $computeValueAt_df64__vec2_vec2_vec2_float_float_int->($rt->binary('+', $fragCoord, $rt->construct(2, $rt->f(1), $rt->f(0)), 2, 'float'), $cX_df, $cY_df, $z_zoom, $rot, $maxIter);
-        $hy = $computeValueAt_df64__vec2_vec2_vec2_float_float_int->($rt->binary('+', $fragCoord, $rt->construct(2, $rt->f(0), $rt->f(1)), 2, 'float'), $cX_df, $cY_df, $z_zoom, $rot, $maxIter);
+        $hx = $computeValueAt_df64__vec2_vec2_vec2_float_float_int->($rt->construct(2, $rt->binary('+', $fragCoord, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float')), $cX_df, $cY_df, $z_zoom, $rot, $maxIter);
+        $hy = $computeValueAt_df64__vec2_vec2_vec2_float_float_int->($rt->construct(2, $rt->binary('+', $fragCoord, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float')), $cX_df, $cY_df, $z_zoom, $rot, $maxIter);
         $normal = $rt->normalize($rt->construct(3, $rt->binary('-', $h0, $hx, 1, 'float'), $rt->binary('-', $h0, $hy, 1, 'float'), $eps));
         $rad = $rt->binary('/', $rt->binary('*', $angle, $g->{TAU}, 1, 'float'), $rt->f(360), 1, 'float');
         $lightDir = $rt->normalize($rt->construct(3, $rt->component_wise('cos', $rad), $rt->component_wise('sin', $rad), $rt->f(0.69999999999999996)));
@@ -371,7 +371,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($cX_df, $cY_df, $dz_final, $effZoom, $globalCoord, $im_df, $maxIter, $rawI, $re_df, $rot, $smoothI, $stripeAcc, $trapMin, $value, $z_final);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $maxIter = $rt->component_wise('min', $_u_iterations, $g->{MAX_ITER});
         $effZoom = $getEffectiveZoom__int->($_u_poi);
         $rot = (($rt->binary('>', $_u_poi, $rt->i(0))) ? ($rt->f(0)) : ($_u_rotation));

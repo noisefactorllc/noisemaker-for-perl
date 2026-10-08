@@ -47,12 +47,12 @@ my $run_pixel = sub {
         if ($rt->binary('>', $rt->dot($_u_lightDirection, $_u_lightDirection), $rt->f(9.9999999999999995e-07))) {
             @{$light} = map { $rt->f32($_) } @{($rt->normalize($_u_lightDirection))};
         }
-        $halfVector = $rt->binary('+', $light, $viewDirection, 3, 'float');
+        $halfVector = $rt->construct(3, $rt->binary('+', $light, $viewDirection, 3, 'float'));
         $specular = $rt->f(0);
         if ($rt->binary('>', $rt->dot($halfVector, $halfVector), $rt->f(9.9999999999999995e-07))) {
             $specular = $rt->binary('*', $rt->component_wise('pow', $rt->component_wise('max', $rt->dot($normal, $rt->normalize($halfVector)), $rt->f(0)), $rt->f(32)), $_u_specularIntensity, 1, 'float');
         }
-        return $rt->binary('+', $rt->binary('*', $color, $rt->binary('+', $_u_ambient, $rt->binary('*', $rt->component_wise('max', $rt->dot($normal, $light), $rt->f(0)), $_u_diffuseIntensity, 1, 'float'), 1, 'float'), 3, 'float'), $specular, 3, 'float');
+        return $rt->construct(3, $rt->binary('+', $rt->binary('*', $color, $rt->binary('+', $_u_ambient, $rt->binary('*', $rt->component_wise('max', $rt->dot($normal, $light), $rt->f(0)), $_u_diffuseIntensity, 1, 'float'), 1, 'float'), 3, 'float'), $specular, 3, 'float'));
     };
     $sampleAtlasTexel__sampler2D_ivec3_bool = sub {
         my ($atlas, $p, $material) = @_;
@@ -71,7 +71,7 @@ my $run_pixel = sub {
         my ($a, $b, $weight) = @_;
         $a = $rt->copy($a, 'float');
         $b = $rt->copy($b, 'float');
-        return $rt->binary('+', $a, $rt->binary('*', $rt->binary('-', $b, $a, 4, 'float'), $weight, 4, 'float'), 4, 'float');
+        return $rt->construct(4, $rt->binary('+', $a, $rt->binary('*', $rt->binary('-', $b, $a, 4, 'float'), $weight, 4, 'float'), 4, 'float'));
     };
     $atlasCoords__vec3 = sub {
         my ($p) = @_;
@@ -112,7 +112,7 @@ my $run_pixel = sub {
         $origin = $rt->copy($origin, 'float');
         $direction = $rt->copy($direction, 'float');
         my ($_for0_first, $_for1_first, $candidate, $candidateCoords, $coords, $distance, $hi, $lo, $mid, $position, $previous, $refine, $step, $stepSize);
-        $position = $rt->binary('+', $origin, $rt->binary('*', $direction, $start, 3, 'float'), 3, 'float');
+        $position = $rt->construct(3, $rt->binary('+', $origin, $rt->binary('*', $direction, $start, 3, 'float'), 3, 'float'));
         $coords = $atlasCoords__vec3->($position);
         if ($isSolid__struct1->($coords)) {
             return [$start, $position, $coords];
@@ -148,7 +148,7 @@ my $run_pixel = sub {
                         last;
                     }
                     $mid = $rt->binary('*', $rt->binary('+', $lo, $hi, 1, 'float'), $rt->f(0.5), 1, 'float');
-                    $candidate = $rt->binary('+', $origin, $rt->binary('*', $direction, $mid, 3, 'float'), 3, 'float');
+                    $candidate = $rt->construct(3, $rt->binary('+', $origin, $rt->binary('*', $direction, $mid, 3, 'float'), 3, 'float'));
                     $candidateCoords = $atlasCoords__vec3->($candidate);
                     if ($isSolid__struct1->($candidateCoords)) {
                         $hi = $mid;
@@ -172,7 +172,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         $fallback = $rt->copy($fallback, 'float');
         my ($gradient);
-        $gradient = $rt->construct(3, $rt->binary('-', $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('-', $p, $rt->construct(3, $rt->f(0.5), $rt->f(0), $rt->f(0)), 3, 'float'), 0), 'a'), $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('+', $p, $rt->construct(3, $rt->f(0.5), $rt->f(0), $rt->f(0)), 3, 'float'), 0), 'a'), 1, 'float'), $rt->binary('-', $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('-', $p, $rt->construct(3, $rt->f(0), $rt->f(0.5), $rt->f(0)), 3, 'float'), 0), 'a'), $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('+', $p, $rt->construct(3, $rt->f(0), $rt->f(0.5), $rt->f(0)), 3, 'float'), 0), 'a'), 1, 'float'), $rt->binary('-', $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('-', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $rt->f(0.5)), 3, 'float'), 0), 'a'), $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->binary('+', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $rt->f(0.5)), 3, 'float'), 0), 'a'), 1, 'float'));
+        $gradient = $rt->construct(3, $rt->binary('-', $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->construct(3, $rt->binary('-', $p, $rt->construct_raw(3, $rt->f(0.5), $rt->f(0), $rt->f(0)), 3, 'float')), 0), 'a'), $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0.5), $rt->f(0), $rt->f(0)), 3, 'float')), 0), 'a'), 1, 'float'), $rt->binary('-', $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->construct(3, $rt->binary('-', $p, $rt->construct_raw(3, $rt->f(0), $rt->f(0.5), $rt->f(0)), 3, 'float')), 0), 'a'), $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $rt->f(0.5), $rt->f(0)), 3, 'float')), 0), 'a'), 1, 'float'), $rt->binary('-', $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->construct(3, $rt->binary('-', $p, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $rt->f(0.5)), 3, 'float')), 0), 'a'), $rt->swizzle($sampleAtlas__sampler2D_vec3_bool->($_u_analyticalGeo, $rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $rt->f(0.5)), 3, 'float')), 0), 'a'), 1, 'float'));
         if ($rt->binary('>', $rt->dot($gradient, $gradient), $rt->f(9.9999999999999998e-13))) {
             return $rt->normalize($gradient);
         }
@@ -204,10 +204,10 @@ my $run_pixel = sub {
         my ($_for2_first, $_for3_first, $_for4_first, $a, $atlas, $axis, $b, $boundary, $cameraRay, $cell, $crossed, $delta, $density, $direction, $distance, $enter, $farT, $focalLength, $framedUv, $hit, $leave, $nearT, $nextT, $normal, $origin, $p, $size, $step, $stepDir, $viewDirection, $worldNormal);
         $size = $rt->construct(1, $_u_volumeSize);
         $focalLength = $rt->binary('/', $rt->f(1), $rt->component_wise('tan', $rt->binary('*', $rt->component_wise('clamp', $_u_fieldOfView, $rt->f(10), $rt->f(150)), $rt->f(0.0087266462600000001), 1, 'float')), 1, 'float');
-        $origin = $rt->binary('*', $rt->binary('+', $rt->binary('/', $inverseRotation__vec3->($rt->construct(3, $rt->unary('-', $_u_posX), $rt->unary('-', $_u_posY), $rt->binary('-', $rt->f(80), $_u_posZ, 1, 'float'))), $rt->f(80), 3, 'float'), $rt->f(0.5), 3, 'float'), $size, 3, 'float');
-        $framedUv = $rt->binary('/', $rt->binary('+', $uv, $rt->construct(2, $_u_panX, $_u_panY), 2, 'float'), $rt->component_wise('max', $_u_zoom, $rt->f(0.001)), 2, 'float');
+        $origin = $rt->construct(3, $rt->binary('*', $rt->construct(3, $rt->binary('+', $rt->construct(3, $rt->binary('/', $inverseRotation__vec3->($rt->construct(3, $rt->unary('-', $_u_posX), $rt->unary('-', $_u_posY), $rt->binary('-', $rt->f(80), $_u_posZ, 1, 'float'))), $rt->f(80), 3, 'float')), $rt->f(0.5), 3, 'float')), $size, 3, 'float'));
+        $framedUv = $rt->construct(2, $rt->binary('/', $rt->binary('+', $uv, $rt->construct_raw(2, $_u_panX, $_u_panY), 2, 'float'), $rt->component_wise('max', $_u_zoom, $rt->f(0.001)), 2, 'float'));
         $cameraRay = $rt->construct(3, $rt->binary('/', $rt->binary('*', $framedUv, $rt->f(2), 2, 'float'), $rt->binary('*', $focalLength, $rt->component_wise('max', $_u_viewScale, $rt->f(0.001)), 1, 'float'), 2, 'float'), $rt->unary('-', $rt->f(1)));
-        $direction = $rt->binary('*', $inverseRotation__vec3->($cameraRay), $rt->binary('/', $size, $rt->f(80), 1, 'float'), 3, 'float');
+        $direction = $rt->construct(3, $rt->binary('*', $inverseRotation__vec3->($cameraRay), $rt->binary('/', $size, $rt->f(80), 1, 'float'), 3, 'float'));
         $nearT = $rt->construct(3, $rt->unary('-', $rt->f(1e+30)));
         $farT = $rt->construct(3, $rt->f(1e+30));
         $delta = $rt->construct(3, $rt->f(1e+30));
@@ -231,9 +231,9 @@ my $run_pixel = sub {
             } else {
                 $a = $rt->binary('/', $rt->unary('-', $origin->[int($axis)]), $direction->[int($axis)], 1, 'float');
                 $b = $rt->binary('/', $rt->binary('-', $size, $origin->[int($axis)], 1, 'float'), $direction->[int($axis)], 1, 'float');
-                $nearT->[int($axis)] = $rt->component_wise('min', $a, $b);
-                $farT->[int($axis)] = $rt->component_wise('max', $a, $b);
-                $delta->[int($axis)] = $rt->binary('/', $rt->f(1), $rt->component_wise('abs', $direction->[int($axis)]), 1, 'float');
+                $nearT->[int($axis)] = $rt->f32($rt->component_wise('min', $a, $b));
+                $farT->[int($axis)] = $rt->f32($rt->component_wise('max', $a, $b));
+                $delta->[int($axis)] = $rt->f32($rt->binary('/', $rt->f(1), $rt->component_wise('abs', $direction->[int($axis)]), 1, 'float'));
                 $stepDir->[int($axis)] = (($rt->binary('>', $direction->[int($axis)], $rt->f(0))) ? ($rt->i(1)) : ($rt->unary('-', $rt->i(1))));
             }
         }
@@ -243,7 +243,7 @@ my $run_pixel = sub {
         if ($rt->binary('>=', $distance, $leave)) {
             return;
         }
-        $cell = $rt->component_wise('clamp', $rt->construct(3, $rt->component_wise('floor', $rt->binary('+', $rt->binary('+', $origin, $rt->binary('*', $direction, $distance, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->construct(3, $stepDir), $rt->f(0.0001), 3, 'float'), 3, 'float')), 'int'), $rt->construct(3, $rt->i(0), 'int'), $rt->construct(3, $rt->binary('-', $_u_volumeSize, $rt->i(1), 1, 'int'), 'int'));
+        $cell = $rt->component_wise('clamp', $rt->construct(3, $rt->component_wise('floor', $rt->binary('+', $rt->binary('+', $origin, $rt->binary('*', $direction, $distance, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->construct_raw(3, $rt->construct(3, $stepDir)), $rt->f(0.0001), 3, 'float'), 3, 'float')), 'int'), $rt->construct(3, $rt->i(0), 'int'), $rt->construct(3, $rt->binary('-', $_u_volumeSize, $rt->i(1), 1, 'int'), 'int'));
         $nextT = $rt->construct(3, $rt->f(1e+30));
         $axis = $rt->i(0);
         $_for3_first = 1;
@@ -258,7 +258,7 @@ my $run_pixel = sub {
             $boundary = $rt->f(0.0);
             if ($rt->binary('!=', $stepDir->[int($axis)], $rt->i(0))) {
                 $boundary = $rt->binary('+', $rt->construct(1, $cell->[int($axis)]), (($rt->binary('>', $stepDir->[int($axis)], $rt->i(0))) ? ($rt->f(1)) : ($rt->f(0))), 1, 'float');
-                $nextT->[int($axis)] = $rt->binary('/', $rt->binary('-', $boundary, $origin->[int($axis)], 1, 'float'), $direction->[int($axis)], 1, 'float');
+                $nextT->[int($axis)] = $rt->f32($rt->binary('/', $rt->binary('-', $boundary, $origin->[int($axis)], 1, 'float'), $direction->[int($axis)], 1, 'float'));
             }
         }
         $viewDirection = $rt->normalize($rt->unary('-', $cameraRay));
@@ -326,15 +326,15 @@ my $run_pixel = sub {
                 }
             }
             @{$cell} = @{($rt->binary('+', $cell, $rt->binary('*', $rt->construct(3, $crossed, 'int'), $stepDir, 3, 'int'), 3, 'int'))};
-            @{$nextT} = map { $rt->f32($_) } @{($rt->binary('+', $nextT, $rt->binary('*', $rt->construct(3, $crossed), $delta, 3, 'float'), 3, 'float'))};
+            @{$nextT} = map { $rt->f32($_) } @{($rt->binary('+', $nextT, $rt->binary('*', $rt->construct_raw(3, $rt->construct(3, $crossed)), $delta, 3, 'float'), 3, 'float'))};
         }
     };
     $main__void = sub {
         my ($_for5_first, $aspect, $atlas, $cell, $color, $crossed, $density, $distance, $enter, $fullRes, $hit, $leave, $nearT, $nextT, $normal, $origin, $p, $right, $size, $span, $step, $up, $uv);
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $_u_bgColor, $_u_bgAlpha, 3, 'float'), $_u_bgAlpha))};
         @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(0.5), $rt->f(1), $rt->f(1)))};
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution));
-        $uv = $rt->binary('/', $rt->binary('-', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $rt->binary('*', $fullRes, $rt->f(0.5), 2, 'float'), 2, 'float'), $rt->swizzle($fullRes, 'y'), 2, 'float');
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $rt->binary('*', $fullRes, $rt->f(0.5), 2, 'float'), 2, 'float'), $rt->swizzle($fullRes, 'y'), 2, 'float'));
         $aspect = $rt->f(0.0);
         $cell = $rt->construct(3, 0.0, 'int');
         $distance = $rt->f(0.0);
@@ -356,8 +356,8 @@ my $run_pixel = sub {
             $span = $rt->binary('/', $rt->binary('*', $rt->binary('*', $rt->component_wise('max', $rt->f(1.6329931619), $rt->binary('/', $rt->f(1.4142135624000001), $aspect, 1, 'float')), $size, 1, 'float'), $rt->f(1.0800000000000001), 1, 'float'), $rt->component_wise('max', $_u_zoom, $rt->f(0.001)), 1, 'float');
             $right = $rt->construct(3, $rt->f(0.70710678120000003), $rt->f(0), $rt->unary('-', $rt->f(0.70710678120000003)));
             $up = $rt->construct(3, $rt->unary('-', $rt->f(0.4082482905)), $rt->f(0.81649658089999999), $rt->unary('-', $rt->f(0.4082482905)));
-            $origin = $rt->binary('+', $rt->binary('+', $rt->construct(3, $rt->binary('*', $size, $rt->f(2.5), 1, 'float')), $rt->binary('*', $rt->binary('*', $right, $rt->binary('+', $rt->swizzle($uv, 'x'), $_u_panX, 1, 'float'), 3, 'float'), $span, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->binary('*', $up, $rt->binary('+', $rt->swizzle($uv, 'y'), $_u_panY, 1, 'float'), 3, 'float'), $span, 3, 'float'), 3, 'float');
-            $nearT = $rt->binary('-', $origin, $size, 3, 'float');
+            $origin = $rt->construct(3, $rt->binary('+', $rt->binary('+', $rt->construct_raw(3, $rt->binary('*', $size, $rt->f(2.5), 1, 'float')), $rt->binary('*', $rt->binary('*', $right, $rt->binary('+', $rt->swizzle($uv, 'x'), $_u_panX, 1, 'float'), 3, 'float'), $span, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->binary('*', $up, $rt->binary('+', $rt->swizzle($uv, 'y'), $_u_panY, 1, 'float'), 3, 'float'), $span, 3, 'float'), 3, 'float'));
+            $nearT = $rt->construct(3, $rt->binary('-', $origin, $size, 3, 'float'));
             $enter = $rt->component_wise('max', $rt->component_wise('max', $rt->swizzle($nearT, 'x'), $rt->swizzle($nearT, 'y')), $rt->swizzle($nearT, 'z'));
             $leave = $rt->component_wise('min', $rt->component_wise('min', $rt->swizzle($origin, 'x'), $rt->swizzle($origin, 'y')), $rt->swizzle($origin, 'z'));
             if ($rt->binary('>=', $enter, $leave)) {
@@ -365,7 +365,7 @@ my $run_pixel = sub {
             }
             $distance = $rt->component_wise('max', $enter, $rt->f(0));
             $cell = $rt->component_wise('clamp', $rt->construct(3, $rt->component_wise('floor', $rt->binary('-', $origin, $rt->binary('+', $distance, $rt->f(0.0001), 1, 'float'), 3, 'float')), 'int'), $rt->construct(3, $rt->i(0), 'int'), $rt->construct(3, $rt->binary('-', $_u_volumeSize, $rt->i(1), 1, 'int'), 'int'));
-            $nextT = $rt->binary('-', $origin, $rt->construct(3, $cell), 3, 'float');
+            $nextT = $rt->construct(3, $rt->binary('-', $origin, $rt->construct_raw(3, $rt->construct(3, $cell)), 3, 'float'));
             $normal = $rt->construct(3, $rt->f(0), $rt->f(0), $rt->f(1));
             if ((($rt->binary('>=', $rt->swizzle($nearT, 'y'), $rt->swizzle($nearT, 'x'))) && ($rt->binary('>=', $rt->swizzle($nearT, 'y'), $rt->swizzle($nearT, 'z'))) ? 1 : 0)) {
                 @{$normal} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $rt->f(1), $rt->f(0)))};

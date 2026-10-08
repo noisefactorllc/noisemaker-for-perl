@@ -23,8 +23,8 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($_for0_first, $brightness, $channel, $col, $dk, $edgeWidth, $globalCoord, $gridUv, $k, $key, $keyExact, $keyFrac, $keyLow, $keyRange, $keysPerPixel, $laneEdge, $laneF, $laneLocal, $lanePixels, $laneSep, $maxVel, $noteData, $noteVal, $prev, $prevBright, $scrollAmount, $scrollUv, $spread, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         $scrollAmount = $rt->binary('*', $rt->binary('*', $_u_speed, $_u_deltaTime, 1, 'float'), $rt->f(0.5), 1, 'float');
         $scrollUv = $rt->construct(2, $rt->binary('-', $rt->swizzle($uv, 'x'), $scrollAmount, 1, 'float'), $rt->swizzle($uv, 'y'));
         $prev = $rt->construct(4, $rt->f(0));
@@ -73,7 +73,7 @@ my $run_pixel = sub {
         }
         $prevBright = $rt->component_wise('max', $rt->swizzle($prev, 'r'), $rt->component_wise('max', $rt->swizzle($prev, 'g'), $rt->swizzle($prev, 'b')));
         $brightness = $rt->component_wise('max', $prevBright, $rt->component_wise('max', $noteVal, $laneSep));
-        $col = $rt->binary('*', $_u_lineColor, $brightness, 3, 'float');
+        $col = $rt->construct(3, $rt->binary('*', $_u_lineColor, $brightness, 3, 'float'));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $col, $rt->f(1)))};
     };
     $main__void->();

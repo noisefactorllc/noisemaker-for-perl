@@ -71,7 +71,7 @@ my $run_pixel = sub {
                 }
             }
         }
-        return $rt->binary('+', $rgb, $rt->construct(3, $m, $m, $m), 3, 'float');
+        return $rt->construct(3, $rt->binary('+', $rgb, $rt->construct_raw(3, $m, $m, $m), 3, 'float'));
     };
     $rgb2hsv__vec3 = sub {
         my ($rgb) = @_;
@@ -209,12 +209,12 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($aberrationOffset, $blue, $blueOffset, $centerDist, $color, $diff, $distort, $globalCoord, $green, $hsv, $lensedCoords, $red, $redOffset, $t, $uv, $zoom);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         $color = $rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(1));
-        $diff = $rt->binary('-', $rt->f(0.5), $uv, 2, 'float');
+        $diff = $rt->construct(2, $rt->binary('-', $rt->f(0.5), $uv, 2, 'float'));
         if ($_u_aspectLens) {
-            @{$diff} = map { $rt->f32($_) } @{($rt->binary('-', $rt->construct(2, $rt->binary('/', $rt->binary('*', $rt->f(0.5), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float'), $rt->f(0.5)), $rt->construct(2, $rt->binary('/', $rt->binary('*', $rt->swizzle($uv, 'x'), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float'), $rt->swizzle($uv, 'y')), 2, 'float'))};
+            @{$diff} = map { $rt->f32($_) } @{($rt->binary('-', $rt->construct_raw(2, $rt->binary('/', $rt->binary('*', $rt->f(0.5), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float'), $rt->f(0.5)), $rt->construct_raw(2, $rt->binary('/', $rt->binary('*', $rt->swizzle($uv, 'x'), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float'), $rt->swizzle($uv, 'y')), 2, 'float'))};
         }
         $centerDist = $_distance__vec2_vec2->($diff, $uv);
         $distort = $rt->f(0);
@@ -236,24 +236,24 @@ my $run_pixel = sub {
         $hsv = $rt->construct(3, $rt->f(1));
         $t = (($_u_modulate) ? ($_u_time) : ($rt->f(0)));
         if ($rt->binary('==', $_u_mode, $rt->i(0))) {
-            @{$color} = map { $rt->f32($_) } @{($rt->binary('-', $rt->construct(4, $rt->swizzle($red, 'r'), $rt->swizzle($green, 'g'), $rt->swizzle($blue, 'b'), $rt->swizzle($color, 'a')), $green, 4, 'float'))};
+            @{$color} = map { $rt->f32($_) } @{($rt->binary('-', $rt->construct_raw(4, $rt->swizzle($red, 'r'), $rt->swizzle($green, 'g'), $rt->swizzle($blue, 'b'), $rt->swizzle($color, 'a')), $green, 4, 'float'))};
             $color = $rt->assign_swizzle($color, 'a', $rt->swizzle($green, 'a'));
             @{$hsv} = map { $rt->f32($_) } @{($rgb2hsv__vec3->($rt->swizzle($color, 'rgb')))};
-            $hsv->[int($rt->i(0))] = $rt->component_wise('fract', $rt->binary('+', $rt->binary('+', $rt->binary('+', $hsv->[int($rt->i(0))], $rt->binary('-', $rt->f(1), $rt->binary('/', $_u_hueRotation, $rt->f(360), 1, 'float'), 1, 'float'), 1, 'float'), $rt->binary('*', $rt->binary('*', $hsv->[int($rt->i(0))], $_u_hueRange, 1, 'float'), $rt->f(0.01), 1, 'float'), 1, 'float'), $t, 1, 'float'));
-            $hsv->[int($rt->i(1))] = $rt->f(1);
+            $hsv->[int($rt->i(0))] = $rt->f32($rt->component_wise('fract', $rt->binary('+', $rt->binary('+', $rt->binary('+', $hsv->[int($rt->i(0))], $rt->binary('-', $rt->f(1), $rt->binary('/', $_u_hueRotation, $rt->f(360), 1, 'float'), 1, 'float'), 1, 'float'), $rt->binary('*', $rt->binary('*', $hsv->[int($rt->i(0))], $_u_hueRange, 1, 'float'), $rt->f(0.01), 1, 'float'), 1, 'float'), $t, 1, 'float')));
+            $hsv->[int($rt->i(1))] = $rt->f32($rt->f(1));
         } else {
-            @{$color} = map { $rt->f32($_) } @{($rt->binary('*', $rt->construct(4, $rt->length($rt->binary('-', $rt->construct(4, $rt->swizzle($red, 'r'), $rt->swizzle($green, 'g'), $rt->swizzle($blue, 'b'), $rt->swizzle($color, 'a')), $green, 4, 'float'))), $green, 4, 'float'))};
+            @{$color} = map { $rt->f32($_) } @{($rt->binary('*', $rt->construct_raw(4, $rt->length($rt->binary('-', $rt->construct_raw(4, $rt->swizzle($red, 'r'), $rt->swizzle($green, 'g'), $rt->swizzle($blue, 'b'), $rt->swizzle($color, 'a')), $green, 4, 'float'))), $green, 4, 'float'))};
             $color = $rt->assign_swizzle($color, 'a', $rt->swizzle($green, 'a'));
             @{$hsv} = map { $rt->f32($_) } @{($rgb2hsv__vec3->($rt->swizzle($color, 'rgb')))};
-            $hsv->[int($rt->i(0))] = $rt->component_wise('fract', $rt->binary('+', $rt->binary('*', $rt->binary('+', $rt->binary('+', $hsv->[int($rt->i(0))], $rt->f(0.125), 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('/', $_u_hueRotation, $rt->f(360), 1, 'float'), 1, 'float'), 1, 'float'), $rt->binary('+', $rt->f(2), $rt->binary('*', $_u_hueRange, $rt->f(0.050000000000000003), 1, 'float'), 1, 'float'), 1, 'float'), $t, 1, 'float'));
-            $hsv->[int($rt->i(1))] = $rt->f(1);
+            $hsv->[int($rt->i(0))] = $rt->f32($rt->component_wise('fract', $rt->binary('+', $rt->binary('*', $rt->binary('+', $rt->binary('+', $hsv->[int($rt->i(0))], $rt->f(0.125), 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('/', $_u_hueRotation, $rt->f(360), 1, 'float'), 1, 'float'), 1, 'float'), $rt->binary('+', $rt->f(2), $rt->binary('*', $_u_hueRange, $rt->f(0.050000000000000003), 1, 'float'), 1, 'float'), 1, 'float'), $t, 1, 'float')));
+            $hsv->[int($rt->i(1))] = $rt->f32($rt->f(1));
         }
-        $green = $rt->assign_swizzle($green, 'rgb', $rt->binary('*', $saturate__vec3->($rt->swizzle($green, 'rgb')), $map__float_float_float_float_float->($_u_passthru, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(2)), 3, 'float'));
+        $green = $rt->assign_swizzle($green, 'rgb', $rt->construct(3, $rt->binary('*', $saturate__vec3->($rt->swizzle($green, 'rgb')), $map__float_float_float_float_float->($_u_passthru, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(2)), 3, 'float')));
         if ($rt->binary('==', $_u_blendMode, $rt->i(0))) {
-            $color = $rt->assign_swizzle($color, 'rgb', $rt->component_wise('min', $rt->binary('+', $rt->swizzle($green, 'rgb'), $hsv2rgb__vec3->($hsv), 3, 'float'), $rt->f(1)));
+            $color = $rt->assign_swizzle($color, 'rgb', $rt->component_wise('min', $rt->construct(3, $rt->binary('+', $rt->swizzle($green, 'rgb'), $hsv2rgb__vec3->($hsv), 3, 'float')), $rt->f(1)));
         } else {
             if ($rt->binary('==', $_u_blendMode, $rt->i(1))) {
-                $color = $rt->assign_swizzle($color, 'rgb', $rt->component_wise('min', $rt->binary('+', $rt->component_wise('max', $rt->binary('-', $rt->swizzle($green, 'rgb'), $rt->construct(3, $hsv->[int($rt->i(2))]), 3, 'float'), $rt->f(0)), $hsv2rgb__vec3->($hsv), 3, 'float'), $rt->f(1)));
+                $color = $rt->assign_swizzle($color, 'rgb', $rt->component_wise('min', $rt->construct(3, $rt->binary('+', $rt->component_wise('max', $rt->binary('-', $rt->swizzle($green, 'rgb'), $rt->construct_raw(3, $hsv->[int($rt->i(2))]), 3, 'float'), $rt->f(0)), $hsv2rgb__vec3->($hsv), 3, 'float')), $rt->f(1)));
             }
         }
         $color = $rt->assign_swizzle($color, 'rgb', $rt->component_wise('mix', $rt->swizzle($color, 'rgb'), (($rt->binary('==', $rt->swizzle($color, 'rgb'), $rt->construct(3, $rt->f(1)))) ? ($rt->swizzle($color, 'rgb')) : ($rt->component_wise('min', $rt->binary('/', $rt->binary('*', $_u_tint, $_u_tint, 3, 'float'), $rt->binary('-', $rt->f(1), $rt->swizzle($color, 'rgb'), 3, 'float'), 3, 'float'), $rt->construct(3, $rt->f(1))))), $rt->binary('*', $_u_alpha, $rt->f(0.01), 1, 'float')));

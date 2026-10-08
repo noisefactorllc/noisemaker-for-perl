@@ -26,11 +26,11 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_g, $b, $globalCoord, $r, $st);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $st = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $r = $rt->binary('/', $rt->binary('*', $luminance__vec4->($rt->texture($_u_rTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_rTex)), 2, 'float'))), $_u_rLevel, 1, 'float'), $rt->f(100), 1, 'float');
-        $_g = $rt->binary('/', $rt->binary('*', $luminance__vec4->($rt->texture($_u_gTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_gTex)), 2, 'float'))), $_u_gLevel, 1, 'float'), $rt->f(100), 1, 'float');
-        $b = $rt->binary('/', $rt->binary('*', $luminance__vec4->($rt->texture($_u_bTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_bTex)), 2, 'float'))), $_u_bLevel, 1, 'float'), $rt->f(100), 1, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $st = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $r = $rt->binary('/', $rt->binary('*', $luminance__vec4->($rt->texture($_u_rTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_rTex)), 2, 'float')))), $_u_rLevel, 1, 'float'), $rt->f(100), 1, 'float');
+        $_g = $rt->binary('/', $rt->binary('*', $luminance__vec4->($rt->texture($_u_gTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_gTex)), 2, 'float')))), $_u_gLevel, 1, 'float'), $rt->f(100), 1, 'float');
+        $b = $rt->binary('/', $rt->binary('*', $luminance__vec4->($rt->texture($_u_bTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_bTex)), 2, 'float')))), $_u_bLevel, 1, 'float'), $rt->f(100), 1, 'float');
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $r, $_g, $b, $rt->f(1)))};
     };
     $main__void->();

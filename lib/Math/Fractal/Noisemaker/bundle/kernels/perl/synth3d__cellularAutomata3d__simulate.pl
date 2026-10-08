@@ -25,7 +25,7 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.10000000000000001), 1, 'float'), 3, 'float'))};
-        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('fract', $rt->binary('*', $p, $rt->construct(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float')))};
+        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('fract', $rt->binary('*', $p, $rt->construct_raw(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float')))};
         @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->dot($p, $rt->binary('+', $rt->swizzle($p, 'yxz'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
         return $rt->component_wise('fract', $rt->binary('*', $rt->binary('+', $rt->swizzle($p, 'x'), $rt->swizzle($p, 'y'), 1, 'float'), $rt->swizzle($p, 'z'), 1, 'float'));
     };

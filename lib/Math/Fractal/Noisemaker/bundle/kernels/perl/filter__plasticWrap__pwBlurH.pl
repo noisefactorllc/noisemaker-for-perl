@@ -15,7 +15,7 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($_for0_first, $dirPx, $fTaps, $i, $o, $radius, $sigma, $sum, $uv, $w, $wsum);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $dirPx = $rt->construct(2, $rt->f(1), $rt->f(0));
         $radius = $rt->component_wise('mix', $rt->f(12), $rt->f(2), $rt->binary('/', $_u_detail, $rt->f(100), 1, 'float'));
         $sigma = $rt->component_wise('max', $rt->binary('*', $radius, $rt->f(0.5), 1, 'float'), $rt->f(0.001));
@@ -36,8 +36,8 @@ my $run_pixel = sub {
                 last;
             }
             $w = $rt->component_wise('exp', $rt->binary('/', $rt->unary('-', $rt->construct(1, $rt->binary('*', $i, $i, 1, 'int'))), $rt->binary('*', $rt->binary('*', $rt->f(2), $sigma, 1, 'float'), $sigma, 1, 'float'), 1, 'float'));
-            $o = $rt->binary('/', $rt->binary('*', $dirPx, $rt->construct(1, $i), 2, 'float'), $_u_resolution, 2, 'float');
-            @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->binary('*', $rt->binary('+', $rt->texture($_u_inputTex, $rt->binary('+', $uv, $o, 2, 'float')), $rt->texture($_u_inputTex, $rt->binary('-', $uv, $o, 2, 'float')), 4, 'float'), $w, 4, 'float'), 4, 'float'))};
+            $o = $rt->construct(2, $rt->binary('/', $rt->binary('*', $dirPx, $rt->construct(1, $i), 2, 'float'), $_u_resolution, 2, 'float'));
+            @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->binary('*', $rt->construct(4, $rt->binary('+', $rt->texture($_u_inputTex, $rt->binary('+', $uv, $o, 2, 'float')), $rt->texture($_u_inputTex, $rt->binary('-', $uv, $o, 2, 'float')), 4, 'float')), $w, 4, 'float'), 4, 'float'))};
             $wsum = $rt->binary('+', $wsum, $rt->binary('*', $rt->f(2), $w, 1, 'float'), 1, 'float');
         }
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('/', $sum, $wsum, 4, 'float'))};

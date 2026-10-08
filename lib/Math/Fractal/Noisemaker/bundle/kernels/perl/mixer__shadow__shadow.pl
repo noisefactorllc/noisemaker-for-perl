@@ -41,10 +41,10 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_for0_first, $_for1_first, $baseColor, $blurPixels, $dist2, $fgMask, $fgSample, $globalCoord, $localUV, $maskSample, $maskUV, $offset, $result, $sampleUV, $shadowMask, $sigma, $sigma2, $thresholded, $totalWeight, $uv, $weight, $withShadow, $wrappedUV, $x, $y);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $baseColor = (($rt->binary('==', $_u_maskSource, $rt->i(0))) ? ($rt->texture($_u_tex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float'))) : ($rt->texture($_u_inputTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'))));
-        $maskUV = $rt->binary('-', $uv, $rt->binary('*', $rt->binary('*', $rt->construct(2, $_u_offsetX, $_u_offsetY), $rt->f(0.10000000000000001), 2, 'float'), $_u_renderScale, 2, 'float'), 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $baseColor = $rt->construct(4, (($rt->binary('==', $_u_maskSource, $rt->i(0))) ? ($rt->texture($_u_tex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float')))) : ($rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'))))));
+        $maskUV = $rt->construct(2, $rt->binary('-', $uv, $rt->binary('*', $rt->binary('*', $rt->construct_raw(2, $_u_offsetX, $_u_offsetY), $rt->f(0.10000000000000001), 2, 'float'), $_u_renderScale, 2, 'float'), 2, 'float'));
         $shadowMask = $rt->f(0);
         $totalWeight = $rt->f(0);
         $blurPixels = $rt->component_wise('min', $rt->binary('*', $_u_blur, $_u_renderScale, 1, 'float'), $rt->f(256));
@@ -70,21 +70,21 @@ my $run_pixel = sub {
                 if (!($rt->binary('<=', $y, $rt->i(5)))) {
                     last;
                 }
-                $offset = $rt->binary('/', $rt->binary('*', $rt->construct(2, $rt->construct(1, $x), $rt->construct(1, $y)), $blurPixels, 2, 'float'), $_u_resolution, 2, 'float');
-                $sampleUV = $rt->binary('+', $maskUV, $offset, 2, 'float');
-                $localUV = $rt->binary('/', $rt->binary('-', $rt->binary('*', $sampleUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float');
+                $offset = $rt->construct(2, $rt->binary('/', $rt->binary('*', $rt->construct_raw(2, $rt->construct(1, $x), $rt->construct(1, $y)), $blurPixels, 2, 'float'), $_u_resolution, 2, 'float'));
+                $sampleUV = $rt->construct(2, $rt->binary('+', $maskUV, $offset, 2, 'float'));
+                $localUV = $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $sampleUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
                 $thresholded = $rt->f(0);
                 $maskSample = $rt->construct(4, 0.0);
                 $wrappedUV = $rt->construct(2, 0.0);
                 if ($rt->binary('==', $_u_wrap, $rt->i(0))) {
                     if ((((((($rt->binary('>=', $rt->swizzle($localUV, 'x'), $rt->f(0))) && ($rt->binary('<=', $rt->swizzle($localUV, 'x'), $rt->f(1))) ? 1 : 0)) && ($rt->binary('>=', $rt->swizzle($localUV, 'y'), $rt->f(0))) ? 1 : 0)) && ($rt->binary('<=', $rt->swizzle($localUV, 'y'), $rt->f(1))) ? 1 : 0)) {
-                        $maskSample = (($rt->binary('==', $_u_maskSource, $rt->i(0))) ? ($rt->texture($_u_inputTex, $localUV)) : ($rt->texture($_u_tex, $localUV)));
+                        $maskSample = $rt->construct(4, (($rt->binary('==', $_u_maskSource, $rt->i(0))) ? ($rt->texture($_u_inputTex, $localUV)) : ($rt->texture($_u_tex, $localUV))));
                         $thresholded = $rt->component_wise('step', $_u_threshold, $getChannel__vec4_int->($maskSample, $_u_sourceChannel));
                     }
                 } else {
                     $wrappedUV = $rt->fresh($localUV);
                     if ($rt->binary('==', $_u_wrap, $rt->i(1))) {
-                        @{$wrappedUV} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $localUV, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
+                        @{$wrappedUV} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $localUV, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
                     } else {
                         if ($rt->binary('==', $_u_wrap, $rt->i(2))) {
                             @{$wrappedUV} = map { $rt->f32($_) } @{($rt->component_wise('fract', $localUV))};
@@ -92,7 +92,7 @@ my $run_pixel = sub {
                             @{$wrappedUV} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $localUV, $rt->f(0), $rt->f(1)))};
                         }
                     }
-                    $maskSample = (($rt->binary('==', $_u_maskSource, $rt->i(0))) ? ($rt->texture($_u_inputTex, $wrappedUV)) : ($rt->texture($_u_tex, $wrappedUV)));
+                    $maskSample = $rt->construct(4, (($rt->binary('==', $_u_maskSource, $rt->i(0))) ? ($rt->texture($_u_inputTex, $wrappedUV)) : ($rt->texture($_u_tex, $wrappedUV))));
                     $thresholded = $rt->component_wise('step', $_u_threshold, $getChannel__vec4_int->($maskSample, $_u_sourceChannel));
                 }
                 $dist2 = $rt->construct(1, $rt->binary('+', $rt->binary('*', $x, $x, 1, 'int'), $rt->binary('*', $y, $y, 1, 'int'), 1, 'int'));
@@ -104,7 +104,7 @@ my $run_pixel = sub {
         $shadowMask = $rt->binary('/', $shadowMask, $totalWeight, 1, 'float');
         $shadowMask = $rt->component_wise('clamp', $rt->binary('*', $shadowMask, $rt->binary('+', $rt->f(1), $_u_spread, 1, 'float'), 1, 'float'), $rt->f(0), $rt->f(1));
         $withShadow = $rt->component_wise('mix', $rt->swizzle($baseColor, 'rgb'), $_u_color, $shadowMask);
-        $fgSample = (($rt->binary('==', $_u_maskSource, $rt->i(0))) ? ($rt->texture($_u_inputTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'))) : ($rt->texture($_u_tex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float'))));
+        $fgSample = $rt->construct(4, (($rt->binary('==', $_u_maskSource, $rt->i(0))) ? ($rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')))) : ($rt->texture($_u_tex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float'))))));
         $fgMask = $rt->component_wise('step', $_u_threshold, $getChannel__vec4_int->($fgSample, $_u_sourceChannel));
         $result = $rt->component_wise('mix', $withShadow, $rt->swizzle($fgSample, 'rgb'), $fgMask);
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($baseColor, 'a')))};

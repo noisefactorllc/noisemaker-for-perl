@@ -17,11 +17,11 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($inputColor, $outAlpha, $outRGB, $outRGB_pre, $scaledInput, $t, $trail, $trailColor, $trailPresence, $uv);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $inputColor = $rt->texture($_u_inputTex, $uv);
         $trailColor = $rt->texture($_u_trailTex, $uv);
         $t = $rt->binary('/', $_u_inputIntensity, $rt->f(100), 1, 'float');
-        $scaledInput = $rt->binary('*', $inputColor, $t, 4, 'float');
+        $scaledInput = $rt->construct(4, $rt->binary('*', $inputColor, $t, 4, 'float'));
         $outRGB = $rt->construct(3, 0.0);
         $outAlpha = $rt->f(0.0);
         $outRGB_pre = $rt->construct(3, 0.0);
@@ -29,7 +29,7 @@ my $run_pixel = sub {
         $trailPresence = $rt->f(0.0);
         if ($rt->binary('==', $_u_blendMode, $rt->i(1))) {
             $outAlpha = $rt->binary('+', $rt->swizzle($trailColor, 'a'), $rt->binary('*', $rt->swizzle($scaledInput, 'a'), $rt->binary('-', $rt->f(1), $rt->swizzle($trailColor, 'a'), 1, 'float'), 1, 'float'), 1, 'float');
-            $outRGB_pre = $rt->binary('+', $rt->swizzle($trailColor, 'rgb'), $rt->binary('*', $rt->binary('*', $rt->swizzle($scaledInput, 'rgb'), $rt->swizzle($scaledInput, 'a'), 3, 'float'), $rt->binary('-', $rt->f(1), $rt->swizzle($trailColor, 'a'), 1, 'float'), 3, 'float'), 3, 'float');
+            $outRGB_pre = $rt->construct(3, $rt->binary('+', $rt->swizzle($trailColor, 'rgb'), $rt->binary('*', $rt->binary('*', $rt->swizzle($scaledInput, 'rgb'), $rt->swizzle($scaledInput, 'a'), 3, 'float'), $rt->binary('-', $rt->f(1), $rt->swizzle($trailColor, 'a'), 1, 'float'), 3, 'float'), 3, 'float'));
             @{$outRGB} = map { $rt->f32($_) } @{((($rt->binary('>', $outAlpha, $rt->f(0))) ? ($rt->binary('/', $outRGB_pre, $outAlpha, 3, 'float')) : ($rt->construct(3, $rt->f(0)))))};
         } else {
             $trail = $rt->component_wise('clamp', $rt->swizzle($trailColor, 'rgb'), $rt->f(0), $rt->f(1));

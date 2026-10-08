@@ -370,3 +370,5 @@ lib/Math/Fractal/Noisemaker/JsTrig.pm
 t/23-osc-automation.t
 t/data/osc-automation-golden.json
 t/24-external-input.t
+t/25-rounding-model.t
+t/data/rounding-model.json

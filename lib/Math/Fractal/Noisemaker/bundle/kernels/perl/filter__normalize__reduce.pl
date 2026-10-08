@@ -15,7 +15,7 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($_for0_first, $_for1_first, $baseCoord, $color, $dx, $dy, $globalCoord, $inSize, $maxVal, $minVal, $outCoord, $pixelMax, $pixelMin, $sampleCoord);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $outCoord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $inSize = $rt->texture_size($_u_inputTex);
         $baseCoord = $rt->binary('*', $outCoord, $rt->i(16), 2, 'int');

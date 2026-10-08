@@ -52,7 +52,7 @@ my $run_pixel = sub {
     $prng__vec3 = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
-        return $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float');
+        return $rt->construct(3, $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float'));
     };
     $rotate2D__vec2_float = sub {
         my ($st, $rot) = @_;
@@ -77,7 +77,7 @@ my $run_pixel = sub {
         $lattice = $rt->construct(2, $rt->binary('*', $rt->swizzle($st, 'x'), $xFreq, 1, 'float'), $rt->binary('*', $rt->swizzle($st, 'y'), $yFreq, 1, 'float'));
         $baseFloor = $rt->component_wise('floor', $lattice);
         $base = $rt->binary('+', $rt->construct(2, $baseFloor, 'int'), $offset, 2, 'int');
-        $frac = $rt->binary('-', $lattice, $baseFloor, 2, 'float');
+        $frac = $rt->construct(2, $rt->binary('-', $lattice, $baseFloor, 2, 'float'));
         $seedInt = $rt->construct(1, $rt->component_wise('floor', $s), 'int');
         $seedFrac = $rt->component_wise('fract', $s);
         $xCombined = $rt->binary('+', $rt->swizzle($frac, 'x'), $seedFrac, 1, 'float');
@@ -305,7 +305,7 @@ my $run_pixel = sub {
                 }
             }
         }
-        return $rt->binary('+', $rgb, $rt->construct(3, $m, $m, $m), 3, 'float');
+        return $rt->construct(3, $rt->binary('+', $rgb, $rt->construct_raw(3, $m, $m, $m), 3, 'float'));
     };
     $rgb2hsv__vec3 = sub {
         my ($rgb) = @_;
@@ -456,7 +456,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($color, $globalCoord, $st);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $color = $rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(1));
         $st = $rt->fresh($globalCoord);
         if ($rt->binary('==', $_u_MODE, $rt->i(0))) {

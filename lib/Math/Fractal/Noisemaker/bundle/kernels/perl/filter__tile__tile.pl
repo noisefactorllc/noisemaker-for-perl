@@ -39,10 +39,10 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         my ($a, $b, $h, $s);
         $s = $rt->construct(2, $rt->f(1), $rt->f(1.7320507999999999));
-        $h = $rt->binary('*', $s, $rt->f(0.5), 2, 'float');
-        $a = $rt->binary('-', $rt->component_wise('mod', $uv, $s), $h, 2, 'float');
-        $b = $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $h, 2, 'float'), $s), $h, 2, 'float');
-        return (($rt->binary('<', $rt->dot($a, $a), $rt->dot($b, $b))) ? ($a) : ($b));
+        $h = $rt->construct(2, $rt->binary('*', $s, $rt->f(0.5), 2, 'float'));
+        $a = $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $uv, $s), $h, 2, 'float'));
+        $b = $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $h, 2, 'float'), $s), $h, 2, 'float'));
+        return $rt->construct(2, (($rt->binary('<', $rt->dot($a, $a), $rt->dot($b, $b))) ? ($a) : ($b)));
     };
     $rotationalFold__vec2_int = sub {
         my ($uv, $n) = @_;
@@ -50,21 +50,21 @@ my $run_pixel = sub {
         my ($a, $fn, $p, $r, $sectorAngle);
         $fn = $rt->construct(1, $n);
         $sectorAngle = $rt->binary('/', $g->{TAU}, $fn, 1, 'float');
-        $p = $rt->binary('-', $uv, $rt->f(0.5), 2, 'float');
+        $p = $rt->construct(2, $rt->binary('-', $uv, $rt->f(0.5), 2, 'float'));
         $a = $rt->component_wise('atan', $rt->swizzle($p, 'y'), $rt->swizzle($p, 'x'));
         $r = $rt->length($p);
         $a = $rt->component_wise('mod', $rt->component_wise('mod', $rt->binary('+', $a, $g->{TAU}, 1, 'float'), $g->{TAU}), $sectorAngle);
         if ($rt->binary('>', $a, $rt->binary('*', $sectorAngle, $rt->f(0.5), 1, 'float'))) {
             $a = $rt->binary('-', $sectorAngle, $a, 1, 'float');
         }
-        return $rt->binary('+', $rt->construct(2, $rt->binary('*', $r, $rt->component_wise('cos', $a), 1, 'float'), $rt->binary('*', $r, $rt->component_wise('sin', $a), 1, 'float')), $rt->f(0.5), 2, 'float');
+        return $rt->construct(2, $rt->binary('+', $rt->construct_raw(2, $rt->binary('*', $r, $rt->component_wise('cos', $a), 1, 'float'), $rt->binary('*', $r, $rt->component_wise('sin', $a), 1, 'float')), $rt->f(0.5), 2, 'float'));
     };
     $main__void = sub {
         my ($aspect, $effectiveScale, $globalCoord, $globalUV, $local, $localUV, $rep, $st);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $globalUV = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $globalUV = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         $aspect = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
-        $st = $rt->binary('-', $globalUV, $rt->f(0.5), 2, 'float');
+        $st = $rt->construct(2, $rt->binary('-', $globalUV, $rt->f(0.5), 2, 'float'));
         if ($_u_aspectLens) {
             $st = $rt->assign_swizzle($st, 'x', $rt->binary('*', $rt->swizzle($st, 'x'), $aspect, 1, 'float'));
         }
@@ -73,19 +73,19 @@ my $run_pixel = sub {
             $st = $rt->assign_swizzle($st, 'x', $rt->binary('/', $rt->swizzle($st, 'x'), $aspect, 1, 'float'));
         }
         @{$st} = map { $rt->f32($_) } @{($rt->binary('+', $st, $rt->f(0.5), 2, 'float'))};
-        $rep = (($_u_aspectLens) ? ($rt->construct(2, $rt->binary('*', $_u_repeat, $aspect, 1, 'float'), $_u_repeat)) : ($rt->construct(2, $_u_repeat)));
+        $rep = $rt->construct(2, (($_u_aspectLens) ? ($rt->construct(2, $rt->binary('*', $_u_repeat, $aspect, 1, 'float'), $_u_repeat)) : ($rt->construct(2, $_u_repeat))));
         $effectiveScale = $rt->f(0.0);
         $local = $rt->construct(2, 0.0);
         if ($rt->binary('==', $_u_symmetry, $rt->i(3))) {
-            $local = $hexCoord__vec2->($rt->binary('*', $rt->binary('+', $st, $rt->construct(2, $_u_offsetX, $_u_offsetY), 2, 'float'), $rep, 2, 'float'));
+            $local = $hexCoord__vec2->($rt->construct(2, $rt->binary('*', $rt->binary('+', $st, $rt->construct_raw(2, $_u_offsetX, $_u_offsetY), 2, 'float'), $rep, 2, 'float')));
             @{$local} = map { $rt->f32($_) } @{($rt->binary('/', $local, $_u_scale, 2, 'float'))};
-            @{$st} = map { $rt->f32($_) } @{($rotationalFold__vec2_int->($rt->binary('+', $local, $rt->f(0.5), 2, 'float'), $rt->i(6)))};
+            @{$st} = map { $rt->f32($_) } @{($rotationalFold__vec2_int->($rt->construct(2, $rt->binary('+', $local, $rt->f(0.5), 2, 'float')), $rt->i(6)))};
         } else {
             @{$st} = map { $rt->f32($_) } @{($rt->binary('*', $st, $rep, 2, 'float'))};
             @{$st} = map { $rt->f32($_) } @{($rt->component_wise('fract', $st))};
             $effectiveScale = (($rt->binary('==', $_u_symmetry, $rt->i(0))) ? ($rt->binary('*', $_u_scale, $rt->f(0.5), 1, 'float')) : ($_u_scale));
             @{$st} = map { $rt->f32($_) } @{($rt->binary('/', $rt->binary('-', $st, $rt->f(0.5), 2, 'float'), $effectiveScale, 2, 'float'))};
-            @{$st} = map { $rt->f32($_) } @{($rt->binary('+', $st, $rt->binary('+', $rt->f(0.5), $rt->construct(2, $_u_offsetX, $_u_offsetY), 2, 'float'), 2, 'float'))};
+            @{$st} = map { $rt->f32($_) } @{($rt->binary('+', $st, $rt->binary('+', $rt->f(0.5), $rt->construct_raw(2, $_u_offsetX, $_u_offsetY), 2, 'float'), 2, 'float'))};
             if ($rt->binary('==', $_u_symmetry, $rt->i(0))) {
                 $st = $rt->assign_swizzle($st, 'x', $mirrorFold__float->($rt->swizzle($st, 'x')));
                 $st = $rt->assign_swizzle($st, 'y', $mirrorFold__float->($rt->swizzle($st, 'y')));

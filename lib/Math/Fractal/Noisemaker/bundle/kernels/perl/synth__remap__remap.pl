@@ -53,8 +53,8 @@ my $run_pixel = sub {
         $b = $rt->copy($b, 'float');
         $q = $rt->copy($q, 'float');
         my ($c, $e, $r, $s, $w);
-        $e = $rt->binary('-', $b, $a, 2, 'float');
-        $w = $rt->binary('-', $q, $a, 2, 'float');
+        $e = $rt->construct(2, $rt->binary('-', $b, $a, 2, 'float'));
+        $w = $rt->construct(2, $rt->binary('-', $q, $a, 2, 'float'));
         $c = $rt->construct(3, $rt->binary('>=', $rt->swizzle($q, 'y'), $rt->swizzle($a, 'y')), $rt->binary('<', $rt->swizzle($q, 'y'), $rt->swizzle($b, 'y')), $rt->binary('>', $rt->binary('*', $rt->swizzle($e, 'x'), $rt->swizzle($w, 'y'), 1, 'float'), $rt->binary('*', $rt->swizzle($e, 'y'), $rt->swizzle($w, 'x'), 1, 'float')));
         if ((($rt->component_wise('all', $c)) || ((($rt->component_wise('any', $c)) ? 0 : 1)) ? 1 : 0)) {
             $t->[0] = (($t->[0]) ? 0 : 1);
@@ -63,7 +63,7 @@ my $run_pixel = sub {
         $s = $rt->f(0.0);
         if ($needDist) {
             $s = $rt->component_wise('clamp', $rt->binary('/', $rt->dot($w, $e), $rt->component_wise('max', $rt->dot($e, $e), $rt->f(9.9999999999999995e-07)), 1, 'float'), $rt->f(0), $rt->f(1));
-            $r = $rt->binary('-', $w, $rt->binary('*', $e, $s, 2, 'float'), 2, 'float');
+            $r = $rt->construct(2, $rt->binary('-', $w, $rt->binary('*', $e, $s, 2, 'float'), 2, 'float'));
             $t->[1] = $rt->component_wise('min', $t->[1], $rt->dot($r, $r));
         }
         return $t;
@@ -75,7 +75,7 @@ my $run_pixel = sub {
         $t = [0, $rt->f(1e+30)];
         $last = $rt->binary('-', $n, $rt->i(1), 1, 'int');
         $lastPack = $_u_data->[int($rt->binary('+', $base, $rt->binary('/', $last, $rt->i(2), 1, 'int'), 1, 'int'))];
-        $prev = $rt->binary('*', (($rt->binary('==', $rt->binary('%', $last, $rt->i(2), 1, 'int'), $rt->i(0))) ? ($rt->swizzle($lastPack, 'xy')) : ($rt->swizzle($lastPack, 'zw'))), $_u_fullResolution, 2, 'float');
+        $prev = $rt->construct(2, $rt->binary('*', (($rt->binary('==', $rt->binary('%', $last, $rt->i(2), 1, 'int'), $rt->i(0))) ? ($rt->swizzle($lastPack, 'xy')) : ($rt->swizzle($lastPack, 'zw'))), $_u_fullResolution, 2, 'float'));
         $pairs = $rt->binary('/', $rt->binary('+', $n, $rt->i(1), 1, 'int'), $rt->i(2), 1, 'int');
         $pair = $rt->i(0);
         $_for0_first = 1;
@@ -91,12 +91,12 @@ my $run_pixel = sub {
                 last;
             }
             $pack = $_u_data->[int($rt->binary('+', $base, $pair, 1, 'int'))];
-            $v0 = $rt->binary('*', $rt->swizzle($pack, 'xy'), $_u_fullResolution, 2, 'float');
+            $v0 = $rt->construct(2, $rt->binary('*', $rt->swizzle($pack, 'xy'), $_u_fullResolution, 2, 'float'));
             $t = $testEdge__struct1_vec2_vec2_vec2_bool->($t, $v0, $prev, $q, $needDist);
             @{$prev} = map { $rt->f32($_) } @{($v0)};
             $v1 = $rt->construct(2, 0.0);
             if ($rt->binary('<', $rt->binary('+', $rt->binary('*', $pair, $rt->i(2), 1, 'int'), $rt->i(1), 1, 'int'), $n)) {
-                $v1 = $rt->binary('*', $rt->swizzle($pack, 'zw'), $_u_fullResolution, 2, 'float');
+                $v1 = $rt->construct(2, $rt->binary('*', $rt->swizzle($pack, 'zw'), $_u_fullResolution, 2, 'float'));
                 $t = $testEdge__struct1_vec2_vec2_vec2_bool->($t, $v1, $prev, $q, $needDist);
                 @{$prev} = map { $rt->f32($_) } @{($v1)};
             }
@@ -105,16 +105,16 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_for1_first, $activeCount, $base, $bounds, $controls, $coverage, $dilate, $featherPx, $globalPx, $header, $k, $n, $needDist, $p, $q, $result, $sampleUv, $src, $t, $z, $zoneMeta);
-        $globalPx = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalPx = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $q = $rt->construct(2, $rt->swizzle($globalPx, 'x'), $rt->binary('-', $rt->swizzle($_u_fullResolution, 'y'), $rt->swizzle($globalPx, 'y'), 1, 'float'));
-        $p = $rt->binary('/', $q, $_u_fullResolution, 2, 'float');
-        $sampleUv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->swizzle($_u_data->[int($rt->i(266))], 'xy'), 2, 'float');
+        $p = $rt->construct(2, $rt->binary('/', $q, $_u_fullResolution, 2, 'float'));
+        $sampleUv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->swizzle($_u_data->[int($rt->i(266))], 'xy'), 2, 'float'));
         $header = $_u_data->[int($rt->i(0))];
         $controls = $_u_data->[int($rt->i(1))];
         $activeCount = $rt->component_wise('min', $rt->construct(1, $rt->swizzle($controls, 'x'), 'int'), $rt->i(8));
         $featherPx = $rt->binary('*', $rt->binary('*', $rt->component_wise('max', $rt->swizzle($controls, 'y'), $rt->f(0)), $rt->f(0.050000000000000003), 1, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 1, 'float');
         $needDist = $rt->binary('>', $featherPx, $rt->f(0));
-        $dilate = $rt->binary('/', $rt->construct(2, $featherPx), $_u_fullResolution, 2, 'float');
+        $dilate = $rt->construct(2, $rt->binary('/', $rt->construct_raw(2, $featherPx), $_u_fullResolution, 2, 'float'));
         $result = $rt->construct(4, $rt->f(0));
         $k = $rt->i(0);
         $_for1_first = 1;
@@ -156,13 +156,13 @@ my $run_pixel = sub {
                     next;
                 }
             }
-            $src = $rt->binary('*', $sampleZone__int_vec2->($z, $sampleUv), $rt->binary('*', $coverage, $rt->swizzle($zoneMeta, 'w'), 1, 'float'), 4, 'float');
+            $src = $rt->construct(4, $rt->binary('*', $sampleZone__int_vec2->($z, $sampleUv), $rt->binary('*', $coverage, $rt->swizzle($zoneMeta, 'w'), 1, 'float'), 4, 'float'));
             @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $result, $rt->binary('*', $src, $rt->binary('-', $rt->f(1), $rt->swizzle($result, 'a'), 1, 'float'), 4, 'float'), 4, 'float'))};
             if ($rt->binary('>=', $rt->swizzle($result, 'a'), $rt->f(0.999))) {
                 last;
             }
         }
-        @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $result, $rt->binary('*', $rt->construct(4, $rt->binary('*', $rt->swizzle($header, 'xyz'), $rt->swizzle($header, 'w'), 3, 'float'), $rt->swizzle($header, 'w')), $rt->binary('-', $rt->f(1), $rt->swizzle($result, 'a'), 1, 'float'), 4, 'float'), 4, 'float'))};
+        @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $result, $rt->binary('*', $rt->construct_raw(4, $rt->binary('*', $rt->swizzle($header, 'xyz'), $rt->swizzle($header, 'w'), 3, 'float'), $rt->swizzle($header, 'w')), $rt->binary('-', $rt->f(1), $rt->swizzle($result, 'a'), 1, 'float'), 4, 'float'), 4, 'float'))};
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($result)};
     };
     $main__void->();

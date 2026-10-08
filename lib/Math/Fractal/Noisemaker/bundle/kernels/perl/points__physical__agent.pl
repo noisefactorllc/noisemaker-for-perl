@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint__uint, $hash__uint, $noise2D__vec2, $fbm__vec2, $main__void);
+    my ($hash_uint_lcg__uint, $hash__uint, $noise2D__vec2, $fbm__vec2, $main__void);
     my $_retc;
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
@@ -24,7 +24,7 @@ my $run_pixel = sub {
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
-    $hash_uint__uint = sub {
+    $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
         $state = $rt->binary('+', $rt->binary('*', $seed, $rt->i(747796405), 1, 'uint'), $rt->i(2891336453), 1, 'uint');
@@ -33,7 +33,7 @@ my $run_pixel = sub {
     };
     $hash__uint = sub {
         my ($seed) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($seed)), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($seed)), $rt->f(4294967295), 1, 'float');
     };
     $noise2D__vec2 = sub {
         my ($p) = @_;
@@ -94,7 +94,7 @@ my $run_pixel = sub {
         }
         $deviationMultiplier = $rt->binary('+', $rt->f(1), $rt->binary('*', $rt->binary('*', $rt->binary('-', $seed_f, $rt->f(0.5), 1, 'float'), $_u_deviation, 1, 'float'), $rt->f(2), 1, 'float'), 1, 'float');
         $noiseScale = $rt->f(2);
-        $wanderAngle = $rt->binary('*', $rt->binary('*', $fbm__vec2->($rt->binary('+', $rt->binary('*', $rt->construct(2, $px, $py), $noiseScale, 2, 'float'), $rt->binary('*', $_u_time, $rt->f(0.5), 1, 'float'), 2, 'float')), $rt->f(6.2831849999999996), 1, 'float'), $rt->f(2), 1, 'float');
+        $wanderAngle = $rt->binary('*', $rt->binary('*', $fbm__vec2->($rt->construct(2, $rt->binary('+', $rt->binary('*', $rt->construct_raw(2, $px, $py), $noiseScale, 2, 'float'), $rt->binary('*', $_u_time, $rt->f(0.5), 1, 'float'), 2, 'float'))), $rt->f(6.2831849999999996), 1, 'float'), $rt->f(2), 1, 'float');
         $wanderStrength = $rt->binary('*', $_u_wander, $rt->f(0.002), 1, 'float');
         $wanderX = $rt->binary('*', $rt->component_wise('cos', $wanderAngle), $wanderStrength, 1, 'float');
         $wanderY = $rt->binary('*', $rt->component_wise('sin', $wanderAngle), $wanderStrength, 1, 'float');

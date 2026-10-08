@@ -42,18 +42,18 @@ my $run_pixel = sub {
         $p = $rt->assign_swizzle($p, 'x', (($rt->binary('>=', $rt->swizzle($p, 'x'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'x'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'x')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
         $p = $rt->assign_swizzle($p, 'y', (($rt->binary('>=', $rt->swizzle($p, 'y'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'y'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'y')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
         $p = $rt->assign_swizzle($p, 'z', (($rt->binary('>=', $rt->swizzle($p, 'z'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'z'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'z')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
-        return $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float');
+        return $rt->construct(3, $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float'));
     };
     $main__void = sub {
         my ($_for0_first, $_for1_first, $_for2_first, $_for3_first, $aspect, $cellChoice, $cellCoord, $cellFract, $cellId, $color, $colorA, $colorB, $d, $d1, $dist, $edge, $edgeDist, $fullRes, $globalCoord, $globalUV, $mask, $mid, $nearestCell, $nearestHash, $nearestPoint, $neighbor, $onEdge, $p, $point, $rnd, $spd, $st, $wobble, $x, $y);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $st = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $colorA = $rt->texture($_u_inputTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
-        $colorB = $rt->texture($_u_tex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float'));
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution));
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $st = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $colorA = $rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
+        $colorB = $rt->texture($_u_tex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float')));
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
         $aspect = $rt->binary('/', $rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y'), 1, 'float');
-        $globalUV = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float');
-        $p = $rt->binary('*', $globalUV, $rt->binary('-', $rt->f(31), $_u_scale, 1, 'float'), 2, 'float');
+        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
+        $p = $rt->construct(2, $rt->binary('*', $globalUV, $rt->binary('-', $rt->f(31), $_u_scale, 1, 'float'), 2, 'float'));
         $p = $rt->assign_swizzle($p, 'x', $rt->binary('*', $rt->swizzle($p, 'x'), $aspect, 1, 'float'));
         $spd = $rt->component_wise('floor', $_u_speed);
         $cellCoord = $rt->component_wise('floor', $p);
@@ -83,10 +83,10 @@ my $run_pixel = sub {
                     last;
                 }
                 $neighbor = $rt->construct(2, $rt->construct(1, $x), $rt->construct(1, $y));
-                $cellId = $rt->binary('+', $cellCoord, $neighbor, 2, 'float');
+                $cellId = $rt->construct(2, $rt->binary('+', $cellCoord, $neighbor, 2, 'float'));
                 $rnd = $prng__vec3->($rt->construct(3, $cellId, $rt->construct(1, $_u_seed)));
-                $wobble = $rt->binary('*', $rt->binary('*', $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $rt->binary('*', $g->{TAU}, $_u_time, 1, 'float'), $spd, 1, 'float'), $rt->binary('*', $rt->swizzle($rnd, 'xy'), $g->{TAU}, 2, 'float'), 2, 'float')), $rt->f(0.14999999999999999), 2, 'float'), $rt->component_wise('min', $spd, $rt->f(1)), 2, 'float');
-                $point = $rt->binary('-', $rt->binary('+', $rt->binary('+', $neighbor, $rt->swizzle($rnd, 'xy'), 2, 'float'), $wobble, 2, 'float'), $cellFract, 2, 'float');
+                $wobble = $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('*', $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $rt->binary('*', $g->{TAU}, $_u_time, 1, 'float'), $spd, 1, 'float'), $rt->binary('*', $rt->swizzle($rnd, 'xy'), $g->{TAU}, 2, 'float'), 2, 'float')), $rt->f(0.14999999999999999), 2, 'float')), $rt->component_wise('min', $spd, $rt->f(1)), 2, 'float'));
+                $point = $rt->construct(2, $rt->binary('-', $rt->binary('+', $rt->binary('+', $neighbor, $rt->swizzle($rnd, 'xy'), 2, 'float'), $wobble, 2, 'float'), $cellFract, 2, 'float'));
                 $dist = $rt->dot($point, $point);
                 if ($rt->binary('<', $dist, $d1)) {
                     $d1 = $dist;
@@ -118,14 +118,14 @@ my $run_pixel = sub {
                     last;
                 }
                 $neighbor = $rt->construct(2, $rt->construct(1, $x), $rt->construct(1, $y));
-                $cellId = $rt->binary('+', $cellCoord, $neighbor, 2, 'float');
+                $cellId = $rt->construct(2, $rt->binary('+', $cellCoord, $neighbor, 2, 'float'));
                 if ($rt->binary('==', $cellId, $nearestCell)) {
                     next;
                 }
                 $rnd = $prng__vec3->($rt->construct(3, $cellId, $rt->construct(1, $_u_seed)));
-                $wobble = $rt->binary('*', $rt->binary('*', $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $rt->binary('*', $g->{TAU}, $_u_time, 1, 'float'), $spd, 1, 'float'), $rt->binary('*', $rt->swizzle($rnd, 'xy'), $g->{TAU}, 2, 'float'), 2, 'float')), $rt->f(0.14999999999999999), 2, 'float'), $rt->component_wise('min', $spd, $rt->f(1)), 2, 'float');
-                $point = $rt->binary('-', $rt->binary('+', $rt->binary('+', $neighbor, $rt->swizzle($rnd, 'xy'), 2, 'float'), $wobble, 2, 'float'), $cellFract, 2, 'float');
-                $mid = $rt->binary('*', $rt->binary('+', $nearestPoint, $point, 2, 'float'), $rt->f(0.5), 2, 'float');
+                $wobble = $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('*', $rt->component_wise('sin', $rt->binary('+', $rt->binary('*', $rt->binary('*', $g->{TAU}, $_u_time, 1, 'float'), $spd, 1, 'float'), $rt->binary('*', $rt->swizzle($rnd, 'xy'), $g->{TAU}, 2, 'float'), 2, 'float')), $rt->f(0.14999999999999999), 2, 'float')), $rt->component_wise('min', $spd, $rt->f(1)), 2, 'float'));
+                $point = $rt->construct(2, $rt->binary('-', $rt->binary('+', $rt->binary('+', $neighbor, $rt->swizzle($rnd, 'xy'), 2, 'float'), $wobble, 2, 'float'), $cellFract, 2, 'float'));
+                $mid = $rt->construct(2, $rt->binary('*', $rt->binary('+', $nearestPoint, $point, 2, 'float'), $rt->f(0.5), 2, 'float'));
                 $edge = $rt->normalize($rt->binary('-', $point, $nearestPoint, 2, 'float'));
                 $d = $rt->component_wise('abs', $rt->dot($mid, $edge));
                 $edgeDist = $rt->component_wise('min', $edgeDist, $d);

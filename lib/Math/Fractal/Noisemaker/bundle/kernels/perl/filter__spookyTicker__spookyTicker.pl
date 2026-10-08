@@ -88,7 +88,7 @@ my $run_pixel = sub {
         }
         $result = $rt->swizzle($src, 'rgb');
         @{$result} = map { $rt->f32($_) } @{($rt->binary('*', $result, $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('*', $shadow, $rt->f(0.40000000000000002), 1, 'float'), $_u_alpha, 1, 'float'), 1, 'float'), 3, 'float'))};
-        @{$result} = map { $rt->f32($_) } @{($rt->component_wise('max', $result, $rt->binary('*', $rt->construct(3, $mask), $_u_alpha, 3, 'float')))};
+        @{$result} = map { $rt->f32($_) } @{($rt->component_wise('max', $result, $rt->binary('*', $rt->construct_raw(3, $mask), $_u_alpha, 3, 'float')))};
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $result, $rt->f(0), $rt->f(1)), $rt->swizzle($src, 'a')))};
     };
     $main__void->();

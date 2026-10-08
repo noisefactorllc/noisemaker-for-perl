@@ -49,11 +49,11 @@ my $run_pixel = sub {
         my ($c0, $c00, $c000, $c001, $c01, $c010, $c011, $c1, $c10, $c100, $c101, $c11, $c110, $c111, $frac, $i0, $i1, $texelFloor, $texelPos, $uvw, $volSize, $volSizeF);
         $volSize = $_u_volumeSize;
         $volSizeF = $rt->construct(1, $volSize);
-        $uvw = $rt->binary('+', $rt->binary('*', $worldPos, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float');
+        $uvw = $rt->construct(3, $rt->binary('+', $rt->binary('*', $worldPos, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'));
         @{$uvw} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $uvw, $rt->f(0), $rt->f(1)))};
-        $texelPos = $rt->binary('*', $uvw, $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float');
+        $texelPos = $rt->construct(3, $rt->binary('*', $uvw, $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float'));
         $texelFloor = $rt->component_wise('floor', $texelPos);
-        $frac = $rt->binary('-', $texelPos, $texelFloor, 3, 'float');
+        $frac = $rt->construct(3, $rt->binary('-', $texelPos, $texelFloor, 3, 'float'));
         $i0 = $rt->construct(3, $texelFloor, 'int');
         $i1 = $rt->component_wise('min', $rt->binary('+', $i0, $rt->i(1), 3, 'int'), $rt->binary('-', $volSize, $rt->i(1), 1, 'int'));
         $c000 = $rt->texel_fetch($_u_volumeCache, $atlasTexel__ivec3_int->($rt->construct(3, $rt->swizzle($i0, 'x'), $rt->swizzle($i0, 'y'), $rt->swizzle($i0, 'z'), 'int'), $volSize), $rt->i(0));
@@ -87,15 +87,15 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($dx, $dy, $dz, $eps, $len, $n);
         $eps = $rt->binary('/', $rt->f(2), $rt->construct(1, $_u_volumeSize), 1, 'float');
-        $dx = $rt->binary('-', $getField__vec3->($rt->binary('+', $p, $rt->construct(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float')), $getField__vec3->($rt->binary('-', $p, $rt->construct(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float')), 1, 'float');
-        $dy = $rt->binary('-', $getField__vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float')), $getField__vec3->($rt->binary('-', $p, $rt->construct(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float')), 1, 'float');
-        $dz = $rt->binary('-', $getField__vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $eps), 3, 'float')), $getField__vec3->($rt->binary('-', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $eps), 3, 'float')), 1, 'float');
+        $dx = $rt->binary('-', $getField__vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float'))), $getField__vec3->($rt->construct(3, $rt->binary('-', $p, $rt->construct_raw(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float'))), 1, 'float');
+        $dy = $rt->binary('-', $getField__vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float'))), $getField__vec3->($rt->construct(3, $rt->binary('-', $p, $rt->construct_raw(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float'))), 1, 'float');
+        $dz = $rt->binary('-', $getField__vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $eps), 3, 'float'))), $getField__vec3->($rt->construct(3, $rt->binary('-', $p, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $eps), 3, 'float'))), 1, 'float');
         $n = $rt->construct(3, $dx, $dy, $dz);
         $len = $rt->length($n);
         if ($rt->binary('<', $len, $rt->f(0.0001))) {
             return $rt->construct(3, $rt->f(0), $rt->f(1), $rt->f(0));
         }
-        return $rt->binary('/', $n, $len, 3, 'float');
+        return $rt->construct(3, $rt->binary('/', $n, $len, 3, 'float'));
     };
     $calcBoundaryNormal__vec3 = sub {
         my ($p) = @_;
@@ -122,9 +122,9 @@ my $run_pixel = sub {
         $ro = $rt->copy($ro, 'float');
         $rd = $rt->copy($rd, 'float');
         my ($invRd, $t0, $t1, $tEnter, $tExit, $tmax, $tmin);
-        $invRd = $rt->binary('/', $rt->f(1), $rd, 3, 'float');
-        $t0 = $rt->binary('*', $rt->binary('-', $rt->unary('-', $rt->f(1)), $ro, 3, 'float'), $invRd, 3, 'float');
-        $t1 = $rt->binary('*', $rt->binary('-', $rt->f(1), $ro, 3, 'float'), $invRd, 3, 'float');
+        $invRd = $rt->construct(3, $rt->binary('/', $rt->f(1), $rd, 3, 'float'));
+        $t0 = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->unary('-', $rt->f(1)), $ro, 3, 'float'), $invRd, 3, 'float'));
+        $t1 = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->f(1), $ro, 3, 'float'), $invRd, 3, 'float'));
         $tmin = $rt->component_wise('min', $t0, $t1);
         $tmax = $rt->component_wise('max', $t0, $t1);
         $tEnter = $rt->component_wise('max', $rt->component_wise('max', $rt->swizzle($tmin, 'x'), $rt->swizzle($tmin, 'y')), $rt->swizzle($tmin, 'z'));
@@ -188,7 +188,7 @@ my $run_pixel = sub {
         $tEnd = $rt->swizzle($bounds, 'y');
         $stepSize = $rt->binary('/', $rt->f(1.5), $rt->construct(1, $_u_volumeSize), 1, 'float');
         $t = $tStart;
-        $prevField = $getField__vec3->($rt->binary('+', $ro, $rt->binary('*', $rd, $t, 3, 'float'), 3, 'float'));
+        $prevField = $getField__vec3->($rt->construct(3, $rt->binary('+', $ro, $rt->binary('*', $rd, $t, 3, 'float'), 3, 'float')));
         if ($rt->binary('<', $prevField, $rt->f(0))) {
             $result->[2] = 1;
             $result->[0] = $tStart;
@@ -210,7 +210,7 @@ my $run_pixel = sub {
             if ($rt->binary('>', $t, $tEnd)) {
                 last;
             }
-            $p = $rt->binary('+', $ro, $rt->binary('*', $rd, $t, 3, 'float'), 3, 'float');
+            $p = $rt->construct(3, $rt->binary('+', $ro, $rt->binary('*', $rd, $t, 3, 'float'), 3, 'float'));
             if ($rt->binary('==', $_u_shape, $rt->i(0))) {
                 if ((($rt->component_wise('any', $rt->component_wise('lessThan', $p, $rt->construct(3, $rt->unary('-', $rt->f(1)))))) || ($rt->component_wise('any', $rt->component_wise('greaterThan', $p, $rt->construct(3, $rt->f(1))))) ? 1 : 0)) {
                     last;
@@ -239,7 +239,7 @@ my $run_pixel = sub {
                         last;
                     }
                     $tMid = $rt->binary('*', $rt->binary('+', $tLo, $tHi, 1, 'float'), $rt->f(0.5), 1, 'float');
-                    $fMid = $getField__vec3->($rt->binary('+', $ro, $rt->binary('*', $rd, $tMid, 3, 'float'), 3, 'float'));
+                    $fMid = $getField__vec3->($rt->construct(3, $rt->binary('+', $ro, $rt->binary('*', $rd, $tMid, 3, 'float'), 3, 'float')));
                     if ($rt->binary('<', $rt->binary('*', $prevField, $fMid, 1, 'float'), $rt->f(0))) {
                         $tHi = $tMid;
                     } else {
@@ -264,20 +264,20 @@ my $run_pixel = sub {
         $worldLightDir = $rt->copy($worldLightDir, 'float');
         my ($ambient, $diffuse, $diffuseFactor, $halfDir, $lightDir, $rim, $rimLight, $specAngle, $specular, $specularFactor, $viewDir);
         $lightDir = $rt->normalize($worldLightDir);
-        $viewDir = $rt->unary('-', $rd);
+        $viewDir = $rt->construct(3, $rt->unary('-', $rd));
         if ($rt->binary('<', $rt->dot($n, $viewDir), $rt->f(0))) {
             @{$n} = map { $rt->f32($_) } @{($rt->unary('-', $n))};
         }
-        $ambient = $rt->binary('*', $_u_ambientColor, $baseColor, 3, 'float');
+        $ambient = $rt->construct(3, $rt->binary('*', $_u_ambientColor, $baseColor, 3, 'float'));
         $diffuseFactor = $rt->component_wise('max', $rt->dot($n, $lightDir), $rt->f(0));
-        $diffuse = $rt->binary('*', $rt->binary('*', $rt->binary('*', $_u_diffuseColor, $diffuseFactor, 3, 'float'), $baseColor, 3, 'float'), $_u_diffuseIntensity, 3, 'float');
+        $diffuse = $rt->construct(3, $rt->binary('*', $rt->binary('*', $rt->binary('*', $_u_diffuseColor, $diffuseFactor, 3, 'float'), $baseColor, 3, 'float'), $_u_diffuseIntensity, 3, 'float'));
         $halfDir = $rt->normalize($rt->binary('+', $lightDir, $viewDir, 3, 'float'));
         $specAngle = $rt->component_wise('max', $rt->dot($halfDir, $n), $rt->f(0));
         $specularFactor = $rt->component_wise('pow', $specAngle, $_u_shininess);
-        $specular = $rt->binary('*', $rt->binary('*', $_u_specularColor, $specularFactor, 3, 'float'), $_u_specularIntensity, 3, 'float');
+        $specular = $rt->construct(3, $rt->binary('*', $rt->binary('*', $_u_specularColor, $specularFactor, 3, 'float'), $_u_specularIntensity, 3, 'float'));
         $rim = $rt->component_wise('pow', $rt->binary('-', $rt->f(1), $rt->component_wise('max', $rt->dot($n, $viewDir), $rt->f(0)), 1, 'float'), $_u_rimPower);
-        $rimLight = $rt->binary('*', $rt->construct(3, $rim), $_u_rimIntensity, 3, 'float');
-        return $rt->binary('+', $rt->binary('+', $rt->binary('+', $ambient, $diffuse, 3, 'float'), $specular, 3, 'float'), $rimLight, 3, 'float');
+        $rimLight = $rt->construct(3, $rt->binary('*', $rt->construct_raw(3, $rim), $_u_rimIntensity, 3, 'float'));
+        return $rt->construct(3, $rt->binary('+', $rt->binary('+', $rt->binary('+', $ambient, $diffuse, 3, 'float'), $specular, 3, 'float'), $rimLight, 3, 'float'));
     };
     $shade__vec3_vec3_vec3_vec3 = sub {
         my ($p, $n, $rd, $worldLightDir) = @_;
@@ -288,7 +288,7 @@ my $run_pixel = sub {
         my ($baseColor, $colorVariance, $volColor);
         $volColor = $sampleVolume__vec3->($p);
         $baseColor = $rt->swizzle($volColor, 'rgb');
-        $colorVariance = $rt->length($rt->binary('-', $rt->swizzle($volColor, 'rgb'), $rt->construct(3, $rt->swizzle($volColor, 'r')), 3, 'float'));
+        $colorVariance = $rt->length($rt->binary('-', $rt->swizzle($volColor, 'rgb'), $rt->construct_raw(3, $rt->swizzle($volColor, 'r')), 3, 'float'));
         if ($rt->binary('<', $colorVariance, $rt->f(0.01))) {
             @{$baseColor} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0.75)))};
         }
@@ -296,13 +296,13 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($alpha, $angle, $c, $color, $depth, $forward, $fullRes, $globalCoord, $hit, $normal, $rd, $rdVol, $right, $ro, $roVol, $s, $up, $uv, $worldLightDir, $worldUp);
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution));
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
         if ($rt->binary('<', $rt->swizzle($fullRes, 'x'), $rt->f(1))) {
             @{$fullRes} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(1024), $rt->f(1024)))};
         }
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $rt->f(0.5), $fullRes, 2, 'float'), 2, 'float'), $rt->swizzle($fullRes, 'y'), 2, 'float');
-        $ro = $rt->binary('*', $rt->binary('*', $_u_cameraPosition, $rt->construct(3, $rt->unary('-', $rt->f(1)), $rt->f(1), $rt->f(1)), 3, 'float'), $rt->f(3.5), 3, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $rt->f(0.5), $fullRes, 2, 'float'), 2, 'float'), $rt->swizzle($fullRes, 'y'), 2, 'float'));
+        $ro = $rt->construct(3, $rt->binary('*', $rt->binary('*', $_u_cameraPosition, $rt->construct_raw(3, $rt->unary('-', $rt->f(1)), $rt->f(1), $rt->f(1)), 3, 'float'), $rt->f(3.5), 3, 'float'));
         $forward = $rt->construct(3, 0.0);
         if ($rt->binary('<', $rt->length($ro), $rt->f(0.001))) {
             @{$forward} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $rt->f(0), $rt->unary('-', $rt->f(1))))};
@@ -316,7 +316,7 @@ my $run_pixel = sub {
         $right = $rt->normalize($rt->cross($worldUp, $forward));
         $up = $rt->cross($forward, $right);
         $rd = $rt->normalize($rt->binary('+', $rt->binary('+', $forward, $rt->binary('*', $rt->swizzle($uv, 'x'), $right, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->swizzle($uv, 'y'), $up, 3, 'float'), 3, 'float'));
-        $worldLightDir = $rt->normalize($rt->binary('*', $_u_lightDirection, $rt->construct(3, $rt->unary('-', $rt->f(1)), $rt->f(1), $rt->f(1)), 3, 'float'));
+        $worldLightDir = $rt->normalize($rt->binary('*', $_u_lightDirection, $rt->construct_raw(3, $rt->unary('-', $rt->f(1)), $rt->f(1), $rt->f(1)), 3, 'float'));
         $angle = $rt->binary('*', $rt->binary('*', $_u_time, $g->{TAU}, 1, 'float'), $rt->construct(1, $_u_orbitSpeed), 1, 'float');
         $c = $rt->component_wise('cos', $angle);
         $s = $rt->component_wise('sin', $angle);

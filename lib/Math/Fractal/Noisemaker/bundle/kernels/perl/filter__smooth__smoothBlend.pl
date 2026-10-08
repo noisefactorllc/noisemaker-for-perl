@@ -31,9 +31,9 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         $texSize = $rt->copy($texSize, 'int');
         my ($base, $bl, $br, $f, $maxC, $texCoord, $tl, $tr);
-        $texCoord = $rt->binary('-', $rt->binary('*', $uv, $rt->construct(2, $texSize), 2, 'float'), $rt->f(0.5), 2, 'float');
+        $texCoord = $rt->construct(2, $rt->binary('-', $rt->binary('*', $uv, $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'), $rt->f(0.5), 2, 'float'));
         $base = $rt->construct(2, $rt->component_wise('floor', $texCoord), 'int');
-        $f = $rt->binary('-', $texCoord, $rt->construct(2, $base), 2, 'float');
+        $f = $rt->construct(2, $rt->binary('-', $texCoord, $rt->construct_raw(2, $rt->construct(2, $base)), 2, 'float'));
         $maxC = $rt->binary('-', $texSize, $rt->i(1), 2, 'int');
         $tl = $rt->texel_fetch($_u_inputTex, $rt->component_wise('clamp', $base, $rt->construct(2, $rt->i(0), 'int'), $maxC), $rt->i(0));
         $tr = $rt->texel_fetch($_u_inputTex, $rt->component_wise('clamp', $rt->binary('+', $base, $rt->construct(2, $rt->i(1), $rt->i(0), 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $maxC), $rt->i(0));
@@ -129,10 +129,10 @@ my $run_pixel = sub {
             if ($rt->binary('>=', $i, $count)) {
                 last;
             }
-            $offset = $rt->binary('*', $getSampleOffset__int_int->($i, $count), $_u_radius, 2, 'float');
-            @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $sampleBilinear__vec2_ivec2->($rt->binary('+', $uv, $rt->binary('*', $offset, $texelSize, 2, 'float'), 2, 'float'), $texSize), 4, 'float'))};
+            $offset = $rt->construct(2, $rt->binary('*', $getSampleOffset__int_int->($i, $count), $_u_radius, 2, 'float'));
+            @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $sampleBilinear__vec2_ivec2->($rt->construct(2, $rt->binary('+', $uv, $rt->binary('*', $offset, $texelSize, 2, 'float'), 2, 'float')), $texSize), 4, 'float'))};
         }
-        return $rt->binary('/', $sum, $rt->construct(1, $count), 4, 'float');
+        return $rt->construct(4, $rt->binary('/', $sum, $rt->construct(1, $count), 4, 'float'));
     };
     $searchEdge__ivec2_ivec2_ivec2_int = sub {
         my ($coord, $dir, $maxC, $component) = @_;
@@ -244,18 +244,18 @@ my $run_pixel = sub {
                 }
                 $d = $rt->construct(1, $rt->binary('+', $rt->binary('*', $dx, $dx, 1, 'int'), $rt->binary('*', $dy, $dy, 1, 'int'), 1, 'int'));
                 $w = $rt->component_wise('exp', $rt->binary('/', $rt->unary('-', $d), $sigma2, 1, 'float'));
-                @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->binary('*', $rt->texel_fetch($_u_inputTex, $rt->component_wise('clamp', $rt->binary('+', $coord, $rt->construct(2, $dx, $dy, 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $maxC), $rt->i(0)), $w, 4, 'float'), 4, 'float'))};
+                @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->construct(4, $rt->binary('*', $rt->texel_fetch($_u_inputTex, $rt->component_wise('clamp', $rt->binary('+', $coord, $rt->construct(2, $dx, $dy, 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $maxC), $rt->i(0)), $w, 4, 'float')), 4, 'float'))};
                 $totalWeight = $rt->binary('+', $totalWeight, $w, 1, 'float');
             }
         }
-        return $rt->binary('/', $sum, $totalWeight, 4, 'float');
+        return $rt->construct(4, $rt->binary('/', $sum, $totalWeight, 4, 'float'));
     };
     $main__void = sub {
         my ($globalCoord, $original, $result, $texSize, $texelSize, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $texSize), 2, 'float');
-        $texelSize = $rt->binary('/', $rt->f(1), $rt->construct(2, $texSize), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
         $original = $rt->texel_fetch($_u_inputTex, $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int'), $rt->i(0));
         $result = $rt->construct(4, 0.0);
         if ($rt->binary('==', $_u_smoothType, $rt->i(0))) {

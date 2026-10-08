@@ -44,7 +44,7 @@ my $run_pixel = sub {
         $p = $rt->assign_swizzle($p, 'x', (($rt->binary('>=', $rt->swizzle($p, 'x'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'x'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'x')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
         $p = $rt->assign_swizzle($p, 'y', (($rt->binary('>=', $rt->swizzle($p, 'y'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'y'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'y')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
         $p = $rt->assign_swizzle($p, 'z', (($rt->binary('>=', $rt->swizzle($p, 'z'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'z'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'z')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
-        return $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->i(4294967295)), 3, 'float');
+        return $rt->construct(3, $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->i(4294967295)), 3, 'float'));
     };
     $rowTime__float_float = sub {
         my ($row, $t) = @_;
@@ -94,7 +94,7 @@ my $run_pixel = sub {
         my ($bh, $bitShift, $levels, $mask, $px, $scale, $shiftStr, $xorHash, $xorStrength);
         $bh = $lineHash__float_float->($rt->binary('+', $row, $rt->f(400), 1, 'float'), $_rt);
         $levels = $rt->component_wise('mix', $rt->f(256), $rt->f(2), $rt->binary('*', $bitAmt, $bitAmt, 1, 'float'));
-        @{$color} = map { $rt->f32($_) } @{($rt->binary('/', $rt->component_wise('floor', $rt->binary('+', $rt->binary('*', $color, $levels, 3, 'float'), $rt->f(0.5), 3, 'float')), $levels, 3, 'float'))};
+        @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('/', $rt->component_wise('floor', $rt->binary('+', $rt->binary('*', $color, $levels, 3, 'float'), $rt->f(0.5), 3, 'float')), $levels, 3, 'float')))};
         $mask = $rt->construct(3, 0.0);
         $px = $rt->f(0.0);
         $xorHash = $rt->construct(3, 0.0);
@@ -158,9 +158,9 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_rt, $bShift, $bUv, $bh, $chAmt, $chHash, $color, $globalCoord, $isCorrupt, $meltAmt, $prob, $rShift, $rUv, $rawRow, $resX, $resolution, $row, $rowHash, $rs, $sampleUv, $scatterAmt, $shiftAmt, $sortAmt, $spd, $t, $tileDims, $uv);
         $tileDims = $rt->construct(2, $rt->texture_size($_u_inputTex));
-        $resolution = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims));
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $resolution, 2, 'float');
+        $resolution = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims)));
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $resolution, 2, 'float'));
         $rs = $rt->component_wise('max', $_u_renderScale, $rt->f(1));
         $resX = $rt->binary('/', $rt->swizzle($resolution, 'x'), $rs, 1, 'float');
         $spd = $rt->component_wise('floor', $_u_speed);

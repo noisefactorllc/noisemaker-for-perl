@@ -28,7 +28,7 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.10000000000000001), 1, 'float'), 3, 'float'))};
-        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('fract', $rt->binary('*', $p, $rt->construct(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float')))};
+        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('fract', $rt->binary('*', $p, $rt->construct_raw(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float')))};
         @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->dot($p, $rt->binary('+', $rt->swizzle($p, 'yxz'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
         return $rt->component_wise('fract', $rt->binary('*', $rt->binary('+', $rt->swizzle($p, 'x'), $rt->swizzle($p, 'y'), 1, 'float'), $rt->swizzle($p, 'z'), 1, 'float'));
     };
@@ -60,8 +60,8 @@ my $run_pixel = sub {
         $yn = $sampleState__ivec3_int->($rt->binary('+', $voxel, $rt->construct(3, $rt->i(0), $rt->unary('-', $rt->i(1)), $rt->i(0), 'int'), 3, 'int'), $volSize);
         $zp = $sampleState__ivec3_int->($rt->binary('+', $voxel, $rt->construct(3, $rt->i(0), $rt->i(0), $rt->i(1), 'int'), 3, 'int'), $volSize);
         $zn = $sampleState__ivec3_int->($rt->binary('+', $voxel, $rt->construct(3, $rt->i(0), $rt->i(0), $rt->unary('-', $rt->i(1)), 'int'), 3, 'int'), $volSize);
-        $neighborSum = $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->swizzle($xp, 'ra'), $rt->swizzle($xn, 'ra'), 2, 'float'), $rt->swizzle($yp, 'ra'), 2, 'float'), $rt->swizzle($yn, 'ra'), 2, 'float'), $rt->swizzle($zp, 'ra'), 2, 'float'), $rt->swizzle($zn, 'ra'), 2, 'float');
-        $lap = $rt->binary('-', $neighborSum, $rt->binary('*', $rt->f(6), $rt->swizzle($center, 'ra'), 2, 'float'), 2, 'float');
+        $neighborSum = $rt->construct(2, $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->swizzle($xp, 'ra'), $rt->swizzle($xn, 'ra'), 2, 'float'), $rt->swizzle($yp, 'ra'), 2, 'float'), $rt->swizzle($yn, 'ra'), 2, 'float'), $rt->swizzle($zp, 'ra'), 2, 'float'), $rt->swizzle($zn, 'ra'), 2, 'float'));
+        $lap = $rt->construct(2, $rt->binary('-', $neighborSum, $rt->binary('*', $rt->f(6), $rt->swizzle($center, 'ra'), 2, 'float'), 2, 'float'));
         return $lap;
     };
     $main__void = sub {

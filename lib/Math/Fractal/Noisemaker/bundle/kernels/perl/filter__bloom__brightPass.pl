@@ -17,7 +17,7 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($bloomFactor, $brightColor, $color, $coord, $globalCoord, $knee, $luma, $t, $threshHigh, $threshLow);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         $luma = $rt->dot($rt->swizzle($color, 'rgb'), $rt->construct(3, $rt->f(0.21260000000000001), $rt->f(0.71519999999999995), $rt->f(0.0722)));
@@ -36,7 +36,7 @@ my $run_pixel = sub {
                 $bloomFactor = $rt->binary('*', $rt->binary('*', $t, $t, 1, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $t, 1, 'float'), 1, 'float'), 1, 'float');
             }
         }
-        $brightColor = $rt->binary('*', $rt->swizzle($color, 'rgb'), $bloomFactor, 3, 'float');
+        $brightColor = $rt->construct(3, $rt->binary('*', $rt->swizzle($color, 'rgb'), $bloomFactor, 3, 'float'));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $brightColor, $rt->swizzle($color, 'a')))};
     };
     $main__void->();

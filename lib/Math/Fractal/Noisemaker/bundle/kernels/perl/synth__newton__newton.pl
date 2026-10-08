@@ -124,7 +124,7 @@ my $run_pixel = sub {
         $re_df = $rt->copy($re_df, 'float');
         $im_df = $rt->copy($im_df, 'float');
         my ($angle, $c, $s, $scale, $uv, $uv_im_df, $uv_re_df);
-        $uv = $rt->binary('/', $rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float'));
         $angle = $rt->binary('/', $rt->binary('*', $rt->unary('-', $rot), $g->{TAU}, 1, 'float'), $rt->f(360), 1, 'float');
         $c = $rt->component_wise('cos', $angle);
         $s = $rt->component_wise('sin', $angle);
@@ -160,7 +160,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_for0_first, $_for1_first, $_for2_first, $_for3_first, $angle, $bailout, $cHi, $cLo, $convergeDist, $convergedRoot, $d, $denom, $di, $doInvert, $dr, $dx, $dy, $effDegree, $effRelax, $effZoomDepth, $fpzi, $fpzi_f, $fpzr, $fpzr_f, $fzi, $fzr, $globalCoord, $im_df, $intDeg, $inv_denom, $iter, $j, $k, $maxIter, $maxIterF, $n, $ni, $nr, $numRoots, $numRootsF, $outMode, $p, $poiIdx, $pwi, $pwr, $re_df, $roots, $smoothIter, $ti, $tr, $value, $zi_df, $zni, $znr, $zoom, $zoomPhase, $zr_df, $zx, $zy);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $maxIter = $rt->construct(1, $_u_iterations, 'int');
         $poiIdx = $rt->construct(1, $_u_poi, 'int');
         $outMode = $rt->construct(1, $_u_outputMode, 'int');
@@ -181,8 +181,8 @@ my $run_pixel = sub {
         $p = [$rt->construct(4, 0.0), $rt->f(0.0), $rt->f(0.0)];
         if ($rt->binary('>', $poiIdx, $rt->i(0))) {
             $p = $getPOI__int->($poiIdx);
-            @{$cHi} = map { $rt->f32($_) } @{($rt->binary('+', $rt->swizzle($p->[0], 'xy'), $rt->construct(2, $_u_centerHiX, $_u_centerHiY), 2, 'float'))};
-            @{$cLo} = map { $rt->f32($_) } @{($rt->binary('+', $rt->swizzle($p->[0], 'zw'), $rt->construct(2, $_u_centerLoX, $_u_centerLoY), 2, 'float'))};
+            @{$cHi} = map { $rt->f32($_) } @{($rt->binary('+', $rt->swizzle($p->[0], 'xy'), $rt->construct_raw(2, $_u_centerHiX, $_u_centerHiY), 2, 'float'))};
+            @{$cLo} = map { $rt->f32($_) } @{($rt->binary('+', $rt->swizzle($p->[0], 'zw'), $rt->construct_raw(2, $_u_centerLoX, $_u_centerLoY), 2, 'float'))};
             $effDegree = $p->[1];
             $effZoomDepth = $rt->component_wise('min', $_u_zoomDepth, $p->[2]);
         } else {
@@ -217,7 +217,7 @@ my $run_pixel = sub {
                 last;
             }
             $angle = $rt->binary('/', $rt->binary('*', $g->{TAU}, $rt->construct(1, $k), 1, 'float'), $rt->construct(1, $intDeg), 1, 'float');
-            $roots->[int($k)] = $rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle));
+            @{$roots->[int($k)]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)))};
         }
         $iter = $rt->f(0);
         $convergedRoot = $rt->unary('-', $rt->i(1));

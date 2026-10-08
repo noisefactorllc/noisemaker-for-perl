@@ -35,9 +35,9 @@ my $run_pixel = sub {
                 last;
             }
             if ($rt->binary('<=', $srgb->[int($i)], $rt->f(0.04045))) {
-                $linear->[int($i)] = $rt->binary('/', $srgb->[int($i)], $rt->f(12.92), 1, 'float');
+                $linear->[int($i)] = $rt->f32($rt->binary('/', $srgb->[int($i)], $rt->f(12.92), 1, 'float'));
             } else {
-                $linear->[int($i)] = $rt->component_wise('pow', $rt->binary('/', $rt->binary('+', $srgb->[int($i)], $rt->f(0.055), 1, 'float'), $rt->f(1.0549999999999999), 1, 'float'), $rt->f(2.3999999999999999));
+                $linear->[int($i)] = $rt->f32($rt->component_wise('pow', $rt->binary('/', $rt->binary('+', $srgb->[int($i)], $rt->f(0.055), 1, 'float'), $rt->f(1.0549999999999999), 1, 'float'), $rt->f(2.3999999999999999)));
             }
         }
         return $linear;
@@ -58,9 +58,9 @@ my $run_pixel = sub {
                 last;
             }
             if ($rt->binary('<=', $linear->[int($i)], $rt->f(0.0031308))) {
-                $srgb->[int($i)] = $rt->binary('*', $linear->[int($i)], $rt->f(12.92), 1, 'float');
+                $srgb->[int($i)] = $rt->f32($rt->binary('*', $linear->[int($i)], $rt->f(12.92), 1, 'float'));
             } else {
-                $srgb->[int($i)] = $rt->binary('-', $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $linear->[int($i)], $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float')), 1, 'float'), $rt->f(0.055), 1, 'float');
+                $srgb->[int($i)] = $rt->f32($rt->binary('-', $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $linear->[int($i)], $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float')), 1, 'float'), $rt->f(0.055), 1, 'float'));
             }
         }
         return $srgb;
@@ -73,7 +73,7 @@ my $run_pixel = sub {
             return $rgb;
         }
         $luma = $rt->dot($rgb, $g->{LUMA_WEIGHTS});
-        $chroma = $rt->binary('-', $rgb, $luma, 3, 'float');
+        $chroma = $rt->construct(3, $rt->binary('-', $rgb, $luma, 3, 'float'));
         $maxC = $rt->component_wise('max', $rt->component_wise('max', $rt->swizzle($rgb, 'r'), $rt->swizzle($rgb, 'g')), $rt->swizzle($rgb, 'b'));
         $minC = $rt->component_wise('min', $rt->component_wise('min', $rt->swizzle($rgb, 'r'), $rt->swizzle($rgb, 'g')), $rt->swizzle($rgb, 'b'));
         $sat = (($rt->binary('>', $maxC, $rt->f(0.001))) ? ($rt->binary('/', $rt->binary('-', $maxC, $minC, 1, 'float'), $maxC, 1, 'float')) : ($rt->f(0)));
@@ -85,7 +85,7 @@ my $run_pixel = sub {
             $skinFactor = $rt->binary('+', $rt->binary('*', $rt->component_wise('smoothstep', $rt->f(0.29999999999999999), $rt->f(0.69999999999999996), $sat), $rt->f(0.5), 1, 'float'), $rt->f(0.5), 1, 'float');
         }
         $finalGain = $rt->component_wise('mix', $rt->f(1), $vibranceGain, $skinFactor);
-        return $rt->binary('+', $luma, $rt->binary('*', $chroma, $finalGain, 3, 'float'), 3, 'float');
+        return $rt->construct(3, $rt->binary('+', $luma, $rt->binary('*', $chroma, $finalGain, 3, 'float'), 3, 'float'));
     };
     $applyFadedFilm__vec3_float = sub {
         my ($rgb, $amount) = @_;
@@ -96,11 +96,11 @@ my $run_pixel = sub {
         }
         $lifted = $rt->component_wise('mix', $rgb, $rt->construct(3, $rt->f(0.20000000000000001)), $rt->binary('*', $amount, $rt->f(0.5), 1, 'float'));
         $luma = $rt->dot($lifted, $g->{LUMA_WEIGHTS});
-        $chroma = $rt->binary('-', $lifted, $luma, 3, 'float');
+        $chroma = $rt->construct(3, $rt->binary('-', $lifted, $luma, 3, 'float'));
         $pivot = $rt->f(0.5);
         $contrastFactor = $rt->binary('-', $rt->f(1), $rt->binary('*', $amount, $rt->f(0.29999999999999999), 1, 'float'), 1, 'float');
         $newLuma = $rt->binary('+', $rt->binary('*', $rt->binary('-', $luma, $pivot, 1, 'float'), $contrastFactor, 1, 'float'), $pivot, 1, 'float');
-        return $rt->binary('+', $newLuma, $rt->binary('*', $chroma, $rt->binary('-', $rt->f(1), $rt->binary('*', $amount, $rt->f(0.20000000000000001), 1, 'float'), 1, 'float'), 3, 'float'), 3, 'float');
+        return $rt->construct(3, $rt->binary('+', $newLuma, $rt->binary('*', $chroma, $rt->binary('-', $rt->f(1), $rt->binary('*', $amount, $rt->f(0.20000000000000001), 1, 'float'), 1, 'float'), 3, 'float'), 3, 'float'));
     };
     $applySplitTone__vec3_vec3_vec3_float = sub {
         my ($rgb, $shadowTint, $highlightTint, $balance) = @_;
@@ -108,8 +108,8 @@ my $run_pixel = sub {
         $shadowTint = $rt->copy($shadowTint, 'float');
         $highlightTint = $rt->copy($highlightTint, 'float');
         my ($balancePoint, $highlightShift, $highlightWeight, $luma, $shadowShift, $shadowWeight, $tintedRgb);
-        $shadowShift = $rt->binary('*', $rt->binary('-', $shadowTint, $rt->f(0.5), 3, 'float'), $rt->f(2), 3, 'float');
-        $highlightShift = $rt->binary('*', $rt->binary('-', $highlightTint, $rt->f(0.5), 3, 'float'), $rt->f(2), 3, 'float');
+        $shadowShift = $rt->construct(3, $rt->binary('*', $rt->binary('-', $shadowTint, $rt->f(0.5), 3, 'float'), $rt->f(2), 3, 'float'));
+        $highlightShift = $rt->construct(3, $rt->binary('*', $rt->binary('-', $highlightTint, $rt->f(0.5), 3, 'float'), $rt->f(2), 3, 'float'));
         if ((($rt->binary('<', $rt->length($shadowShift), $rt->f(0.01))) && ($rt->binary('<', $rt->length($highlightShift), $rt->f(0.01))) ? 1 : 0)) {
             return $rgb;
         }
@@ -124,7 +124,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($color, $coord, $globalCoord, $rgb);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         $rgb = $srgbToLinear__vec3->($rt->swizzle($color, 'rgb'));

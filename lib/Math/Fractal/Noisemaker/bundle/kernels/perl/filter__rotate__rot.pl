@@ -26,7 +26,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($angle, $aspect, $center, $texSize, $uv);
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $texSize), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
         $angle = $_u_rotation;
         if ($rt->binary('!=', $_u_speed, $rt->i(0))) {
             $angle = $rt->binary('+', $angle, $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(360), 1, 'float'), $rt->construct(1, $_u_speed), 1, 'float'), 1, 'float');
@@ -39,7 +39,7 @@ my $run_pixel = sub {
         $uv = $rt->assign_swizzle($uv, 'x', $rt->binary('/', $rt->swizzle($uv, 'x'), $aspect, 1, 'float'));
         @{$uv} = map { $rt->f32($_) } @{($rt->binary('+', $uv, $center, 2, 'float'))};
         if ($rt->binary('==', $_u_wrap, $rt->i(0))) {
-            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
+            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
         } else {
             if ($rt->binary('==', $_u_wrap, $rt->i(1))) {
                 @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('fract', $uv))};

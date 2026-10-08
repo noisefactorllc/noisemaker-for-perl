@@ -41,7 +41,7 @@ my $run_pixel = sub {
     $prng__vec3 = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
-        return $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float');
+        return $rt->construct(3, $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float'));
     };
     $f__vec2 = sub {
         my ($st) = @_;
@@ -98,7 +98,7 @@ my $run_pixel = sub {
         $st = $rt->copy($st, 'float');
         my ($centerDistance, $hatch, $noise);
         $centerDistance = $rt->binary('*', $rt->binary('*', $rt->length($rt->binary('-', $rt->f(0.5), $st, 2, 'float')), $rt->f(3.1415926535900001), 1, 'float'), $rt->f(0.5), 1, 'float');
-        $noise = $rt->binary('*', $periodicFunction__float->($rt->binary('-', $bicubic__vec2->($rt->binary('*', $st, $rt->f(4), 2, 'float')), $_u_time, 1, 'float')), $map__float_float_float_float_float->($_u_scanlinesAmt, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(0.5)), 1, 'float');
+        $noise = $rt->binary('*', $periodicFunction__float->($rt->binary('-', $bicubic__vec2->($rt->construct(2, $rt->binary('*', $st, $rt->f(4), 2, 'float'))), $_u_time, 1, 'float')), $map__float_float_float_float_float->($_u_scanlinesAmt, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(0.5)), 1, 'float');
         $hatch = $rt->binary('*', $rt->binary('+', $rt->component_wise('sin', $rt->binary('*', $rt->binary('*', $rt->component_wise('mix', $rt->swizzle($st, 'y'), $rt->binary('+', $rt->swizzle($st, 'y'), $noise, 1, 'float'), $rt->component_wise('pow', $centerDistance, $rt->f(8))), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float'), $rt->f(1.5), 1, 'float')), $rt->f(1), 1, 'float'), $rt->f(0.5), 1, 'float');
         $color = $rt->assign_swizzle($color, 'rgb', $rt->component_wise('mix', $rt->swizzle($color, 'rgb'), $rt->binary('*', $rt->swizzle($color, 'rgb'), $hatch, 3, 'float'), $map__float_float_float_float_float->($_u_scanlinesAmt, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(0.5))));
         return $color;
@@ -148,8 +148,8 @@ my $run_pixel = sub {
             $freq = $rt->assign_swizzle($freq, 'y', $rt->binary('*', $rt->swizzle($freq, 'y'), $map__float_float_float_float_float->($_u_yChonk, $rt->f(1), $rt->f(100), $rt->f(50), $rt->f(1)), 1, 'float'));
             @{$freq} = map { $rt->f32($_) } @{($rt->binary('*', $freq, $rt->construct(2, $periodicFunction__float->($rt->binary('-', $rt->swizzle($prng__vec3->($rt->construct(3, $rt->component_wise('floor', $rt->binary('*', $st, $freq, 2, 'float')), $rt->f(0))), 'x'), $_u_time, 1, 'float'))), 2, 'float'))};
             $_g = $map__float_float_float_float_float->($_u_glitchiness, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(1));
-            $xDrift = $rt->binary('*', $rt->swizzle($prng__vec3->($rt->construct(3, $rt->binary('+', $rt->component_wise('floor', $rt->binary('*', $st, $freq, 2, 'float')), $rt->f(10), 2, 'float'), $rt->f(0))), 'x'), $_g, 1, 'float');
-            $yDrift = $rt->binary('*', $rt->swizzle($prng__vec3->($rt->construct(3, $rt->binary('-', $rt->component_wise('floor', $rt->binary('*', $st, $freq, 2, 'float')), $rt->f(10), 2, 'float'), $rt->f(0))), 'x'), $_g, 1, 'float');
+            $xDrift = $rt->binary('*', $rt->swizzle($prng__vec3->($rt->construct(3, $rt->construct(2, $rt->binary('+', $rt->component_wise('floor', $rt->binary('*', $st, $freq, 2, 'float')), $rt->f(10), 2, 'float')), $rt->f(0))), 'x'), $_g, 1, 'float');
+            $yDrift = $rt->binary('*', $rt->swizzle($prng__vec3->($rt->construct(3, $rt->construct(2, $rt->binary('-', $rt->component_wise('floor', $rt->binary('*', $st, $freq, 2, 'float')), $rt->f(10), 2, 'float')), $rt->f(0))), 'x'), $_g, 1, 'float');
             $sparseness = $map__float_float_float_float_float->($_u_glitchiness, $rt->f(0), $rt->f(100), $rt->f(8), $rt->f(2));
             $rand = $rt->swizzle($prng__vec3->($rt->construct(3, $rt->component_wise('floor', $rt->binary('*', $st, $freq, 2, 'float')), $rt->f(0))), 'x');
             $xOffset = $rt->component_wise('clamp', $rt->binary('*', $rt->binary('-', $periodicFunction__float->($rt->binary('-', $rt->binary('+', $rand, $xDrift, 1, 'float'), $_u_time, 1, 'float')), $rt->binary('*', $periodicFunction__float->($rt->binary('-', $xDrift, $_u_time, 1, 'float')), $sparseness, 1, 'float'), 1, 'float'), $rt->f(4), 1, 'float'), $rt->f(0), $rt->f(1));
@@ -160,7 +160,7 @@ my $run_pixel = sub {
         }
         $diff = $rt->construct(2, $rt->binary('-', $rt->f(0.5), $st, 2, 'float'));
         if ($_u_aspectLens) {
-            @{$diff} = map { $rt->f32($_) } @{($rt->binary('-', $rt->construct(2, $rt->binary('/', $rt->binary('*', $rt->f(0.5), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float'), $rt->f(0.5)), $rt->construct(2, $rt->binary('/', $rt->binary('*', $rt->swizzle($st, 'x'), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float'), $rt->swizzle($st, 'y')), 2, 'float'))};
+            @{$diff} = map { $rt->f32($_) } @{($rt->binary('-', $rt->construct_raw(2, $rt->binary('/', $rt->binary('*', $rt->f(0.5), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float'), $rt->f(0.5)), $rt->construct_raw(2, $rt->binary('/', $rt->binary('*', $rt->swizzle($st, 'x'), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float'), $rt->swizzle($st, 'y')), 2, 'float'))};
         }
         $centerDist = $rt->length($diff);
         $distort = $rt->f(0);
@@ -175,19 +175,19 @@ my $run_pixel = sub {
         $lensedCoords = $rt->component_wise('fract', $rt->binary('-', $rt->binary('-', $st, $rt->binary('*', $diff, $zoom, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->binary('*', $rt->binary('*', $diff, $centerDist, 2, 'float'), $centerDist, 2, 'float'), $distort, 2, 'float'), 2, 'float'));
         $aberrationOffset = $rt->binary('*', $rt->binary('*', $rt->binary('*', $map__float_float_float_float_float->($_u_aberration, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(0.050000000000000003)), $centerDist, 1, 'float'), $rt->f(3.1415926535900001), 1, 'float'), $rt->f(0.5), 1, 'float');
         $redOffset = $rt->component_wise('mix', $rt->component_wise('clamp', $rt->binary('+', $rt->swizzle($lensedCoords, 'x'), $aberrationOffset, 1, 'float'), $rt->f(0), $rt->f(1)), $rt->swizzle($lensedCoords, 'x'), $rt->swizzle($lensedCoords, 'x'));
-        $localUV_red = $rt->component_wise('fract', $rt->binary('/', $rt->binary('-', $rt->binary('*', $rt->construct(2, $redOffset, $rt->swizzle($lensedCoords, 'y')), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+        $localUV_red = $rt->component_wise('fract', $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->construct_raw(2, $redOffset, $rt->swizzle($lensedCoords, 'y')), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
         $red = $rt->texture($_u_inputTex, $localUV_red);
-        $localUV_green = $rt->component_wise('fract', $rt->binary('/', $rt->binary('-', $rt->binary('*', $lensedCoords, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+        $localUV_green = $rt->component_wise('fract', $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $lensedCoords, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
         $green = $rt->texture($_u_inputTex, $localUV_green);
         $blueOffset = $rt->component_wise('mix', $rt->swizzle($lensedCoords, 'x'), $rt->component_wise('clamp', $rt->binary('-', $rt->swizzle($lensedCoords, 'x'), $aberrationOffset, 1, 'float'), $rt->f(0), $rt->f(1)), $rt->swizzle($lensedCoords, 'x'));
-        $localUV_blue = $rt->component_wise('fract', $rt->binary('/', $rt->binary('-', $rt->binary('*', $rt->construct(2, $blueOffset, $rt->swizzle($lensedCoords, 'y')), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+        $localUV_blue = $rt->component_wise('fract', $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->construct_raw(2, $blueOffset, $rt->swizzle($lensedCoords, 'y')), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
         $blue = $rt->texture($_u_inputTex, $localUV_blue);
         return $rt->construct(4, $rt->swizzle($red, 'r'), $rt->swizzle($green, 'g'), $rt->swizzle($blue, 'b'), $rt->swizzle($green, 'a'));
     };
     $main__void = sub {
         my ($blendy, $color, $globalCoord, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         $color = $rt->construct(4, $rt->f(0));
         $blendy = $periodicFunction__float->($rt->binary('-', $_u_time, $offsets__vec2->($uv), 1, 'float'));
         @{$color} = map { $rt->f32($_) } @{($glitch__vec2->($uv))};

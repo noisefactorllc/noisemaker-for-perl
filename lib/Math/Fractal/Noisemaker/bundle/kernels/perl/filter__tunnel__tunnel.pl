@@ -34,15 +34,15 @@ my $run_pixel = sub {
     $smod__vec2_float = sub {
         my ($v, $m) = @_;
         $v = $rt->copy($v, 'float');
-        return $rt->binary('*', $m, $rt->binary('-', $rt->binary('-', $rt->f(0.75), $rt->component_wise('abs', $rt->binary('-', $rt->component_wise('fract', $v), $rt->f(0.5), 2, 'float')), 2, 'float'), $rt->f(0.25), 2, 'float'), 2, 'float');
+        return $rt->construct(2, $rt->binary('*', $m, $rt->construct(2, $rt->binary('-', $rt->construct(2, $rt->binary('-', $rt->f(0.75), $rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('fract', $v), $rt->f(0.5), 2, 'float'))), 2, 'float')), $rt->f(0.25), 2, 'float')), 2, 'float'));
     };
     $main__void = sub {
         my ($a, $amt, $aspectRatio, $centerMask, $centered, $color, $dx, $dy, $fullRes, $p, $r, $texSize, $tileDims, $tunnelCoords, $uv);
         $texSize = $rt->texture_size($_u_inputTex);
         $tileDims = $rt->construct(2, $texSize);
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims));
-        $uv = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float');
-        $centered = $rt->binary('-', $uv, $rt->f(0.5), 2, 'float');
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims)));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
+        $centered = $rt->construct(2, $rt->binary('-', $uv, $rt->f(0.5), 2, 'float'));
         $aspectRatio = $rt->binary('/', $rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y'), 1, 'float');
         if ($_u_aspectLens) {
             $centered = $rt->assign_swizzle($centered, 'x', $rt->binary('*', $rt->swizzle($centered, 'x'), $aspectRatio, 1, 'float'));
@@ -54,19 +54,19 @@ my $run_pixel = sub {
             $r = $rt->length($centered);
         } else {
             if ($rt->binary('==', $_u_shape, $rt->i(1))) {
-                $r = $polygonShape__vec2_int->($rt->binary('*', $centered, $rt->f(2), 2, 'float'), $rt->i(3));
+                $r = $polygonShape__vec2_int->($rt->construct(2, $rt->binary('*', $centered, $rt->f(2), 2, 'float')), $rt->i(3));
             } else {
                 if ($rt->binary('==', $_u_shape, $rt->i(2))) {
-                    $p = $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->binary('*', $centered, $centered, 2, 'float'), $centered, 2, 'float'), $centered, 2, 'float'), $centered, 2, 'float'), $centered, 2, 'float'), $centered, 2, 'float'), $centered, 2, 'float');
+                    $p = $rt->construct(2, $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->binary('*', $centered, $centered, 2, 'float'), $centered, 2, 'float'), $centered, 2, 'float'), $centered, 2, 'float'), $centered, 2, 'float'), $centered, 2, 'float'), $centered, 2, 'float'));
                     $r = $rt->component_wise('pow', $rt->binary('+', $rt->swizzle($p, 'x'), $rt->swizzle($p, 'y'), 1, 'float'), $rt->binary('/', $rt->f(1), $rt->f(8), 1, 'float'));
                 } else {
                     if ($rt->binary('==', $_u_shape, $rt->i(3))) {
-                        $r = $polygonShape__vec2_int->($rt->binary('*', $centered, $rt->f(2), 2, 'float'), $rt->i(4));
+                        $r = $polygonShape__vec2_int->($rt->construct(2, $rt->binary('*', $centered, $rt->f(2), 2, 'float')), $rt->i(4));
                     } else {
                         if ($rt->binary('==', $_u_shape, $rt->i(4))) {
-                            $r = $polygonShape__vec2_int->($rt->binary('*', $centered, $rt->f(2), 2, 'float'), $rt->i(6));
+                            $r = $polygonShape__vec2_int->($rt->construct(2, $rt->binary('*', $centered, $rt->f(2), 2, 'float')), $rt->i(6));
                         } else {
-                            $r = $polygonShape__vec2_int->($rt->binary('*', $centered, $rt->f(2), 2, 'float'), $rt->i(8));
+                            $r = $polygonShape__vec2_int->($rt->construct(2, $rt->binary('*', $centered, $rt->f(2), 2, 'float')), $rt->i(8));
                         }
                     }
                 }

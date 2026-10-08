@@ -29,8 +29,21 @@ sub _strip_comments {
 
 sub _canonical_compatibility {
     my ($source, $canonical_key) = @_;
-    # Keep the canonical CPU's float32 boundaries local to these kernels.
-    if (defined $canonical_key && $canonical_key =~ m{^filter/(?:mosaicTiles|stipple|strokes):}) {
+    # Two different pinned `uint hash_uint(uint)` bodies share one name.
+    # noisemaker-for-cpu 5b686a4 routes them by BODY (compile-glsl
+    # lowerUnsignedJavaScript): the murmur finalizer (7feb352d/846ca68b) keeps
+    # stdlib.hashUint, the LCG-seeded mix (747796405; pointsEmit init, the
+    # points/* agents, flow3d) goes to stdlib.hashUintLcg. hash_uint routes by
+    # name in the codegen, so give the LCG body its own name.
+    if ($source =~ /\buint\s+hash_uint\s*\(\s*uint\b/ && $source !~ /7feb352d|846ca68b/
+        && index($source, '747796405') >= 0) {
+        $source =~ s/\bhash_uint\s*\(/hash_uint_lcg(/g;
+    }
+    # The oracle's adaptCanonicalSource applies these float32 hash boundaries
+    # to every effect except filter/scatter (craquelure, directionalBlur,
+    # extrude, hatch, oilPaint, relief, spinBlur, stamp, watercolor and dla's
+    # initGrid as well as mosaicTiles, stipple and strokes).
+    if (!(defined $canonical_key && $canonical_key =~ m{^filter/scatter:})) {
         $source =~ s{\Qreturn fract((p3.x + p3.y) * p3.z);\E}{return fract(float(float(p3.x + p3.y) * p3.z));}g;
         $source =~ s{\Qreturn fract((p3.xx + p3.yz) * p3.zy);\E}{return fract(vec2(float(float(p3.x + p3.y) * p3.z), float(float(p3.x + p3.z) * p3.y)));}g;
     }
@@ -97,6 +110,18 @@ sub _canonical_compatibility {
             uvec4\s+q\s*=\s*uvec4\(\s*ivec4\(\s*ps\s*\*\s*1000\.0\s*\)\s*\+\s*65536\s*\)\s*;
         }{uvec4 q = uvec4(ivec4(vec4(ps * 1000.0)) + 65536);}gx);
         die "noise3d canonical hash4 pattern changed\n" unless $ps == 1 && $q == 1;
+    }
+    elsif (defined $canonical_key && $canonical_key eq 'synth/perlin:perlin') {
+        # hash3 (the 3D path) is noise3d's hash4 over a uvec3: the canonical
+        # kernel stores the seeded `p` and `p * 1000.0` in Float32Arrays
+        # before the int conversion, so both round to f32 first.
+        my $p = ($source =~ s{
+            \bp\s*=\s*p\s*\+\s*float\(seed\)\s*\*\s*0\.1\s*;
+        }{p = vec3(p + float(seed) * 0.1);}gx);
+        my $q = ($source =~ s{
+            uvec3\s+q\s*=\s*uvec3\(\s*ivec3\(\s*p\s*\*\s*1000\.0\s*\)\s*\+\s*65536\s*\)\s*;
+        }{uvec3 q = uvec3(ivec3(vec3(p * 1000.0)) + 65536);}gx);
+        die "perlin canonical hash3 pattern changed\n" unless $p == 1 && $q == 1;
     }
     elsif (defined $canonical_key && $canonical_key eq 'synth/navierStokes:nsSplat') {
         # The pinned CPU artifact lowers this vector assignment as two

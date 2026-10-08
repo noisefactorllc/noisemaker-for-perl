@@ -22,10 +22,10 @@ my $run_pixel = sub {
         $coord = $rt->copy($coord, 'float');
         $size = $rt->copy($size, 'float');
         my ($mode, $uv);
-        $uv = $rt->binary('/', $coord, $size, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $coord, $size, 2, 'float'));
         $mode = $rt->construct(1, $_u_wrap, 'int');
         if ($rt->binary('==', $mode, $rt->i(0))) {
-            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
+            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
         } else {
             if ($rt->binary('==', $mode, $rt->i(1))) {
                 @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('fract', $uv))};
@@ -38,8 +38,8 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($angle, $c, $center, $color, $pixelCoord, $rad, $s, $srcCoord, $texSize, $wrappedUV);
         $texSize = $rt->construct(2, $rt->texture_size($_u_inputTex));
-        $center = $rt->binary('*', $texSize, $rt->f(0.5), 2, 'float');
-        $pixelCoord = $rt->binary('-', $rt->swizzle($ctx->{frag_coord}, 'xy'), $center, 2, 'float');
+        $center = $rt->construct(2, $rt->binary('*', $texSize, $rt->f(0.5), 2, 'float'));
+        $pixelCoord = $rt->construct(2, $rt->binary('-', $rt->swizzle($ctx->{frag_coord}, 'xy'), $center, 2, 'float'));
         $angle = $_u_angled;
         $rad = $rt->binary('/', $rt->binary('*', $angle, $g->{PI}, 1, 'float'), $rt->f(180), 1, 'float');
         $c = $rt->component_wise('cos', $rad);
@@ -51,7 +51,7 @@ my $run_pixel = sub {
         $wrappedUV = $applyWrap__vec2_vec2->($srcCoord, $texSize);
         $color = $rt->texture($_u_inputTex, $wrappedUV);
         if ($_u_darkest) {
-            @{$color} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct(3, $rt->f(1)), $rt->swizzle($color, 'rgb'), 3, 'float'), $rt->swizzle($color, 'a')))};
+            @{$color} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->swizzle($color, 'rgb'), 3, 'float'), $rt->swizzle($color, 'a')))};
         }
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
     };

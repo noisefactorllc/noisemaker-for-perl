@@ -116,14 +116,14 @@ my $run_pixel = sub {
                                                     @{$middle} = map { $rt->f32($_) } @{($rt->binary('*', $color1, $color2, 4, 'float'))};
                                                 } else {
                                                     if ($rt->binary('==', $mode, $rt->i(12))) {
-                                                        @{$middle} = map { $rt->f32($_) } @{($rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->component_wise('abs', $rt->binary('-', $rt->binary('-', $rt->construct(4, $rt->f(1)), $color1, 4, 'float'), $color2, 4, 'float')), 4, 'float'))};
+                                                        @{$middle} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->component_wise('abs', $rt->binary('-', $rt->binary('-', $rt->construct_raw(4, $rt->f(1)), $color1, 4, 'float'), $color2, 4, 'float')), 4, 'float')))};
                                                         $middle = $rt->assign_swizzle($middle, 'a', $rt->component_wise('max', $rt->swizzle($color1, 'a'), $rt->swizzle($color2, 'a')));
                                                     } else {
                                                         if ($rt->binary('==', $mode, $rt->i(13))) {
                                                             @{$middle} = map { $rt->f32($_) } @{($rt->construct(4, $blendOverlay__float_float->($rt->swizzle($color1, 'r'), $rt->swizzle($color2, 'r')), $blendOverlay__float_float->($rt->swizzle($color1, 'g'), $rt->swizzle($color2, 'g')), $blendOverlay__float_float->($rt->swizzle($color1, 'b'), $rt->swizzle($color2, 'b')), $rt->component_wise('mix', $rt->swizzle($color1, 'a'), $rt->swizzle($color2, 'a'), $rt->f(0.5))))};
                                                         } else {
                                                             if ($rt->binary('==', $mode, $rt->i(14))) {
-                                                                @{$middle} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('-', $rt->component_wise('min', $color1, $color2), $rt->component_wise('max', $color1, $color2), 4, 'float'), $rt->construct(4, $rt->f(1)), 4, 'float'))};
+                                                                @{$middle} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->construct(4, $rt->binary('-', $rt->component_wise('min', $color1, $color2), $rt->component_wise('max', $color1, $color2), 4, 'float')), $rt->construct(4, $rt->f(1)), 4, 'float')))};
                                                             } else {
                                                                 if ($rt->binary('==', $mode, $rt->i(15))) {
                                                                     @{$middle} = map { $rt->f32($_) } @{((($rt->binary('==', $color1, $rt->construct(4, $rt->f(1)))) ? ($color1) : ($rt->component_wise('min', $rt->binary('/', $rt->binary('*', $color2, $color2, 4, 'float'), $rt->binary('-', $rt->f(1), $color1, 4, 'float'), 4, 'float'), $rt->construct(4, $rt->f(1))))))};
@@ -229,7 +229,7 @@ my $run_pixel = sub {
                 }
             }
         }
-        return $rt->binary('+', $rgb, $rt->construct(3, $m, $m, $m), 3, 'float');
+        return $rt->construct(3, $rt->binary('+', $rgb, $rt->construct_raw(3, $m, $m, $m), 3, 'float'));
     };
     $rgb2hsv__vec3 = sub {
         my ($rgb) = @_;
@@ -264,7 +264,7 @@ my $run_pixel = sub {
         $st = $rt->copy($st, 'float');
         my ($aberrationOffset, $blue, $blueOffset, $centerDist, $diff, $distort, $green, $red, $redOffset, $scale, $tex, $zoom);
         @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $_u_rotation))};
-        $diff = $rt->binary('-', $rt->f(0.5), $st, 2, 'float');
+        $diff = $rt->construct(2, $rt->binary('-', $rt->f(0.5), $st, 2, 'float'));
         $centerDist = $rt->length($diff);
         $distort = $rt->f(0);
         $zoom = $rt->f(0);
@@ -297,7 +297,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($color, $hsv, $leftColor, $leftLen, $leftUV, $ra, $rb, $rightColor, $rightLen, $rightUV, $uv);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         if ($_u_resetState) {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $uv))};
             return;
@@ -329,7 +329,7 @@ my $run_pixel = sub {
             @{$color} = map { $rt->f32($_) } @{($blend__vec4_vec4_int_float->($rt->texture($_u_inputTex, $leftUV), $getImage__vec2->($rightUV), $_u_blendMode, $rt->binary('*', $_u_mixAmt, $rt->f(0.01), 1, 'float')))};
         }
         $hsv = $rgb2hsv__vec3->($rt->swizzle($color, 'rgb'));
-        $hsv->[int($rt->i(0))] = $rt->component_wise('mod', $rt->binary('+', $hsv->[int($rt->i(0))], $map__float_float_float_float_float->($_u_hueRotation, $rt->unary('-', $rt->f(180)), $rt->f(180), $rt->unary('-', $rt->f(0.050000000000000003)), $rt->f(0.050000000000000003)), 1, 'float'), $rt->f(1));
+        $hsv->[int($rt->i(0))] = $rt->f32($rt->component_wise('mod', $rt->binary('+', $hsv->[int($rt->i(0))], $map__float_float_float_float_float->($_u_hueRotation, $rt->unary('-', $rt->f(180)), $rt->f(180), $rt->unary('-', $rt->f(0.050000000000000003)), $rt->f(0.050000000000000003)), 1, 'float'), $rt->f(1)));
         $color = $rt->assign_swizzle($color, 'rgb', $hsv2rgb__vec3->($hsv));
         $color = $rt->assign_swizzle($color, 'rgb', $brightnessContrast__vec3->($rt->swizzle($color, 'rgb')));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};

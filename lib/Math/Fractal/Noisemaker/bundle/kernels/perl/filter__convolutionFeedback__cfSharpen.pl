@@ -57,8 +57,8 @@ my $run_pixel = sub {
                 $weightSum = $rt->binary('+', $weightSum, $weight, 1, 'float');
             }
         }
-        $blurred = $rt->binary('/', $blurSum, $weightSum, 3, 'float');
-        $sharpened = $rt->binary('+', $rt->swizzle($center, 'rgb'), $rt->binary('*', $_u_sharpenAmount, $rt->binary('-', $rt->swizzle($center, 'rgb'), $blurred, 3, 'float'), 3, 'float'), 3, 'float');
+        $blurred = $rt->construct(3, $rt->binary('/', $blurSum, $weightSum, 3, 'float'));
+        $sharpened = $rt->construct(3, $rt->binary('+', $rt->swizzle($center, 'rgb'), $rt->binary('*', $_u_sharpenAmount, $rt->binary('-', $rt->swizzle($center, 'rgb'), $blurred, 3, 'float'), 3, 'float'), 3, 'float'));
         @{$sharpened} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $sharpened, $rt->f(0), $rt->f(1)))};
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $sharpened, $rt->swizzle($center, 'a')))};
     };

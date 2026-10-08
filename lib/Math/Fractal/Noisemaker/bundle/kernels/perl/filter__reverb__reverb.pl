@@ -23,7 +23,7 @@ my $run_pixel = sub {
         my ($mode);
         $mode = $rt->construct(1, $_u_wrap, 'int');
         if ($rt->binary('==', $mode, $rt->i(0))) {
-            return $rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'));
+            return $rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')));
         } else {
             if ($rt->binary('==', $mode, $rt->i(1))) {
                 return $rt->component_wise('fract', $uv);
@@ -34,14 +34,14 @@ my $run_pixel = sub {
     $ridge_transform__vec4 = sub {
         my ($color) = @_;
         $color = $rt->copy($color, 'float');
-        return $rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->component_wise('abs', $rt->binary('-', $rt->binary('*', $color, $rt->f(2), 4, 'float'), $rt->construct(4, $rt->f(1)), 4, 'float')), 4, 'float');
+        return $rt->construct(4, $rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->component_wise('abs', $rt->binary('-', $rt->binary('*', $color, $rt->f(2), 4, 'float'), $rt->construct_raw(4, $rt->f(1)), 4, 'float')), 4, 'float'));
     };
     $main__void = sub {
         my ($_for0_first, $accum, $current, $dims, $globalCoord, $globalUV, $i, $iters, $localUV, $original, $result, $sampledLocalUV, $scale, $scaled, $totalWeight, $warpedGlobalUV, $weight, $wrappedGlobalUV);
         $dims = $rt->texture_size($_u_inputTex);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $globalUV = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $localUV = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $dims), 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $globalUV = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $localUV = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $dims)), 2, 'float'));
         $original = $rt->texture($_u_inputTex, $localUV);
         $current = $rt->fresh($original);
         if ($_u_ridges) {
@@ -62,9 +62,9 @@ my $run_pixel = sub {
             if (!($rt->binary('<', $i, $iters))) {
                 last;
             }
-            $warpedGlobalUV = $rt->binary('*', $globalUV, $scale, 2, 'float');
+            $warpedGlobalUV = $rt->construct(2, $rt->binary('*', $globalUV, $scale, 2, 'float'));
             $wrappedGlobalUV = $applyWrap__vec2->($warpedGlobalUV);
-            $sampledLocalUV = $rt->component_wise('fract', $rt->binary('/', $rt->binary('-', $rt->binary('*', $wrappedGlobalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $dims), 2, 'float'));
+            $sampledLocalUV = $rt->component_wise('fract', $rt->binary('/', $rt->binary('-', $rt->binary('*', $wrappedGlobalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct_raw(2, $rt->construct(2, $dims)), 2, 'float'));
             $scaled = $rt->texture($_u_inputTex, $sampledLocalUV);
             if ($_u_ridges) {
                 @{$scaled} = map { $rt->f32($_) } @{($ridge_transform__vec4->($scaled))};
@@ -74,7 +74,7 @@ my $run_pixel = sub {
             $scale = $rt->binary('*', $scale, $rt->f(2), 1, 'float');
             $weight = $rt->binary('*', $weight, $rt->f(0.5), 1, 'float');
         }
-        $result = $rt->binary('/', $accum, $totalWeight, 4, 'float');
+        $result = $rt->construct(4, $rt->binary('/', $accum, $totalWeight, 4, 'float'));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('mix', $rt->swizzle($original, 'rgb'), $rt->swizzle($result, 'rgb'), $_u_alpha), $rt->f(1)))};
     };
     $main__void->();

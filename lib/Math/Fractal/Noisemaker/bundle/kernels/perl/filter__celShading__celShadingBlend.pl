@@ -19,9 +19,9 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($celColor, $edgeStrength, $finalColor, $globalCoord, $origColor, $texSize, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $texSize), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
         $origColor = $rt->texture($_u_inputTex, $uv);
         $celColor = $rt->texture($_u_colorTex, $uv);
         $edgeStrength = $rt->swizzle($rt->texture($_u_edgeTex, $uv), 'r');

@@ -17,7 +17,7 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($current, $mixFactor, $previous, $uv);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         if ($_u_resetState) {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $uv))};
             return;

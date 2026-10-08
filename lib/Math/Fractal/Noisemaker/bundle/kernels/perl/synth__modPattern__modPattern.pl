@@ -65,12 +65,12 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($anim, $color, $globalCoord, $n1, $n2, $n3, $osc1, $osc2, $osc3, $p, $phase1, $phase2, $phase3, $s1, $s2, $s3, $shift, $spd, $uv, $val);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float'));
         $spd = $rt->component_wise('floor', $_u_speed);
         $anim = $rt->binary('*', $_u_time, $spd, 1, 'float');
         $s1 = $rt->binary('-', $rt->f(20.100000000000001), $_u_scale1, 1, 'float');
-        $p = $rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('*', $uv, $s1, 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'));
+        $p = $rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('*', $uv, $s1, 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')));
         $osc1 = $rt->f(0.0);
         if ($rt->binary('==', $_u_animMode, $rt->i(1))) {
             $osc1 = $rt->binary('*', $rt->component_wise('sin', $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $spd, 1, 'float')), $rt->f(0.029999999999999999), 1, 'float');
@@ -81,7 +81,7 @@ my $run_pixel = sub {
         $phase2 = (($rt->binary('==', $_u_animMode, $rt->i(2))) ? ($anim) : ($rt->f(0)));
         $phase3 = (($rt->binary('==', $_u_animMode, $rt->i(2))) ? ($anim) : ($rt->f(0)));
         $s2 = $rt->binary('-', $rt->f(10.1), $_u_scale2, 1, 'float');
-        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('*', $p, $s2, 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
+        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('*', $p, $s2, 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
         $osc2 = $rt->f(0.0);
         if ($rt->binary('==', $_u_animMode, $rt->i(1))) {
             $osc2 = $rt->binary('*', $rt->component_wise('sin', $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $spd, 1, 'float')), $rt->f(0.070000000000000007), 1, 'float');
@@ -95,7 +95,7 @@ my $run_pixel = sub {
             $val = $smoothFract__float->($rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $n1, $_u_repeat1, 1, 'float'), $phase1, 1, 'float'), $rt->binary('*', $n2, $_u_repeat2, 1, 'float'), 1, 'float'), $phase2, 1, 'float'));
         }
         $s3 = $rt->binary('-', $rt->f(6.0999999999999996), $_u_scale3, 1, 'float');
-        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('*', $p, $s3, 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
+        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('*', $p, $s3, 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
         $osc3 = $rt->f(0.0);
         if ($rt->binary('==', $_u_animMode, $rt->i(1))) {
             $osc3 = $rt->binary('*', $rt->component_wise('sin', $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $spd, 1, 'float')), $rt->f(0.14999999999999999), 1, 'float');

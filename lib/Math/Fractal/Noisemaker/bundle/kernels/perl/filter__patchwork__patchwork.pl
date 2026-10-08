@@ -53,22 +53,22 @@ my $run_pixel = sub {
                 if (!($rt->binary('<=', $i, $rt->i(1)))) {
                     last;
                 }
-                $p = $rt->binary('+', $centerPx, $rt->binary('*', $rt->construct(2, $rt->construct(1, $i), $rt->construct(1, $j)), $sp, 2, 'float'), 2, 'float');
+                $p = $rt->construct(2, $rt->binary('+', $centerPx, $rt->binary('*', $rt->construct_raw(2, $rt->construct(1, $i), $rt->construct(1, $j)), $sp, 2, 'float'), 2, 'float'));
                 @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->texture($_u_inputTex, $toSampleUV__vec2->($p)), 4, 'float'))};
             }
         }
-        return $rt->binary('*', $sum, $rt->binary('/', $rt->f(1), $rt->f(9), 1, 'float'), 4, 'float');
+        return $rt->construct(4, $rt->binary('*', $sum, $rt->binary('/', $rt->f(1), $rt->f(9), 1, 'float'), 4, 'float'));
     };
     $main__void = sub {
         my ($a, $bevelMul, $cellCenter, $cellColor, $cellIdxF, $dBottom, $dLeft, $dMin, $dRight, $dTop, $dh, $edgeNormal, $globalCoord, $h, $hNeighbor, $imgCenter, $lightDir, $localPx, $neighborCenter, $neighborIdx, $relPx, $result, $rimPx, $signTerm, $srcOwn, $topFaceShade, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $srcOwn = $rt->texture($_u_inputTex, $uv);
-        $imgCenter = $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float');
-        $relPx = $rt->binary('-', $globalCoord, $imgCenter, 2, 'float');
+        $imgCenter = $rt->construct(2, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'));
+        $relPx = $rt->construct(2, $rt->binary('-', $globalCoord, $imgCenter, 2, 'float'));
         $cellIdxF = $rt->component_wise('floor', $rt->binary('/', $relPx, $_u_squareSize, 2, 'float'));
-        $localPx = $rt->binary('-', $relPx, $rt->binary('*', $cellIdxF, $_u_squareSize, 2, 'float'), 2, 'float');
-        $cellCenter = $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('+', $cellIdxF, $rt->f(0.5), 2, 'float'), $_u_squareSize, 2, 'float'), 2, 'float');
+        $localPx = $rt->construct(2, $rt->binary('-', $relPx, $rt->binary('*', $cellIdxF, $_u_squareSize, 2, 'float'), 2, 'float'));
+        $cellCenter = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('+', $cellIdxF, $rt->f(0.5), 2, 'float'), $_u_squareSize, 2, 'float'), 2, 'float'));
         $cellColor = $rt->swizzle($cellAvgColor3x3__vec2->($cellCenter), 'rgb');
         $h = $lum__vec3->($cellColor);
         $topFaceShade = $rt->binary('+', $rt->f(0.90000000000000002), $rt->binary('*', $rt->f(0.20000000000000001), $rt->binary('-', $h, $rt->f(0.5), 1, 'float'), 1, 'float'), 1, 'float');
@@ -107,7 +107,7 @@ my $run_pixel = sub {
                     }
                 }
             }
-            $neighborCenter = $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('+', $neighborIdx, $rt->f(0.5), 2, 'float'), $_u_squareSize, 2, 'float'), 2, 'float');
+            $neighborCenter = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('+', $neighborIdx, $rt->f(0.5), 2, 'float'), $_u_squareSize, 2, 'float'), 2, 'float'));
             $hNeighbor = $lum__vec3->($rt->swizzle($cellAvgColor3x3__vec2->($neighborCenter), 'rgb'));
             $dh = $rt->binary('-', $h, $hNeighbor, 1, 'float');
             $a = $rt->component_wise('radians', $_u_lightAngle);

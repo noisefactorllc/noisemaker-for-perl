@@ -33,15 +33,15 @@ my $run_pixel = sub {
         $size = $rt->copy($size, 'float');
         my ($val);
         $val = $rt->construct(3, $rt->f(0));
-        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct(2, $rt->unary('-', $rt->i(1)), $rt->unary('-', $rt->i(1))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.050000000000000003), 3, 'float'), 3, 'float'))};
-        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct(2, $rt->i(0), $rt->unary('-', $rt->i(1))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.20000000000000001), 3, 'float'), 3, 'float'))};
-        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct(2, $rt->i(1), $rt->unary('-', $rt->i(1))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.050000000000000003), 3, 'float'), 3, 'float'))};
-        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct(2, $rt->unary('-', $rt->i(1)), $rt->i(0)), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.20000000000000001), 3, 'float'), 3, 'float'))};
-        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct(2, $rt->i(0), $rt->i(0)), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->unary('-', $rt->f(1)), 3, 'float'), 3, 'float'))};
-        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct(2, $rt->i(1), $rt->i(0)), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.20000000000000001), 3, 'float'), 3, 'float'))};
-        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct(2, $rt->unary('-', $rt->i(1)), $rt->i(1)), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.050000000000000003), 3, 'float'), 3, 'float'))};
-        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct(2, $rt->i(0), $rt->i(1)), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.20000000000000001), 3, 'float'), 3, 'float'))};
-        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct(2, $rt->i(1), $rt->i(1)), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.050000000000000003), 3, 'float'), 3, 'float'))};
+        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->construct(3, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct_raw(2, $rt->construct(1, $rt->unary('-', $rt->i(1))), $rt->construct(1, $rt->unary('-', $rt->i(1)))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.050000000000000003), 3, 'float')), 3, 'float'))};
+        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->construct(3, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct_raw(2, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->unary('-', $rt->i(1)))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.20000000000000001), 3, 'float')), 3, 'float'))};
+        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->construct(3, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct_raw(2, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->unary('-', $rt->i(1)))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.050000000000000003), 3, 'float')), 3, 'float'))};
+        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->construct(3, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct_raw(2, $rt->construct(1, $rt->unary('-', $rt->i(1))), $rt->construct(1, $rt->i(0))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.20000000000000001), 3, 'float')), 3, 'float'))};
+        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->construct(3, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct_raw(2, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->unary('-', $rt->f(1)), 3, 'float')), 3, 'float'))};
+        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->construct(3, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct_raw(2, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.20000000000000001), 3, 'float')), 3, 'float'))};
+        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->construct(3, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct_raw(2, $rt->construct(1, $rt->unary('-', $rt->i(1))), $rt->construct(1, $rt->i(1))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.050000000000000003), 3, 'float')), 3, 'float'))};
+        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->construct(3, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct_raw(2, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.20000000000000001), 3, 'float')), 3, 'float'))};
+        @{$val} = map { $rt->f32($_) } @{($rt->binary('+', $val, $rt->construct(3, $rt->binary('*', $rt->swizzle($rt->texture($tex, $rt->binary('/', $rt->binary('+', $uv, $rt->construct_raw(2, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1))), 2, 'float'), $size, 2, 'float')), 'rgb'), $rt->f(0.050000000000000003), 3, 'float')), 3, 'float'))};
         return $val;
     };
     $map__float_float_float_float_float = sub {
@@ -57,28 +57,28 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($p2);
-        $p2 = $rt->component_wise('fract', $rt->binary('*', $p, $rt->construct(2, $rt->f(0.1031), $rt->f(0.10299999999999999)), 2, 'float'));
+        $p2 = $rt->component_wise('fract', $rt->binary('*', $p, $rt->construct_raw(2, $rt->f(0.1031), $rt->f(0.10299999999999999)), 2, 'float'));
         @{$p2} = map { $rt->f32($_) } @{($rt->binary('+', $p2, $rt->dot($p2, $rt->binary('+', $rt->swizzle($p2, 'yx'), $rt->f(33.329999999999998), 2, 'float')), 2, 'float'))};
         return $rt->component_wise('fract', $rt->binary('*', $rt->binary('+', $rt->swizzle($p2, 'x'), $rt->swizzle($p2, 'y'), 1, 'float'), $rt->swizzle($p2, 'x'), 1, 'float'));
     };
     $main__void = sub {
         my ($a, $a2, $b, $b2, $bufferIsEmpty, $color, $f, $k, $prevFrame, $prevFrameCoord, $prevLum, $r1, $r2, $s, $tex, $texSize, $val);
         $texSize = $rt->texture_size($_u_bufTex);
-        $tex = $rt->texture($_u_bufTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $texSize), 2, 'float'));
+        $tex = $rt->texture($_u_bufTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
         $a = $rt->swizzle($tex, 'r');
         $b = $rt->swizzle($tex, 'g');
         $bufferIsEmpty = (((((($rt->binary('==', $rt->swizzle($tex, 'r'), $rt->f(0))) && ($rt->binary('==', $rt->swizzle($tex, 'g'), $rt->f(0))) ? 1 : 0)) && ($rt->binary('==', $rt->swizzle($tex, 'b'), $rt->f(0))) ? 1 : 0)) && ($rt->binary('==', $rt->swizzle($tex, 'a'), $rt->f(0))) ? 1 : 0);
         if ((($bufferIsEmpty) || ($_u_resetState) ? 1 : 0)) {
             $a = $rt->f(1);
             $b = $rt->f(0);
-            if ($rt->binary('>', $hash__vec2->($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->construct(1, $_u_seed)), 2, 'float')), $rt->f(0.98999999999999999))) {
+            if ($rt->binary('>', $hash__vec2->($rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(1, $_u_seed)), 2, 'float'))), $rt->f(0.98999999999999999))) {
                 $b = $rt->f(1);
             }
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $a, $b, $rt->f(0), $rt->f(1)))};
             return;
         }
         $color = $lp__sampler2D_vec2_vec2->($_u_bufTex, $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $texSize));
-        $prevFrameCoord = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $texSize), 2, 'float');
+        $prevFrameCoord = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
         $prevFrame = $rt->swizzle($rt->texture($_u_inputTex, $prevFrameCoord), 'rgb');
         $prevLum = $lum__vec3->($prevFrame);
         $f = $rt->binary('*', $_u_feed, $rt->f(0.001), 1, 'float');

@@ -34,9 +34,9 @@ my $run_pixel = sub {
                 last;
             }
             if ($rt->binary('<=', $srgb->[int($i)], $rt->f(0.04045))) {
-                $linear->[int($i)] = $rt->binary('/', $srgb->[int($i)], $rt->f(12.92), 1, 'float');
+                $linear->[int($i)] = $rt->f32($rt->binary('/', $srgb->[int($i)], $rt->f(12.92), 1, 'float'));
             } else {
-                $linear->[int($i)] = $rt->component_wise('pow', $rt->binary('/', $rt->binary('+', $srgb->[int($i)], $rt->f(0.055), 1, 'float'), $rt->f(1.0549999999999999), 1, 'float'), $rt->f(2.3999999999999999));
+                $linear->[int($i)] = $rt->f32($rt->component_wise('pow', $rt->binary('/', $rt->binary('+', $srgb->[int($i)], $rt->f(0.055), 1, 'float'), $rt->f(1.0549999999999999), 1, 'float'), $rt->f(2.3999999999999999)));
             }
         }
         return $linear;
@@ -57,9 +57,9 @@ my $run_pixel = sub {
                 last;
             }
             if ($rt->binary('<=', $linear->[int($i)], $rt->f(0.0031308))) {
-                $srgb->[int($i)] = $rt->binary('*', $linear->[int($i)], $rt->f(12.92), 1, 'float');
+                $srgb->[int($i)] = $rt->f32($rt->binary('*', $linear->[int($i)], $rt->f(12.92), 1, 'float'));
             } else {
-                $srgb->[int($i)] = $rt->binary('-', $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $linear->[int($i)], $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float')), 1, 'float'), $rt->f(0.055), 1, 'float');
+                $srgb->[int($i)] = $rt->f32($rt->binary('-', $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $linear->[int($i)], $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float')), 1, 'float'), $rt->f(0.055), 1, 'float'));
             }
         }
         return $srgb;
@@ -91,9 +91,9 @@ my $run_pixel = sub {
         $midWheel = $rt->copy($midWheel, 'float');
         $highWheel = $rt->copy($highWheel, 'float');
         my ($colorShift, $hW, $highOffset, $luma, $lumaDiff, $mW, $midOffset, $newLuma, $result, $sW, $shadowOffset, $totalWeight);
-        $shadowOffset = $rt->binary('*', $rt->binary('-', $shadowWheel, $rt->f(0.5), 3, 'float'), $rt->f(2), 3, 'float');
-        $midOffset = $rt->binary('*', $rt->binary('-', $midWheel, $rt->f(0.5), 3, 'float'), $rt->f(2), 3, 'float');
-        $highOffset = $rt->binary('*', $rt->binary('-', $highWheel, $rt->f(0.5), 3, 'float'), $rt->f(2), 3, 'float');
+        $shadowOffset = $rt->construct(3, $rt->binary('*', $rt->binary('-', $shadowWheel, $rt->f(0.5), 3, 'float'), $rt->f(2), 3, 'float'));
+        $midOffset = $rt->construct(3, $rt->binary('*', $rt->binary('-', $midWheel, $rt->f(0.5), 3, 'float'), $rt->f(2), 3, 'float'));
+        $highOffset = $rt->construct(3, $rt->binary('*', $rt->binary('-', $highWheel, $rt->f(0.5), 3, 'float'), $rt->f(2), 3, 'float'));
         if ((((($rt->binary('<', $rt->length($shadowOffset), $rt->f(0.01))) && ($rt->binary('<', $rt->length($midOffset), $rt->f(0.01))) ? 1 : 0)) && ($rt->binary('<', $rt->length($highOffset), $rt->f(0.01))) ? 1 : 0)) {
             return $rgb;
         }
@@ -109,7 +109,7 @@ my $run_pixel = sub {
         @{$colorShift} = map { $rt->f32($_) } @{($rt->binary('+', $colorShift, $rt->binary('*', $rt->binary('*', $shadowOffset, $sW, 3, 'float'), $rt->f(0.5), 3, 'float'), 3, 'float'))};
         @{$colorShift} = map { $rt->f32($_) } @{($rt->binary('+', $colorShift, $rt->binary('*', $rt->binary('*', $midOffset, $mW, 3, 'float'), $rt->f(0.5), 3, 'float'), 3, 'float'))};
         @{$colorShift} = map { $rt->f32($_) } @{($rt->binary('+', $colorShift, $rt->binary('*', $rt->binary('*', $highOffset, $hW, 3, 'float'), $rt->f(0.5), 3, 'float'), 3, 'float'))};
-        $result = $rt->binary('+', $rgb, $colorShift, 3, 'float');
+        $result = $rt->construct(3, $rt->binary('+', $rgb, $colorShift, 3, 'float'));
         $newLuma = $rt->dot($result, $g->{LUMA_WEIGHTS});
         $lumaDiff = $rt->binary('-', $luma, $newLuma, 1, 'float');
         @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $result, $rt->binary('*', $lumaDiff, $rt->f(0.29999999999999999), 1, 'float'), 3, 'float'))};
@@ -117,7 +117,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($color, $coord, $globalCoord, $rgb);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         $rgb = $srgbToLinear__vec3->($rt->swizzle($color, 'rgb'));

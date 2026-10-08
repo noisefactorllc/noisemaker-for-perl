@@ -21,9 +21,9 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($color, $globalCoord, $lum, $result, $texSize, $use_rgb, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $texSize), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
         $color = $rt->texture($_u_inputTex, $uv);
         $use_rgb = $rt->binary('>', $_u_colorMode, $rt->f(0.5));
         $lum = $rt->f(0.0);

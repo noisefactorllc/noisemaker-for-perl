@@ -25,16 +25,16 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($bottom, $center, $color, $dist, $dx, $dy, $localUV, $radiusPixels, $right, $texSize, $texelSize);
         $texSize = $rt->texture_size($_u_inputTex);
-        $texelSize = $rt->binary('/', $rt->f(1), $rt->construct(2, $texSize), 2, 'float');
-        $localUV = $rt->binary('*', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texelSize, 2, 'float');
+        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $localUV = $rt->construct(2, $rt->binary('*', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texelSize, 2, 'float'));
         $radiusPixels = $rt->binary('*', $_u_amount, $_u_renderScale, 1, 'float');
         $radiusPixels = $rt->component_wise('min', $radiusPixels, $rt->f(256));
         $color = $rt->texture($_u_inputTex, $localUV);
         $center = $desaturate__vec3->($rt->swizzle($color, 'rgb'));
-        $right = $desaturate__vec3->($rt->swizzle($rt->texture($_u_inputTex, $rt->binary('+', $localUV, $rt->binary('*', $rt->construct(2, $radiusPixels, $rt->f(0)), $texelSize, 2, 'float'), 2, 'float')), 'rgb'));
-        $bottom = $desaturate__vec3->($rt->swizzle($rt->texture($_u_inputTex, $rt->binary('+', $localUV, $rt->binary('*', $rt->construct(2, $rt->f(0), $radiusPixels), $texelSize, 2, 'float'), 2, 'float')), 'rgb'));
-        $dx = $rt->binary('-', $center, $right, 3, 'float');
-        $dy = $rt->binary('-', $center, $bottom, 3, 'float');
+        $right = $desaturate__vec3->($rt->swizzle($rt->texture($_u_inputTex, $rt->binary('+', $localUV, $rt->binary('*', $rt->construct_raw(2, $radiusPixels, $rt->f(0)), $texelSize, 2, 'float'), 2, 'float')), 'rgb'));
+        $bottom = $desaturate__vec3->($rt->swizzle($rt->texture($_u_inputTex, $rt->binary('+', $localUV, $rt->binary('*', $rt->construct_raw(2, $rt->f(0), $radiusPixels), $texelSize, 2, 'float'), 2, 'float')), 'rgb'));
+        $dx = $rt->construct(3, $rt->binary('-', $center, $right, 3, 'float'));
+        $dy = $rt->construct(3, $rt->binary('-', $center, $bottom, 3, 'float'));
         $dist = $rt->binary('*', $rt->distance($dx, $dy), $rt->f(2.5), 1, 'float');
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $rt->binary('*', $rt->swizzle($color, 'rgb'), $dist, 3, 'float'), $rt->f(0), $rt->f(1)), $rt->swizzle($color, 'a')))};
     };

@@ -30,19 +30,19 @@ my $run_pixel = sub {
     $prng__vec3 = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
-        return $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float');
+        return $rt->construct(3, $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float'));
     };
     $main__void = sub {
         my ($_for0_first, $color, $fullRes, $globalCoord, $globalUV, $offset, $percent, $t, $tex, $texSize, $tileDims, $toCenter, $total, $uv, $weight);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
         $tileDims = $rt->construct(2, $texSize);
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims));
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $tileDims, 2, 'float');
-        $globalUV = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float');
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims)));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $tileDims, 2, 'float'));
+        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
         $color = $rt->construct(3, $rt->f(0));
         $total = $rt->f(0);
-        $toCenter = $rt->binary('-', $globalUV, $rt->f(0.5), 2, 'float');
+        $toCenter = $rt->construct(2, $rt->binary('-', $globalUV, $rt->f(0.5), 2, 'float'));
         $offset = $rt->swizzle($prng__vec3->($rt->construct(3, $rt->f(12.989800000000001), $rt->f(78.233000000000004), $rt->f(151.7182))), 'x');
         $t = $rt->f(0);
         $_for0_first = 1;

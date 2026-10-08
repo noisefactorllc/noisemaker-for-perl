@@ -28,7 +28,7 @@ my $run_pixel = sub {
     $smod2__vec2_float = sub {
         my ($v, $m) = @_;
         $v = $rt->copy($v, 'float');
-        return $rt->binary('*', $m, $rt->binary('-', $rt->binary('-', $rt->f(0.75), $rt->component_wise('abs', $rt->binary('-', $rt->component_wise('fract', $v), $rt->f(0.5), 2, 'float')), 2, 'float'), $rt->f(0.25), 2, 'float'), 2, 'float');
+        return $rt->construct(2, $rt->binary('*', $m, $rt->construct(2, $rt->binary('-', $rt->construct(2, $rt->binary('-', $rt->f(0.75), $rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('fract', $v), $rt->f(0.5), 2, 'float'))), 2, 'float')), $rt->f(0.25), 2, 'float')), 2, 'float'));
     };
     $polarCoords__vec2_float = sub {
         my ($uv, $aspect) = @_;
@@ -61,8 +61,8 @@ my $run_pixel = sub {
         my ($aspect, $col, $coord, $dx, $dy, $fullRes, $texSize, $tileDims, $uv);
         $texSize = $rt->texture_size($_u_inputTex);
         $tileDims = $rt->construct(2, $texSize);
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims));
-        $uv = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float');
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims)));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
         $aspect = $rt->binary('/', $rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y'), 1, 'float');
         $coord = $rt->construct(2, 0.0);
         if ($rt->binary('==', $_u_polarMode, $rt->i(0))) {

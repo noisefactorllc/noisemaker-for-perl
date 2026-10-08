@@ -36,8 +36,8 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($a, $aspectRatio, $col, $dx, $dy, $globalCoord, $r, $sampleUV, $spiralAmt, $uv);
         $aspectRatio = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         @{$uv} = map { $rt->f32($_) } @{($rotate2D__vec2_float_float->($uv, $rt->binary('/', $_u_rotation, $rt->f(180), 1, 'float'), $aspectRatio))};
         @{$uv} = map { $rt->f32($_) } @{($rt->binary('-', $uv, $rt->f(0.5), 2, 'float'))};
         if ($_u_aspectLens) {
@@ -47,13 +47,13 @@ my $run_pixel = sub {
         $a = $rt->component_wise('atan', $rt->swizzle($uv, 'y'), $rt->swizzle($uv, 'x'));
         $spiralAmt = $rt->binary('*', $rt->binary('*', $_u_strength, $rt->f(0.050000000000000003), 1, 'float'), $r, 1, 'float');
         $a = $rt->binary('+', $a, $rt->binary('-', $spiralAmt, $rt->binary('*', $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $rt->construct(1, $_u_speed), 1, 'float'), $rt->component_wise('sign', $_u_strength), 1, 'float'), 1, 'float'), 1, 'float');
-        @{$uv} = map { $rt->f32($_) } @{($rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $a), $rt->component_wise('sin', $a)), $r, 2, 'float'))};
+        @{$uv} = map { $rt->f32($_) } @{($rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $a), $rt->component_wise('sin', $a)), $r, 2, 'float'))};
         if ($_u_aspectLens) {
             $uv = $rt->assign_swizzle($uv, 'x', $rt->binary('/', $rt->swizzle($uv, 'x'), $aspectRatio, 1, 'float'));
         }
         @{$uv} = map { $rt->f32($_) } @{($rt->binary('+', $uv, $rt->f(0.5), 2, 'float'))};
         if ($rt->binary('==', $_u_wrap, $rt->i(0))) {
-            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
+            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
         } else {
             if ($rt->binary('==', $_u_wrap, $rt->i(1))) {
                 @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('mod', $uv, $rt->f(1)))};

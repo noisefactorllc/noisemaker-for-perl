@@ -129,7 +129,7 @@ my $run_pixel = sub {
         $n = $rt->component_wise('max', $_u_gridSize, $rt->i(1));
         $cellUV = $rt->component_wise('fract', $rt->binary('*', $uv, $rt->construct(1, $n), 2, 'float'));
         $edge = $rt->component_wise('min', $cellUV, $rt->binary('-', $rt->f(1), $cellUV, 2, 'float'));
-        $fw = $rt->binary('*', $rt->binary('/', $rt->construct(2, $rt->f(1)), $_u_fullResolution, 2, 'float'), $rt->construct(1, $n), 2, 'float');
+        $fw = $rt->construct(2, $rt->binary('*', $rt->binary('/', $rt->construct_raw(2, $rt->f(1)), $_u_fullResolution, 2, 'float'), $rt->construct(1, $n), 2, 'float'));
         $line = $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->component_wise('smoothstep', $rt->f(0), $rt->binary('*', $rt->f(2), $rt->swizzle($fw, 'x'), 1, 'float'), $rt->swizzle($edge, 'x')), $rt->component_wise('smoothstep', $rt->f(0), $rt->binary('*', $rt->f(2), $rt->swizzle($fw, 'y'), 1, 'float'), $rt->swizzle($edge, 'y')), 1, 'float'), 1, 'float');
         return $rt->construct(4, $rt->construct(3, $line), $rt->f(1));
     };
@@ -157,7 +157,7 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         my ($dist, $dot, $n, $nearest, $scaled);
         $n = $rt->component_wise('max', $_u_gridSize, $rt->i(1));
-        $scaled = $rt->binary('*', $uv, $rt->construct(1, $n), 2, 'float');
+        $scaled = $rt->construct(2, $rt->binary('*', $uv, $rt->construct(1, $n), 2, 'float'));
         $nearest = $rt->component_wise('round', $scaled);
         $dist = $rt->length($rt->binary('-', $scaled, $nearest, 2, 'float'));
         $dot = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $rt->f(0.12), $rt->f(0.14999999999999999), $dist), 1, 'float');
@@ -165,8 +165,8 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($globalCoord, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         if ($rt->binary('==', $_u_pattern, $rt->i(1))) {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($colorBars__vec2->($uv))};
         } else {

@@ -19,8 +19,8 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($dist, $fIndex, $fract_i, $globalCoord, $i0, $i1, $line, $s0, $s1, $uv, $wval);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         $fIndex = $rt->binary('*', $rt->swizzle($uv, 'x'), $rt->f(127), 1, 'float');
         $i0 = $rt->construct(1, $rt->component_wise('floor', $fIndex), 'int');
         $i1 = $rt->component_wise('min', $rt->binary('+', $i0, $rt->i(1), 1, 'int'), $rt->i(127));

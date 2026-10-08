@@ -17,7 +17,7 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($a, $accum, $blended, $i, $inputColor, $result, $st);
-        $st = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $st = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $inputColor = $rt->texture($_u_inputTex, $st);
         $accum = $rt->texture($_u_accumTex, $st);
         $a = $rt->binary('/', $_u_alpha, $rt->f(100), 1, 'float');

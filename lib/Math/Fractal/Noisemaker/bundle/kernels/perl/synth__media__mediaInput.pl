@@ -73,7 +73,7 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         my ($f, $lo, $p, $size);
         $size = $rt->texture_size($_u_imageTex);
-        $p = $rt->binary('-', $rt->binary('*', $uv, $rt->construct(2, $size), 2, 'float'), $rt->f(0.5), 2, 'float');
+        $p = $rt->construct(2, $rt->binary('-', $rt->binary('*', $uv, $rt->construct_raw(2, $rt->construct(2, $size)), 2, 'float'), $rt->f(0.5), 2, 'float'));
         $lo = $rt->construct(2, $rt->component_wise('floor', $p), 'int');
         $f = $rt->component_wise('fract', $p);
         return $rt->component_wise('mix', $rt->component_wise('mix', $mediaTexel__ivec2_ivec2->($lo, $size), $mediaTexel__ivec2_ivec2->($rt->binary('+', $lo, $rt->construct(2, $rt->i(1), $rt->i(0), 'int'), 2, 'int'), $size), $rt->swizzle($f, 'x')), $rt->component_wise('mix', $mediaTexel__ivec2_ivec2->($rt->binary('+', $lo, $rt->construct(2, $rt->i(0), $rt->i(1), 'int'), 2, 'int'), $size), $mediaTexel__ivec2_ivec2->($rt->binary('+', $lo, $rt->construct(2, $rt->i(1), $rt->i(1), 'int'), 2, 'int'), $size), $rt->swizzle($f, 'x')), $rt->swizzle($f, 'y'));
@@ -220,7 +220,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($st);
-        $st = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $st = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $st = $rt->assign_swizzle($st, 'y', $rt->binary('-', $rt->f(1), $rt->swizzle($st, 'y'), 1, 'float'));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($getImage__vec2->($st))};
     };

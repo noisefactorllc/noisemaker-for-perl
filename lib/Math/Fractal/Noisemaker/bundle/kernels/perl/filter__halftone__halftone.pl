@@ -46,7 +46,7 @@ my $run_pixel = sub {
         my ($cmy, $k, $scale);
         $k = $rt->binary('-', $rt->f(1), $rt->component_wise('max', $rt->component_wise('max', $rt->swizzle($rgb, 'r'), $rt->swizzle($rgb, 'g')), $rt->swizzle($rgb, 'b')), 1, 'float');
         $scale = $rt->component_wise('max', $rt->binary('-', $rt->f(1), $k, 1, 'float'), $rt->f(1.0000000000000001e-05));
-        $cmy = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('-', $rt->binary('-', $rt->f(1), $rgb, 3, 'float'), $rt->construct(3, $k), 3, 'float'), $scale, 3, 'float'), $rt->f(0), $rt->f(1));
+        $cmy = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('-', $rt->binary('-', $rt->f(1), $rgb, 3, 'float'), $rt->construct_raw(3, $k), 3, 'float'), $scale, 3, 'float'), $rt->f(0), $rt->f(1));
         return $rt->construct(4, $cmy, $k);
     };
     $rotate2D__vec2_float = sub {
@@ -56,7 +56,7 @@ my $run_pixel = sub {
         $a = $rt->component_wise('radians', $angleDeg);
         $co = $rt->component_wise('cos', $a);
         $si = $rt->component_wise('sin', $a);
-        return $rt->matrix_mult($rt->construct(4, $co, $rt->unary('-', $si), $si, $co), $v, 2);
+        return $rt->construct(2, $rt->matrix_mult($rt->construct(4, $co, $rt->unary('-', $si), $si, $co), $v, 2));
     };
     $boxBlur3__vec2_vec2 = sub {
         my ($uv, $texel) = @_;
@@ -84,19 +84,19 @@ my $run_pixel = sub {
                 if (!($rt->binary('<=', $x, $rt->i(1)))) {
                     last;
                 }
-                $o = $rt->binary('*', $rt->construct(2, $rt->construct(1, $x), $rt->construct(1, $y)), $texel, 2, 'float');
+                $o = $rt->construct(2, $rt->binary('*', $rt->construct_raw(2, $rt->construct(1, $x), $rt->construct(1, $y)), $texel, 2, 'float'));
                 @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->swizzle($rt->texture($_u_inputTex, $rt->component_wise('clamp', $rt->binary('+', $uv, $o, 2, 'float'), $rt->f(0), $rt->f(1))), 'rgb'), 3, 'float'))};
             }
         }
-        return $rt->binary('/', $sum, $rt->f(9), 3, 'float');
+        return $rt->construct(3, $rt->binary('/', $sum, $rt->f(9), 3, 'float'));
     };
     $cellSampleFromRuv__vec2_float_vec2 = sub {
         my ($ruv, $angleDeg, $texel) = @_;
         $ruv = $rt->copy($ruv, 'float');
         $texel = $rt->copy($texel, 'float');
         my ($cellCenterGc, $cellId, $cellUV);
-        $cellId = $rt->binary('+', $rt->component_wise('floor', $ruv), $rt->f(0.5), 2, 'float');
-        $cellCenterGc = $rotate2D__vec2_float->($rt->binary('*', $cellId, $_u_frequency, 2, 'float'), $rt->unary('-', $angleDeg));
+        $cellId = $rt->construct(2, $rt->binary('+', $rt->component_wise('floor', $ruv), $rt->f(0.5), 2, 'float'));
+        $cellCenterGc = $rotate2D__vec2_float->($rt->construct(2, $rt->binary('*', $cellId, $_u_frequency, 2, 'float')), $rt->unary('-', $angleDeg));
         $cellUV = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('-', $cellCenterGc, $_u_tileOffset, 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
         return $boxBlur3__vec2_vec2->($cellUV, $texel);
     };
@@ -125,9 +125,9 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($alpha, $center, $d, $dotOffset, $globalCoord, $ink, $inkC, $inkK, $inkM, $inkY, $off, $rd, $ruv, $ruvC, $ruvK, $ruvM, $ruvY, $screened, $texel, $uv, $valC, $valK, $valM, $valY, $value);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
-        $texel = $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $texel = $rt->construct(2, $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float'));
         $alpha = $rt->swizzle($rt->texture($_u_inputTex, $uv), 'a');
         $d = $rt->f(0.0);
         $dotOffset = $rt->construct(2, 0.0);
@@ -146,19 +146,19 @@ my $run_pixel = sub {
         $valY = $rt->f(0.0);
         $value = $rt->f(0.0);
         if ($rt->binary('==', $_u_MODE, $rt->i(0))) {
-            $ruvC = $rt->binary('/', $rotate2D__vec2_float->($globalCoord, $_u_cyanAngle), $_u_frequency, 2, 'float');
-            $ruvM = $rt->binary('/', $rotate2D__vec2_float->($globalCoord, $_u_magentaAngle), $_u_frequency, 2, 'float');
-            $ruvY = $rt->binary('/', $rotate2D__vec2_float->($globalCoord, $_u_yellowAngle), $_u_frequency, 2, 'float');
-            $ruvK = $rt->binary('/', $rotate2D__vec2_float->($globalCoord, $_u_blackAngle), $_u_frequency, 2, 'float');
+            $ruvC = $rt->construct(2, $rt->binary('/', $rotate2D__vec2_float->($globalCoord, $_u_cyanAngle), $_u_frequency, 2, 'float'));
+            $ruvM = $rt->construct(2, $rt->binary('/', $rotate2D__vec2_float->($globalCoord, $_u_magentaAngle), $_u_frequency, 2, 'float'));
+            $ruvY = $rt->construct(2, $rt->binary('/', $rotate2D__vec2_float->($globalCoord, $_u_yellowAngle), $_u_frequency, 2, 'float'));
+            $ruvK = $rt->construct(2, $rt->binary('/', $rotate2D__vec2_float->($globalCoord, $_u_blackAngle), $_u_frequency, 2, 'float'));
             $valC = $rt->swizzle($rgbToCmyk__vec3->($cellSampleFromRuv__vec2_float_vec2->($ruvC, $_u_cyanAngle, $texel)), 'r');
             $valM = $rt->swizzle($rgbToCmyk__vec3->($cellSampleFromRuv__vec2_float_vec2->($ruvM, $_u_magentaAngle, $texel)), 'g');
             $valY = $rt->swizzle($rgbToCmyk__vec3->($cellSampleFromRuv__vec2_float_vec2->($ruvY, $_u_yellowAngle, $texel)), 'b');
             $valK = $rt->swizzle($rgbToCmyk__vec3->($cellSampleFromRuv__vec2_float_vec2->($ruvK, $_u_blackAngle, $texel)), 'a');
-            $inkC = $roundDotCoverage__vec2_float_float->($rt->binary('-', $rt->component_wise('fract', $ruvC), $rt->f(0.5), 2, 'float'), $valC, $_u_sharpness);
-            $inkM = $roundDotCoverage__vec2_float_float->($rt->binary('-', $rt->component_wise('fract', $ruvM), $rt->f(0.5), 2, 'float'), $valM, $_u_sharpness);
-            $inkY = $roundDotCoverage__vec2_float_float->($rt->binary('-', $rt->component_wise('fract', $ruvY), $rt->f(0.5), 2, 'float'), $valY, $_u_sharpness);
-            $inkK = $roundDotCoverage__vec2_float_float->($rt->binary('-', $rt->component_wise('fract', $ruvK), $rt->f(0.5), 2, 'float'), $valK, $_u_sharpness);
-            $screened = $rt->binary('*', $rt->binary('-', $rt->construct(3, $rt->f(1)), $rt->construct(3, $inkC, $inkM, $inkY), 3, 'float'), $rt->binary('-', $rt->f(1), $inkK, 1, 'float'), 3, 'float');
+            $inkC = $roundDotCoverage__vec2_float_float->($rt->construct(2, $rt->binary('-', $rt->component_wise('fract', $ruvC), $rt->f(0.5), 2, 'float')), $valC, $_u_sharpness);
+            $inkM = $roundDotCoverage__vec2_float_float->($rt->construct(2, $rt->binary('-', $rt->component_wise('fract', $ruvM), $rt->f(0.5), 2, 'float')), $valM, $_u_sharpness);
+            $inkY = $roundDotCoverage__vec2_float_float->($rt->construct(2, $rt->binary('-', $rt->component_wise('fract', $ruvY), $rt->f(0.5), 2, 'float')), $valY, $_u_sharpness);
+            $inkK = $roundDotCoverage__vec2_float_float->($rt->construct(2, $rt->binary('-', $rt->component_wise('fract', $ruvK), $rt->f(0.5), 2, 'float')), $valK, $_u_sharpness);
+            $screened = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->construct_raw(3, $inkC, $inkM, $inkY), 3, 'float'), $rt->binary('-', $rt->f(1), $inkK, 1, 'float'), 3, 'float'));
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $screened, $alpha))};
             return;
         } else {
@@ -170,14 +170,14 @@ my $run_pixel = sub {
             $rd = $rt->f(0.0);
             $ruv = $rt->construct(2, 0.0);
             if ($rt->binary('==', $_u_PATTERN, $rt->i(2))) {
-                $center = $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float');
+                $center = $rt->construct(2, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'));
                 $value = $rt->binary('-', $rt->f(1), $lum__vec3->($boxBlur3__vec2_vec2->($uv, $texel)), 1, 'float');
                 $rd = $rt->binary('/', $rt->length($rt->binary('-', $globalCoord, $center, 2, 'float')), $_u_frequency, 1, 'float');
                 $d = $rt->component_wise('abs', $rt->binary('-', $rt->component_wise('fract', $rd), $rt->f(0.5), 1, 'float'));
             } else {
-                $ruv = $rt->binary('/', $rotate2D__vec2_float->($globalCoord, $_u_monoAngle), $_u_frequency, 2, 'float');
+                $ruv = $rt->construct(2, $rt->binary('/', $rotate2D__vec2_float->($globalCoord, $_u_monoAngle), $_u_frequency, 2, 'float'));
                 $value = $rt->binary('-', $rt->f(1), $lum__vec3->($cellSampleFromRuv__vec2_float_vec2->($ruv, $_u_monoAngle, $texel)), 1, 'float');
-                $off = $rt->binary('-', $rt->component_wise('fract', $ruv), $rt->f(0.5), 2, 'float');
+                $off = $rt->construct(2, $rt->binary('-', $rt->component_wise('fract', $ruv), $rt->f(0.5), 2, 'float'));
                 @{$dotOffset} = map { $rt->f32($_) } @{($off)};
                 if ($rt->binary('==', $_u_PATTERN, $rt->i(1))) {
                     $d = $rt->component_wise('abs', $rt->swizzle($off, 'y'));

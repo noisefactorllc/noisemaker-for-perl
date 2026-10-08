@@ -37,15 +37,15 @@ my $run_pixel = sub {
         $c = $rt->copy($c, 'float');
         my ($K, $p);
         $K = $rt->construct(4, $rt->f(1), $rt->binary('/', $rt->f(2), $rt->f(3), 1, 'float'), $rt->binary('/', $rt->f(1), $rt->f(3), 1, 'float'), $rt->f(3));
-        $p = $rt->component_wise('abs', $rt->binary('-', $rt->binary('*', $rt->component_wise('fract', $rt->binary('+', $rt->swizzle($c, 'xxx'), $rt->swizzle($K, 'xyz'), 3, 'float')), $rt->f(6), 3, 'float'), $rt->swizzle($K, 'www'), 3, 'float'));
-        return $rt->binary('*', $rt->swizzle($c, 'z'), $rt->component_wise('mix', $rt->swizzle($K, 'xxx'), $rt->component_wise('clamp', $rt->binary('-', $p, $rt->swizzle($K, 'xxx'), 3, 'float'), $rt->f(0), $rt->f(1)), $rt->swizzle($c, 'y')), 3, 'float');
+        $p = $rt->component_wise('abs', $rt->construct(3, $rt->binary('-', $rt->construct(3, $rt->binary('*', $rt->component_wise('fract', $rt->binary('+', $rt->swizzle($c, 'xxx'), $rt->swizzle($K, 'xyz'), 3, 'float')), $rt->f(6), 3, 'float')), $rt->swizzle($K, 'www'), 3, 'float')));
+        return $rt->construct(3, $rt->binary('*', $rt->swizzle($c, 'z'), $rt->component_wise('mix', $rt->swizzle($K, 'xxx'), $rt->component_wise('clamp', $rt->binary('-', $p, $rt->swizzle($K, 'xxx'), 3, 'float'), $rt->f(0), $rt->f(1)), $rt->swizzle($c, 'y')), 3, 'float'));
     };
     $main__void = sub {
         my ($a, $amt, $b, $color, $color1, $color2, $factor, $globalCoord, $middle, $resultHSV, $st);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $st = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $color1 = $rt->texture($_u_inputTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
-        $color2 = $rt->texture($_u_tex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float'));
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $st = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $color1 = $rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
+        $color2 = $rt->texture($_u_tex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float')));
         $a = $rgb2hsv__vec3->($rt->swizzle($color1, 'rgb'));
         $b = $rgb2hsv__vec3->($rt->swizzle($color2, 'rgb'));
         $resultHSV = $rt->construct(3, 0.0);

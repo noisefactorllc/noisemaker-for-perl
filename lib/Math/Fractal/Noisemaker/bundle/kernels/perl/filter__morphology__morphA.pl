@@ -17,8 +17,8 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($_for0_first, $_for1_first, $_for2_first, $acc, $d, $hi, $i, $lo, $o, $r, $r2, $s, $sL, $sR, $texel, $uv, $x, $y);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
-        $texel = $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $texel = $rt->construct(2, $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float'));
         $acc = $rt->texture($_u_inputTex, $uv);
         $r = $rt->f(0.0);
         $r2 = $rt->f(0.0);
@@ -73,7 +73,7 @@ my $run_pixel = sub {
                 if ($rt->binary('>', $rt->construct(1, $i), $r)) {
                     last;
                 }
-                $o = $rt->binary('*', $rt->construct(2, $rt->construct(1, $i), $rt->f(0)), $texel, 2, 'float');
+                $o = $rt->construct(2, $rt->binary('*', $rt->construct_raw(2, $rt->construct(1, $i), $rt->f(0)), $texel, 2, 'float'));
                 $sL = $rt->texture($_u_inputTex, $rt->binary('-', $uv, $o, 2, 'float'));
                 $sR = $rt->texture($_u_inputTex, $rt->binary('+', $uv, $o, 2, 'float'));
                 $hi = $rt->component_wise('max', $acc, $rt->component_wise('max', $sL, $sR));

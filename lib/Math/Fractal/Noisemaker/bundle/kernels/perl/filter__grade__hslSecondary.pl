@@ -42,9 +42,9 @@ my $run_pixel = sub {
                 last;
             }
             if ($rt->binary('<=', $srgb->[int($i)], $rt->f(0.04045))) {
-                $linear->[int($i)] = $rt->binary('/', $srgb->[int($i)], $rt->f(12.92), 1, 'float');
+                $linear->[int($i)] = $rt->f32($rt->binary('/', $srgb->[int($i)], $rt->f(12.92), 1, 'float'));
             } else {
-                $linear->[int($i)] = $rt->component_wise('pow', $rt->binary('/', $rt->binary('+', $srgb->[int($i)], $rt->f(0.055), 1, 'float'), $rt->f(1.0549999999999999), 1, 'float'), $rt->f(2.3999999999999999));
+                $linear->[int($i)] = $rt->f32($rt->component_wise('pow', $rt->binary('/', $rt->binary('+', $srgb->[int($i)], $rt->f(0.055), 1, 'float'), $rt->f(1.0549999999999999), 1, 'float'), $rt->f(2.3999999999999999)));
             }
         }
         return $linear;
@@ -65,9 +65,9 @@ my $run_pixel = sub {
                 last;
             }
             if ($rt->binary('<=', $linear->[int($i)], $rt->f(0.0031308))) {
-                $srgb->[int($i)] = $rt->binary('*', $linear->[int($i)], $rt->f(12.92), 1, 'float');
+                $srgb->[int($i)] = $rt->f32($rt->binary('*', $linear->[int($i)], $rt->f(12.92), 1, 'float'));
             } else {
-                $srgb->[int($i)] = $rt->binary('-', $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $linear->[int($i)], $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float')), 1, 'float'), $rt->f(0.055), 1, 'float');
+                $srgb->[int($i)] = $rt->f32($rt->binary('-', $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $linear->[int($i)], $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float')), 1, 'float'), $rt->f(0.055), 1, 'float'));
             }
         }
         return $srgb;
@@ -123,15 +123,15 @@ my $run_pixel = sub {
             $t = $rt->binary('+', $h, $rt->binary('/', $rt->binary('-', $rt->f(1), $rt->construct(1, $i), 1, 'float'), $rt->f(3), 1, 'float'), 1, 'float');
             $t = $rt->component_wise('fract', $t);
             if ($rt->binary('<', $t, $rt->binary('/', $rt->f(1), $rt->f(6), 1, 'float'))) {
-                $rgb->[int($i)] = $rt->binary('+', $p, $rt->binary('*', $rt->binary('*', $rt->binary('-', $q, $p, 1, 'float'), $rt->f(6), 1, 'float'), $t, 1, 'float'), 1, 'float');
+                $rgb->[int($i)] = $rt->f32($rt->binary('+', $p, $rt->binary('*', $rt->binary('*', $rt->binary('-', $q, $p, 1, 'float'), $rt->f(6), 1, 'float'), $t, 1, 'float'), 1, 'float'));
             } else {
                 if ($rt->binary('<', $t, $rt->f(0.5))) {
-                    $rgb->[int($i)] = $q;
+                    $rgb->[int($i)] = $rt->f32($q);
                 } else {
                     if ($rt->binary('<', $t, $rt->binary('/', $rt->f(2), $rt->f(3), 1, 'float'))) {
-                        $rgb->[int($i)] = $rt->binary('+', $p, $rt->binary('*', $rt->binary('*', $rt->binary('-', $q, $p, 1, 'float'), $rt->binary('-', $rt->binary('/', $rt->f(2), $rt->f(3), 1, 'float'), $t, 1, 'float'), 1, 'float'), $rt->f(6), 1, 'float'), 1, 'float');
+                        $rgb->[int($i)] = $rt->f32($rt->binary('+', $p, $rt->binary('*', $rt->binary('*', $rt->binary('-', $q, $p, 1, 'float'), $rt->binary('-', $rt->binary('/', $rt->f(2), $rt->f(3), 1, 'float'), $t, 1, 'float'), 1, 'float'), $rt->f(6), 1, 'float'), 1, 'float'));
                     } else {
-                        $rgb->[int($i)] = $p;
+                        $rgb->[int($i)] = $rt->f32($p);
                     }
                 }
             }
@@ -161,7 +161,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($color, $coord, $correctedHsl, $correctedRgb, $globalCoord, $hsl, $matte, $rgb);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         if ($rt->binary('==', $_u_hslEnable, $rt->i(0))) {

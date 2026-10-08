@@ -270,7 +270,7 @@ my $run_pixel = sub {
         my ($cellCenter, $cellHash, $cellIndex, $cs, $csf, $glyphIdx, $glyphVal, $gx, $gy, $isTileRendering, $localPos, $luma, $pixelCoord, $resolution, $sampleUV, $srcColor, $texSize, $variant);
         $texSize = $rt->texture_size($_u_inputTex);
         $resolution = $rt->construct(2, $texSize);
-        $pixelCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $pixelCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $cs = $rt->component_wise('max', $rt->construct(1, $rt->binary('*', $rt->construct(1, $_u_cellSize), $_u_renderScale, 1, 'float'), 'int'), $rt->i(1));
         $isTileRendering = $rt->binary('>', $rt->length($_u_tileOffset), $rt->f(0));
         if ($isTileRendering) {
@@ -283,8 +283,8 @@ my $run_pixel = sub {
         $gy = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $rt->swizzle($localPos, 'y'), $rt->f(7), 1, 'float')), 'int');
         $gx = $rt->component_wise('clamp', $gx, $rt->i(0), $rt->i(4));
         $gy = $rt->component_wise('clamp', $gy, $rt->i(0), $rt->i(6));
-        $cellCenter = $rt->binary('*', $rt->binary('+', $cellIndex, $rt->f(0.5), 2, 'float'), $csf, 2, 'float');
-        $sampleUV = $rt->binary('/', $rt->binary('-', $cellCenter, $_u_tileOffset, 2, 'float'), $resolution, 2, 'float');
+        $cellCenter = $rt->construct(2, $rt->binary('*', $rt->binary('+', $cellIndex, $rt->f(0.5), 2, 'float'), $csf, 2, 'float'));
+        $sampleUV = $rt->construct(2, $rt->binary('/', $rt->binary('-', $cellCenter, $_u_tileOffset, 2, 'float'), $resolution, 2, 'float'));
         if ($isTileRendering) {
             @{$sampleUV} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $sampleUV, $rt->f(0), $rt->f(1)))};
         }
@@ -292,7 +292,7 @@ my $run_pixel = sub {
         $luma = $rt->dot($rt->swizzle($srcColor, 'rgb'), $rt->construct(3, $rt->f(0.29899999999999999), $rt->f(0.58699999999999997), $rt->f(0.114)));
         $glyphIdx = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $luma, $rt->construct(1, $g->{GLYPH_COUNT}), 1, 'float')), 'int');
         $glyphIdx = $rt->component_wise('clamp', $glyphIdx, $rt->i(0), $rt->binary('-', $g->{GLYPH_COUNT}, $rt->i(1), 1, 'int'));
-        $cellHash = $hash__vec2->($rt->binary('+', $cellIndex, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.37), 1, 'float'), 2, 'float'));
+        $cellHash = $hash__vec2->($rt->construct(2, $rt->binary('+', $cellIndex, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.37), 1, 'float'), 2, 'float')));
         $variant = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $cellHash, $rt->f(3), 1, 'float')), 'int');
         if ((((($rt->binary('==', $variant, $rt->i(1))) && ($rt->binary('>', $glyphIdx, $rt->i(0))) ? 1 : 0)) && ($rt->binary('<', $glyphIdx, $rt->binary('-', $g->{GLYPH_COUNT}, $rt->i(1), 1, 'int'))) ? 1 : 0)) {
             $glyphIdx = $glyphIdx;

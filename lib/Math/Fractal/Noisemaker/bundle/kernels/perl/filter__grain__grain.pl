@@ -106,7 +106,7 @@ my $run_pixel = sub {
         $freq = $rt->copy($freq, 'float');
         my ($angle, $bl, $bottom, $br, $cell, $cell_f, $frac, $scaled_freq, $scaled_uv, $slice0, $slice1, $slice2, $slice3, $time_cell, $time_coord, $time_floor, $time_frac, $tl, $top, $tr, $weight_x, $weight_y);
         $scaled_freq = $rt->component_wise('max', $freq, $rt->construct(2, $rt->f(1), $rt->f(1)));
-        $scaled_uv = $rt->binary('*', $uv, $scaled_freq, 2, 'float');
+        $scaled_uv = $rt->construct(2, $rt->binary('*', $uv, $scaled_freq, 2, 'float'));
         $cell_f = $rt->component_wise('floor', $scaled_uv);
         $cell = $rt->construct(2, $rt->construct(1, $rt->swizzle($cell_f, 'x'), 'int'), $rt->construct(1, $rt->swizzle($cell_f, 'y'), 'int'), 'int');
         $frac = $rt->component_wise('fract', $scaled_uv);
@@ -182,9 +182,9 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($blend_alpha, $coords, $effective_time, $globalCoord, $global_id, $global_pixel, $mixed_rgb, $noise_rgb, $noise_value, $res, $rs, $texel, $u_height, $u_width);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $global_id = $rt->construct(3, $rt->construct(1, $rt->swizzle($ctx->{frag_coord}, 'x'), 'uint'), $rt->construct(1, $rt->swizzle($ctx->{frag_coord}, 'y'), 'uint'), $rt->i(0), 'uint');
-        $res = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution));
+        $res = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
         $u_width = $rt->component_wise('max', $as_u32__float->($rt->swizzle($res, 'x')), $rt->i(1));
         $u_height = $rt->component_wise('max', $as_u32__float->($rt->swizzle($res, 'y')), $rt->i(1));
         $global_pixel = $rt->construct(2, $rt->construct(1, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'x'), $rt->swizzle($_u_tileOffset, 'x'), 1, 'float'), 'uint'), $rt->construct(1, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'y'), $rt->swizzle($_u_tileOffset, 'y'), 1, 'float'), 'uint'), 'uint');

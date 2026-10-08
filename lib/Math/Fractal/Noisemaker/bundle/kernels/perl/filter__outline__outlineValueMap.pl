@@ -51,9 +51,9 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($dimensions, $globalCoord, $texel, $uv, $value);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $dimensions = $rt->texture_size($_u_inputTex);
-        $uv = $rt->binary('/', $rt->binary('-', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->f(0.5)), 2, 'float'), $rt->construct(2, $rt->component_wise('max', $rt->swizzle($dimensions, 'x'), $rt->i(1)), $rt->component_wise('max', $rt->swizzle($dimensions, 'y'), $rt->i(1))), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'), $rt->construct_raw(2, $rt->construct(1, $rt->component_wise('max', $rt->swizzle($dimensions, 'x'), $rt->i(1))), $rt->construct(1, $rt->component_wise('max', $rt->swizzle($dimensions, 'y'), $rt->i(1)))), 2, 'float'));
         $texel = $rt->texture($_u_inputTex, $uv);
         $value = $valueMapComponent__vec4->($texel);
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $value, $value, $value, $rt->swizzle($texel, 'a')))};

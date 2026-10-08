@@ -29,23 +29,23 @@ my $run_pixel = sub {
         my ($uv) = @_;
         $uv = $rt->copy($uv, 'float');
         my ($centered);
-        $centered = $rt->binary('*', $rt->component_wise('abs', $rt->binary('-', $uv, $rt->construct(2, $rt->f(0.5)), 2, 'float')), $rt->f(2), 2, 'float');
+        $centered = $rt->construct(2, $rt->binary('*', $rt->component_wise('abs', $rt->binary('-', $uv, $rt->construct_raw(2, $rt->f(0.5)), 2, 'float')), $rt->f(2), 2, 'float'));
         return $rt->component_wise('max', $rt->swizzle($centered, 'x'), $rt->swizzle($centered, 'y'));
     };
     $main__void = sub {
         my ($_for0_first, $a, $bloomed, $blurAccum, $blurred, $boosted, $edgeBlended, $edgeMask, $finalRgb, $fullRes, $globalCoord, $globalUV, $i, $offset, $original, $r, $radiusUV, $sampleGlobalUV, $sampleLocalUV, $sigma, $sourceClamped, $t, $texelSize, $theta, $uv, $weight, $weightSum);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution));
-        $globalUV = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
+        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
         $original = $rt->texel_fetch($_u_inputTex, $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int'), $rt->i(0));
         $a = $rt->component_wise('clamp', $_u_alpha, $rt->f(0), $rt->f(1));
         if ($rt->binary('<=', $a, $rt->f(0))) {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $clamp01__vec3->($rt->swizzle($original, 'rgb')), $rt->swizzle($original, 'a')))};
             return;
         }
-        $texelSize = $rt->binary('/', $rt->f(1), $_u_fullResolution, 2, 'float');
-        $radiusUV = $rt->binary('*', $rt->binary('*', $g->{RADIUS}, $_u_renderScale, 1, 'float'), $texelSize, 2, 'float');
+        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $_u_fullResolution, 2, 'float'));
+        $radiusUV = $rt->construct(2, $rt->binary('*', $rt->binary('*', $g->{RADIUS}, $_u_renderScale, 1, 'float'), $texelSize, 2, 'float'));
         $blurAccum = $rt->construct(3, $rt->f(0));
         $weightSum = $rt->f(0);
         $i = $rt->i(0);
@@ -61,20 +61,20 @@ my $run_pixel = sub {
             $t = $rt->binary('/', $rt->construct(1, $i), $rt->construct(1, $g->{TAP_COUNT}), 1, 'float');
             $r = $rt->component_wise('sqrt', $t);
             $theta = $rt->binary('*', $rt->construct(1, $i), $g->{GOLDEN_ANGLE}, 1, 'float');
-            $offset = $rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $theta), $rt->component_wise('sin', $theta)), $r, 2, 'float');
+            $offset = $rt->construct(2, $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $theta), $rt->component_wise('sin', $theta)), $r, 2, 'float'));
             $sigma = $rt->f(0.40000000000000002);
             $weight = $rt->component_wise('exp', $rt->binary('/', $rt->binary('*', $rt->unary('-', $rt->f(0.5)), $rt->binary('*', $r, $r, 1, 'float'), 1, 'float'), $rt->binary('*', $sigma, $sigma, 1, 'float'), 1, 'float'));
             $sampleGlobalUV = $rt->component_wise('clamp', $rt->binary('+', $uv, $rt->binary('*', $offset, $radiusUV, 2, 'float'), 2, 'float'), $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->f(1)));
-            $sampleLocalUV = $rt->binary('/', $rt->binary('-', $rt->binary('*', $sampleGlobalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float');
-            @{$blurAccum} = map { $rt->f32($_) } @{($rt->binary('+', $blurAccum, $rt->binary('*', $rt->swizzle($rt->texture($_u_inputTex, $sampleLocalUV), 'rgb'), $weight, 3, 'float'), 3, 'float'))};
+            $sampleLocalUV = $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $sampleGlobalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+            @{$blurAccum} = map { $rt->f32($_) } @{($rt->binary('+', $blurAccum, $rt->construct(3, $rt->binary('*', $rt->swizzle($rt->texture($_u_inputTex, $sampleLocalUV), 'rgb'), $weight, 3, 'float')), 3, 'float'))};
             $weightSum = $rt->binary('+', $weightSum, $weight, 1, 'float');
         }
-        $blurred = $rt->binary('/', $blurAccum, $weightSum, 3, 'float');
-        $boosted = $clamp01__vec3->($rt->binary('+', $blurred, $rt->construct(3, $g->{BRIGHTNESS_ADJUST}), 3, 'float'));
+        $blurred = $rt->construct(3, $rt->binary('/', $blurAccum, $weightSum, 3, 'float'));
+        $boosted = $clamp01__vec3->($rt->construct(3, $rt->binary('+', $blurred, $rt->construct_raw(3, $g->{BRIGHTNESS_ADJUST}), 3, 'float')));
         $edgeMask = $chebyshev_mask__vec2->($globalUV);
         $edgeMask = $rt->component_wise('smoothstep', $rt->f(0), $rt->f(0.80000000000000004), $edgeMask);
         $sourceClamped = $clamp01__vec3->($rt->swizzle($original, 'rgb'));
-        $bloomed = $clamp01__vec3->($rt->binary('*', $rt->binary('+', $sourceClamped, $boosted, 3, 'float'), $rt->f(0.5), 3, 'float'));
+        $bloomed = $clamp01__vec3->($rt->construct(3, $rt->binary('*', $rt->binary('+', $sourceClamped, $boosted, 3, 'float'), $rt->f(0.5), 3, 'float')));
         $edgeBlended = $rt->component_wise('mix', $sourceClamped, $bloomed, $edgeMask);
         $finalRgb = $clamp01__vec3->($rt->component_wise('mix', $sourceClamped, $edgeBlended, $a));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $finalRgb, $rt->swizzle($original, 'a')))};

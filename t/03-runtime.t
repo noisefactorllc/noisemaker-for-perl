@@ -33,6 +33,23 @@ feq($rt->length($chain), 2.805586576461792, 'chain length (double-rounded)');
 
 veq($rt->normalize($rt->construct(3, 0.5, 0.5, 1.0)),
     [0.40824827551841736, 0.40824827551841736, 0.8164965510368347], 'normalize');
+# The oracle rounds the dot product before its sqrt (shapes3d repetition), and
+# distance rounds each difference as well. Values from the cpu stdlib.
+veq(
+    $rt->normalize($rt->construct(3, -0.0015451312065124512, -0.0015643835067749023, -0.0097536444664001465)),
+    [-0.1545376181602478, -0.15646316111087799, -0.97551912069320679],
+    'normalize rounds the dot before its sqrt',
+);
+feq(
+    $rt->distance(
+        $rt->construct(3, 0.98552024364471436, -0.88193178176879883, -0.23187106847763062),
+        $rt->construct(3, -0.93949294090270996, -0.85601300001144409, 0.34736850857734680),
+    ),
+    2.010439395904541,
+    'distance rounds each difference and the dot',
+);
+is_deeply($rt->construct_raw(3, 0.1, [0.2, 0.3]), [0.1, 0.2, 0.3], 'construct_raw keeps float components raw');
+is_deeply($rt->construct_raw(2, 0.1), [0.1, 0.1], 'construct_raw splats a scalar');
 veq(
     $rt->cross($rt->construct(3, 1.0, 2.0, 3.0), $rt->construct(3, 4.0, 5.0, 6.0)),
     [-3.0, 6.0, -3.0],

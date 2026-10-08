@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint__uint, $hash__uint, $complexToScreen__vec2, $inMandelbrotInterior__float_float, $main__void);
+    my ($hash_uint_lcg__uint, $hash__uint, $complexToScreen__vec2, $inMandelbrotInterior__float_float, $main__void);
     my $_retc;
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
@@ -23,7 +23,7 @@ my $run_pixel = sub {
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
-    $hash_uint__uint = sub {
+    $hash_uint_lcg__uint = sub {
         my ($s) = @_;
         my ($state, $word);
         $state = $rt->binary('+', $rt->binary('*', $s, $rt->i(747796405), 1, 'uint'), $rt->i(2891336453), 1, 'uint');
@@ -32,7 +32,7 @@ my $run_pixel = sub {
     };
     $hash__uint = sub {
         my ($s) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($s)), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($s)), $rt->f(4294967295), 1, 'float');
     };
     $complexToScreen__vec2 = sub {
         my ($z) = @_;
@@ -64,7 +64,7 @@ my $run_pixel = sub {
             @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)};
             return;
         }
-        $agentSeed = $rt->binary('^', $rt->binary('^', $rt->hash_uint($rt->construct(1, $rt->binary('+', $rt->swizzle($coord, 'x'), $rt->binary('*', $rt->swizzle($coord, 'y'), $stateSize, 1, 'int'), 1, 'int'), 'uint')), $rt->construct(1, $rt->binary('*', $_u_time, $rt->f(65536), 1, 'float'), 'uint'), 1, 'uint'), $rt->construct(1, $rt->binary('*', $rt->swizzle($vel, 'z'), $rt->f(137), 1, 'float'), 'uint'), 1, 'uint');
+        $agentSeed = $rt->binary('^', $rt->binary('^', $rt->hash_uint_lcg($rt->construct(1, $rt->binary('+', $rt->swizzle($coord, 'x'), $rt->binary('*', $rt->swizzle($coord, 'y'), $stateSize, 1, 'int'), 1, 'int'), 'uint')), $rt->construct(1, $rt->binary('*', $_u_time, $rt->f(65536), 1, 'float'), 'uint'), 1, 'uint'), $rt->construct(1, $rt->binary('*', $rt->swizzle($vel, 'z'), $rt->f(137), 1, 'float'), 'uint'), 1, 'uint');
         $needsInit = $rt->binary('<', $rt->swizzle($pos, 'z'), $rt->f(0.25));
         $brightness = $rt->f(0.0);
         $cIm = $rt->f(0.0);

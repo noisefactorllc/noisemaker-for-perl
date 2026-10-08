@@ -22,9 +22,9 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($p3);
-        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
+        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
         @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
-        return $rt->component_wise('fract', $rt->binary('*', $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float'), $rt->swizzle($p3, 'z'), 1, 'float'));
+        return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
     };
     $rotateAround__vec2_vec2_float_float = sub {
         my ($uv, $center, $angle, $aspectRatio) = @_;
@@ -46,8 +46,8 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_for0_first, $angularStep, $arc, $aspectRatio, $center, $distorted, $globalCoord, $i, $jitter, $jitterCoord, $sampleUV, $sum, $theta, $uv);
         $aspectRatio = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         $center = $rt->construct(2, $_u_centerX, $_u_centerY);
         $arc = $rt->component_wise('radians', $_u_amount);
         $angularStep = $rt->binary('/', $arc, $rt->construct(1, $rt->binary('-', $g->{N}, $rt->i(1), 1, 'int')), 1, 'float');

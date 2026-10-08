@@ -22,8 +22,8 @@ my $run_pixel = sub {
         my ($angle, $aspect, $c, $effectiveSkewAmt, $globalPixel, $globalUV, $localUV, $maxSkew, $resolution, $s, $st, $texSize, $wrapMode);
         $texSize = $rt->texture_size($_u_inputTex);
         $resolution = $rt->construct(2, $texSize);
-        $globalPixel = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $globalUV = $rt->binary('/', $globalPixel, $_u_fullResolution, 2, 'float');
+        $globalPixel = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $globalUV = $rt->construct(2, $rt->binary('/', $globalPixel, $_u_fullResolution, 2, 'float'));
         $aspect = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
         $st = $rt->fresh($globalUV);
         @{$st} = map { $rt->f32($_) } @{($rt->binary('-', $st, $rt->f(0.5), 2, 'float'))};
@@ -37,13 +37,13 @@ my $run_pixel = sub {
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('+', $rt->swizzle($st, 'x'), $rt->binary('*', $rt->swizzle($st, 'y'), $rt->unary('-', $effectiveSkewAmt), 1, 'float'), 1, 'float'));
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('/', $rt->swizzle($st, 'x'), $aspect, 1, 'float'));
         @{$st} = map { $rt->f32($_) } @{($rt->binary('+', $st, $rt->f(0.5), 2, 'float'))};
-        $localUV = $rt->binary('/', $rt->binary('-', $rt->binary('*', $st, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $resolution, 2, 'float');
+        $localUV = $rt->construct(2, $rt->binary('/', $rt->binary('-', $rt->binary('*', $st, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $resolution, 2, 'float'));
         $wrapMode = $rt->construct(1, $_u_wrap, 'int');
         if ($rt->binary('==', $wrapMode, $rt->i(0))) {
             @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $localUV, $rt->f(0), $rt->f(1)))};
         } else {
             if ($rt->binary('==', $wrapMode, $rt->i(1))) {
-                @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $localUV, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
+                @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $localUV, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
             } else {
                 @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('fract', $localUV))};
             }

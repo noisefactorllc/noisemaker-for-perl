@@ -223,6 +223,19 @@ sub construct {
     return [@vals[0 .. $width - 1]];
 }
 
+# A float vector constructor that is an operand of fused arithmetic. The
+# oracle's JS substitutes each component expression into the arithmetic
+# (`vec3(a, b, c) / eps` is `[(a) / eps, ...]`), so the components stay raw
+# until the fused result is stored.
+sub construct_raw {
+    my ($self, $width, @rest) = @_;
+    return [($rest[0]) x $width] if @rest == 1 && !_is_vec($rest[0]);
+    my @vals = map { _is_vec($_) ? @$_ : $_ } @rest;
+    die "construct_raw($width) with no components\n" unless @vals;
+    push @vals, ($vals[-1]) x ($width - @vals) if @vals < $width;
+    return [@vals[0 .. $width - 1]];
+}
+
 # Pass-by-value copy of a function argument, coerced to the DECLARED
 # parameter's element type. Float params force float32 (GLSL implicit
 # conversion at the call boundary); int/uint params stay integer so a uvecN
@@ -601,6 +614,7 @@ sub pcg3d {
 }
 
 sub hash_uint { Math::Fractal::Noisemaker::UintMath::hash_uint32(int($_[1]) & _U32) }
+sub hash_uint_lcg { Math::Fractal::Noisemaker::UintMath::hash_uint_lcg(int($_[1]) & _U32) }
 
 sub float_bits_to_uint { Math::Fractal::Noisemaker::UintMath::float_bits_to_uint(0.0 + $_[1]) }
 
@@ -659,15 +673,19 @@ sub distance {
     my ($self, $a, $b) = @_;
     my $av = _snap32($a);
     my $bv = _snap32($b);
-    my @d = map { $av->[$_] - $bv->[$_] } 0 .. $#$av;
-    return f32(sqrt(_dot_raw(\@d, \@d)));
+    # JS distance is length(subtract(a, b)): the vector subtract rounds each
+    # difference to f32, and length rounds the dot before the sqrt.
+    my @d = map { f32($av->[$_] - $bv->[$_]) } 0 .. $#$av;
+    return f32(sqrt(f32(_dot_raw(\@d, \@d))));
 }
 
 sub normalize {
     my ($self, $a) = @_;
     my $v = _snap32($a);
-    # JS normalize divides by length(), which is f32-rounded.
-    my $mag = f32(sqrt(_dot_raw($v, $v)));
+    # JS normalize divides by length(), F32(sqrt(dot)), and that dot is
+    # itself F32-rounded: the squared magnitude rounds to f32 before the
+    # sqrt, exactly as in length().
+    my $mag = f32(sqrt(f32(_dot_raw($v, $v))));
     return [(0.0) x scalar @$v] if $mag == 0.0;
     return [map { f32($_ / $mag) } @$v];
 }

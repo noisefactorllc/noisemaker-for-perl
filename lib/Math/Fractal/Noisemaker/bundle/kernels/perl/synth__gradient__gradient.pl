@@ -83,7 +83,7 @@ my $run_pixel = sub {
         $p = $rt->assign_swizzle($p, 'x', (($rt->binary('>=', $rt->swizzle($p, 'x'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'x'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'x')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
         $p = $rt->assign_swizzle($p, 'y', (($rt->binary('>=', $rt->swizzle($p, 'y'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'y'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'y')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
         $p = $rt->assign_swizzle($p, 'z', (($rt->binary('>=', $rt->swizzle($p, 'z'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'z'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'z')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
-        return $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float');
+        return $rt->construct(3, $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float'));
     };
     $hash2D__vec2 = sub {
         my ($p) = @_;
@@ -96,11 +96,11 @@ my $run_pixel = sub {
         my ($a, $b, $c, $d, $f, $i, $u);
         $i = $rt->component_wise('floor', $p);
         $f = $rt->component_wise('fract', $p);
-        $u = $rt->binary('*', $rt->binary('*', $f, $f, 2, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 2, 'float'), 2, 'float'), 2, 'float');
+        $u = $rt->construct(2, $rt->binary('*', $rt->binary('*', $f, $f, 2, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 2, 'float'), 2, 'float'), 2, 'float'));
         $a = $hash2D__vec2->($i);
-        $b = $hash2D__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(1), $rt->f(0)), 2, 'float'));
-        $c = $hash2D__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(0), $rt->f(1)), 2, 'float'));
-        $d = $hash2D__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(1), $rt->f(1)), 2, 'float'));
+        $b = $hash2D__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float')));
+        $c = $hash2D__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float')));
+        $d = $hash2D__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(1), $rt->f(1)), 2, 'float')));
         return $rt->component_wise('mix', $rt->component_wise('mix', $a, $b, $rt->swizzle($u, 'x')), $rt->component_wise('mix', $c, $d, $rt->swizzle($u, 'x')), $rt->swizzle($u, 'y'));
     };
     $fbmNoise__vec2 = sub {
@@ -121,7 +121,7 @@ my $run_pixel = sub {
             if (!($rt->binary('<', $i, $rt->i(4)))) {
                 last;
             }
-            $sum = $rt->binary('+', $sum, $rt->binary('*', $valueNoise__vec2->($rt->binary('*', $p, $freq, 2, 'float')), $amp, 1, 'float'), 1, 'float');
+            $sum = $rt->binary('+', $sum, $rt->binary('*', $valueNoise__vec2->($rt->construct(2, $rt->binary('*', $p, $freq, 2, 'float'))), $amp, 1, 'float'), 1, 'float');
             $maxVal = $rt->binary('+', $maxVal, $amp, 1, 'float');
             $freq = $rt->binary('*', $freq, $rt->f(2), 1, 'float');
             $amp = $rt->binary('*', $amp, $rt->f(0.5), 1, 'float');
@@ -130,12 +130,12 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($a, $angle, $aspectRatio, $bottom, $c, $cBL, $cBR, $cTL, $cTR, $centered, $color, $cornerSt, $dist, $globalCoord, $noiseSt, $rotatedCentered, $rotatedPoint, $rotatedSt, $s, $st, $t, $timeOffset, $top);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $st = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $st = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         $aspectRatio = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
         $angle = $rt->binary('/', $rt->binary('*', $rt->unary('-', $_u_rotation), $rt->f(3.1415926535900001), 1, 'float'), $rt->f(180), 1, 'float');
         $rotatedSt = $rotate2D__vec2_float->($st, $angle);
-        $centered = $rt->binary('-', $st, $rt->f(0.5), 2, 'float');
+        $centered = $rt->construct(2, $rt->binary('-', $st, $rt->f(0.5), 2, 'float'));
         $centered = $rt->assign_swizzle($centered, 'x', $rt->binary('*', $rt->swizzle($centered, 'x'), $aspectRatio, 1, 'float'));
         $rotatedCentered = $rt->fresh($centered);
         $c = $rt->component_wise('cos', $angle);
@@ -169,9 +169,9 @@ my $run_pixel = sub {
                 if ($rt->binary('==', $_u_gradientType, $rt->i(2))) {
                     $cornerSt = $rotate2D__vec2_float->($st, $angle);
                     $cTL = $rt->fresh($_u_color1);
-                    $cTR = (($rt->binary('>=', $_u_colorCount, $rt->i(3))) ? ($_u_color2) : ($_u_color1));
-                    $cBL = (($rt->binary('>=', $_u_colorCount, $rt->i(3))) ? ($_u_color3) : ($_u_color2));
-                    $cBR = (($rt->binary('>=', $_u_colorCount, $rt->i(4))) ? ($_u_color4) : ($cBL));
+                    $cTR = $rt->construct(3, (($rt->binary('>=', $_u_colorCount, $rt->i(3))) ? ($_u_color2) : ($_u_color1)));
+                    $cBL = $rt->construct(3, (($rt->binary('>=', $_u_colorCount, $rt->i(3))) ? ($_u_color3) : ($_u_color2)));
+                    $cBR = $rt->construct(3, (($rt->binary('>=', $_u_colorCount, $rt->i(4))) ? ($_u_color4) : ($cBL)));
                     $top = $rt->component_wise('mix', $cTL, $cTR, $rt->swizzle($cornerSt, 'x'));
                     $bottom = $rt->component_wise('mix', $cBL, $cBR, $rt->swizzle($cornerSt, 'x'));
                     @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $bottom, $top, $rt->swizzle($cornerSt, 'y')))};
@@ -182,13 +182,13 @@ my $run_pixel = sub {
                         @{$color} = map { $rt->f32($_) } @{($blendColors__float->($t))};
                     } else {
                         if ($rt->binary('==', $_u_gradientType, $rt->i(4))) {
-                            $noiseSt = $rt->binary('*', $rotatedCentered, $rt->f(4), 2, 'float');
+                            $noiseSt = $rt->construct(2, $rt->binary('*', $rotatedCentered, $rt->f(4), 2, 'float'));
                             $t = $fbmNoise__vec2->($noiseSt);
                             $t = $rt->component_wise('fract', $rt->binary('+', $rt->binary('*', $t, $rt->construct(1, $_u_repeat), 1, 'float'), $timeOffset, 1, 'float'));
                             @{$color} = map { $rt->f32($_) } @{($blendColors__float->($t))};
                         } else {
                             if ($rt->binary('==', $_u_gradientType, $rt->i(5))) {
-                                $rotatedPoint = $rt->matrix_mult($rt->construct(4, $c, $rt->unary('-', $s), $s, $c), $centered, 2);
+                                $rotatedPoint = $rt->construct(2, $rt->matrix_mult($rt->construct(4, $c, $rt->unary('-', $s), $s, $c), $centered, 2));
                                 $dist = $rt->binary('*', $rt->length($rotatedPoint), $rt->f(2), 1, 'float');
                                 $t = $dist;
                                 $t = $rt->component_wise('fract', $rt->binary('+', $rt->binary('*', $t, $rt->construct(1, $_u_repeat), 1, 'float'), $timeOffset, 1, 'float'));

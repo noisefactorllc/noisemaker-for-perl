@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint__uint, $hash__uint, $hash_f__float, $wrapPosition__vec2, $luminance__vec3, $sampleTrail__vec2, $sampleExternalField__vec2_float, $main__void);
+    my ($hash_uint_lcg__uint, $hash__uint, $hash_f__float, $wrapPosition__vec2, $luminance__vec3, $sampleTrail__vec2, $sampleExternalField__vec2_float, $main__void);
     my $_retc;
     my $_u_xyzTex = $ctx->texture_binding('xyzTex');
     my $_u_velTex = $ctx->texture_binding('velTex');
@@ -25,7 +25,7 @@ my $run_pixel = sub {
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
     $g->{TAU} = $rt->f(6.2831853071800001);
-    $hash_uint__uint = sub {
+    $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
         $state = $rt->binary('+', $rt->binary('*', $seed, $rt->i(747796405), 1, 'uint'), $rt->i(2891336453), 1, 'uint');
@@ -34,11 +34,11 @@ my $run_pixel = sub {
     };
     $hash__uint = sub {
         my ($seed) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($seed)), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($seed)), $rt->f(4294967295), 1, 'float');
     };
     $hash_f__float = sub {
         my ($n) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($rt->float_bits_to_uint($n))), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($rt->float_bits_to_uint($n))), $rt->f(4294967295), 1, 'float');
     };
     $wrapPosition__vec2 = sub {
         my ($pos) = @_;
@@ -86,9 +86,9 @@ my $run_pixel = sub {
         $forwardDir = $rt->construct(2, $rt->component_wise('cos', $heading), $rt->component_wise('sin', $heading));
         $leftDir = $rt->construct(2, $rt->component_wise('cos', $rt->binary('-', $heading, $_u_sensorAngle, 1, 'float')), $rt->component_wise('sin', $rt->binary('-', $heading, $_u_sensorAngle, 1, 'float')));
         $rightDir = $rt->construct(2, $rt->component_wise('cos', $rt->binary('+', $heading, $_u_sensorAngle, 1, 'float')), $rt->component_wise('sin', $rt->binary('+', $heading, $_u_sensorAngle, 1, 'float')));
-        $sensorPosF = $wrapPosition__vec2->($rt->binary('+', $pos, $rt->binary('*', $forwardDir, $_u_sensorDistance, 2, 'float'), 2, 'float'));
-        $sensorPosL = $wrapPosition__vec2->($rt->binary('+', $pos, $rt->binary('*', $leftDir, $_u_sensorDistance, 2, 'float'), 2, 'float'));
-        $sensorPosR = $wrapPosition__vec2->($rt->binary('+', $pos, $rt->binary('*', $rightDir, $_u_sensorDistance, 2, 'float'), 2, 'float'));
+        $sensorPosF = $wrapPosition__vec2->($rt->construct(2, $rt->binary('+', $pos, $rt->binary('*', $forwardDir, $_u_sensorDistance, 2, 'float'), 2, 'float')));
+        $sensorPosL = $wrapPosition__vec2->($rt->construct(2, $rt->binary('+', $pos, $rt->binary('*', $leftDir, $_u_sensorDistance, 2, 'float'), 2, 'float')));
+        $sensorPosR = $wrapPosition__vec2->($rt->construct(2, $rt->binary('+', $pos, $rt->binary('*', $rightDir, $_u_sensorDistance, 2, 'float'), 2, 'float')));
         $valF = $rt->binary('+', $sampleTrail__vec2->($sensorPosF), $sampleExternalField__vec2_float->($sensorPosF, $_u_inputWeight), 1, 'float');
         $valL = $rt->binary('+', $sampleTrail__vec2->($sensorPosL), $sampleExternalField__vec2_float->($sensorPosL, $_u_inputWeight), 1, 'float');
         $valR = $rt->binary('+', $sampleTrail__vec2->($sensorPosR), $sampleExternalField__vec2_float->($sensorPosR, $_u_inputWeight), 1, 'float');
@@ -116,7 +116,7 @@ my $run_pixel = sub {
             $speedScale = $rt->component_wise('mix', $rt->f(1), $rt->component_wise('mix', $rt->f(1.8), $rt->f(0.34999999999999998), $localInput), $blend);
         }
         $normalizedSpeed = $rt->binary('*', $rt->binary('*', $_u_moveSpeed, $rt->f(0.001), 1, 'float'), $speedScale, 1, 'float');
-        $newPos = $wrapPosition__vec2->($rt->binary('+', $pos, $rt->binary('*', $moveDir, $normalizedSpeed, 2, 'float'), 2, 'float'));
+        $newPos = $wrapPosition__vec2->($rt->construct(2, $rt->binary('+', $pos, $rt->binary('*', $moveDir, $normalizedSpeed, 2, 'float'), 2, 'float')));
         $newAge = $rt->binary('+', $age, $rt->f(0.016), 1, 'float');
         @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPos, $newHeading, $rt->f(1)))};
         @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $newAge, $seed))};

@@ -45,11 +45,11 @@ my $run_pixel = sub {
         my ($c0, $c00, $c000, $c001, $c01, $c010, $c011, $c1, $c10, $c100, $c101, $c11, $c110, $c111, $frac, $i0, $i1, $texelFloor, $texelPos, $uvw, $volSize, $volSizeF);
         $volSize = $_u_volumeSize;
         $volSizeF = $rt->construct(1, $volSize);
-        $uvw = $rt->binary('+', $rt->binary('*', $worldPos, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float');
+        $uvw = $rt->construct(3, $rt->binary('+', $rt->binary('*', $worldPos, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'));
         @{$uvw} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $uvw, $rt->f(0), $rt->f(1)))};
-        $texelPos = $rt->binary('*', $uvw, $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float');
+        $texelPos = $rt->construct(3, $rt->binary('*', $uvw, $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float'));
         $texelFloor = $rt->component_wise('floor', $texelPos);
-        $frac = $rt->binary('-', $texelPos, $texelFloor, 3, 'float');
+        $frac = $rt->construct(3, $rt->binary('-', $texelPos, $texelFloor, 3, 'float'));
         $i0 = $rt->construct(3, $texelFloor, 'int');
         $i1 = $rt->component_wise('min', $rt->binary('+', $i0, $rt->i(1), 3, 'int'), $rt->binary('-', $volSize, $rt->i(1), 1, 'int'));
         $c000 = $rt->texel_fetch($_u_volumeCache, $atlasTexel__ivec3_int->($rt->construct(3, $rt->swizzle($i0, 'x'), $rt->swizzle($i0, 'y'), $rt->swizzle($i0, 'z'), 'int'), $volSize), $rt->i(0));
@@ -93,7 +93,7 @@ my $run_pixel = sub {
         $worldPos = $rt->copy($worldPos, 'float');
         my ($uvw, $volSize);
         $volSize = $_u_volumeSize;
-        $uvw = $rt->binary('+', $rt->binary('*', $worldPos, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float');
+        $uvw = $rt->construct(3, $rt->binary('+', $rt->binary('*', $worldPos, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'));
         return $rt->construct(3, $rt->component_wise('floor', $rt->binary('*', $uvw, $rt->construct(1, $volSize), 3, 'float')), 'int');
     };
     $voxelToWorld__ivec3 = sub {
@@ -101,8 +101,8 @@ my $run_pixel = sub {
         $voxel = $rt->copy($voxel, 'int');
         my ($uvw, $volSize);
         $volSize = $_u_volumeSize;
-        $uvw = $rt->binary('/', $rt->binary('+', $rt->construct(3, $voxel), $rt->f(0.5), 3, 'float'), $rt->construct(1, $volSize), 3, 'float');
-        return $rt->binary('-', $rt->binary('*', $uvw, $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float');
+        $uvw = $rt->construct(3, $rt->binary('/', $rt->binary('+', $rt->construct_raw(3, $rt->construct(3, $voxel)), $rt->f(0.5), 3, 'float'), $rt->construct(1, $volSize), 3, 'float'));
+        return $rt->construct(3, $rt->binary('-', $rt->binary('*', $uvw, $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'));
     };
     $voxelTrace__vec3_vec3 = sub {
         my ($ro, $rd) = @_;
@@ -115,9 +115,9 @@ my $run_pixel = sub {
         $result->[2] = $rt->construct(3, $rt->i(0), 'int');
         $volSize = $_u_volumeSize;
         $voxelSize = $rt->binary('/', $rt->f(2), $rt->construct(1, $volSize), 1, 'float');
-        $invRd = $rt->binary('/', $rt->f(1), $rd, 3, 'float');
-        $t0 = $rt->binary('*', $rt->binary('-', $rt->unary('-', $rt->f(1)), $ro, 3, 'float'), $invRd, 3, 'float');
-        $t1 = $rt->binary('*', $rt->binary('-', $rt->f(1), $ro, 3, 'float'), $invRd, 3, 'float');
+        $invRd = $rt->construct(3, $rt->binary('/', $rt->f(1), $rd, 3, 'float'));
+        $t0 = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->unary('-', $rt->f(1)), $ro, 3, 'float'), $invRd, 3, 'float'));
+        $t1 = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->f(1), $ro, 3, 'float'), $invRd, 3, 'float'));
         $tmin = $rt->component_wise('min', $t0, $t1);
         $tmax = $rt->component_wise('max', $t0, $t1);
         $tEnter = $rt->component_wise('max', $rt->component_wise('max', $rt->swizzle($tmin, 'x'), $rt->swizzle($tmin, 'y')), $rt->swizzle($tmin, 'z'));
@@ -126,12 +126,12 @@ my $run_pixel = sub {
             return $result;
         }
         $tStart = $rt->component_wise('max', $rt->binary('+', $tEnter, $rt->f(0.001), 1, 'float'), $rt->f(0));
-        $pos = $rt->binary('+', $ro, $rt->binary('*', $rd, $tStart, 3, 'float'), 3, 'float');
+        $pos = $rt->construct(3, $rt->binary('+', $ro, $rt->binary('*', $rd, $tStart, 3, 'float'), 3, 'float'));
         $voxel = $worldToVoxel__vec3->($pos);
         @{$voxel} = @{($rt->component_wise('clamp', $voxel, $rt->construct(3, $rt->i(0), 'int'), $rt->construct(3, $rt->binary('-', $volSize, $rt->i(1), 1, 'int'), 'int')))};
         $step = $rt->construct(3, $rt->component_wise('sign', $rd), 'int');
         $voxelBounds = $rt->construct(3, 9**9**9 - 9**9**9);
-        $tMaxVec = $rt->binary('*', $rt->binary('-', $voxelBounds, $ro, 3, 'float'), $invRd, 3, 'float');
+        $tMaxVec = $rt->construct(3, $rt->binary('*', $rt->binary('-', $voxelBounds, $ro, 3, 'float'), $invRd, 3, 'float'));
         $tDelta = $rt->component_wise('abs', $rt->binary('*', $voxelSize, $invRd, 3, 'float'));
         $lastNormal = $rt->construct(3, $rt->f(0));
         $i = $rt->i(0);
@@ -199,15 +199,15 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($dx, $dy, $dz, $eps, $len, $n);
         $eps = $rt->binary('/', $rt->f(2), $rt->construct(1, $_u_volumeSize), 1, 'float');
-        $dx = $rt->binary('-', $getField__vec3->($rt->binary('+', $p, $rt->construct(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float')), $getField__vec3->($rt->binary('-', $p, $rt->construct(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float')), 1, 'float');
-        $dy = $rt->binary('-', $getField__vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float')), $getField__vec3->($rt->binary('-', $p, $rt->construct(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float')), 1, 'float');
-        $dz = $rt->binary('-', $getField__vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $eps), 3, 'float')), $getField__vec3->($rt->binary('-', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $eps), 3, 'float')), 1, 'float');
+        $dx = $rt->binary('-', $getField__vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float'))), $getField__vec3->($rt->construct(3, $rt->binary('-', $p, $rt->construct_raw(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float'))), 1, 'float');
+        $dy = $rt->binary('-', $getField__vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float'))), $getField__vec3->($rt->construct(3, $rt->binary('-', $p, $rt->construct_raw(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float'))), 1, 'float');
+        $dz = $rt->binary('-', $getField__vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $eps), 3, 'float'))), $getField__vec3->($rt->construct(3, $rt->binary('-', $p, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $eps), 3, 'float'))), 1, 'float');
         $n = $rt->construct(3, $dx, $dy, $dz);
         $len = $rt->length($n);
         if ($rt->binary('<', $len, $rt->f(0.0001))) {
             return $rt->construct(3, $rt->f(0), $rt->f(1), $rt->f(0));
         }
-        return $rt->binary('/', $n, $len, 3, 'float');
+        return $rt->construct(3, $rt->binary('/', $n, $len, 3, 'float'));
     };
     $isosurfaceTrace__vec3_vec3 = sub {
         my ($ro, $rd) = @_;
@@ -218,9 +218,9 @@ my $run_pixel = sub {
         $result->[2] = 0;
         $result->[0] = $rt->unary('-', $rt->f(1));
         $result->[1] = $rt->construct(3, $rt->f(0));
-        $invRd = $rt->binary('/', $rt->f(1), $rd, 3, 'float');
-        $t0 = $rt->binary('*', $rt->binary('-', $rt->unary('-', $rt->f(1)), $ro, 3, 'float'), $invRd, 3, 'float');
-        $t1 = $rt->binary('*', $rt->binary('-', $rt->f(1), $ro, 3, 'float'), $invRd, 3, 'float');
+        $invRd = $rt->construct(3, $rt->binary('/', $rt->f(1), $rd, 3, 'float'));
+        $t0 = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->unary('-', $rt->f(1)), $ro, 3, 'float'), $invRd, 3, 'float'));
+        $t1 = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->f(1), $ro, 3, 'float'), $invRd, 3, 'float'));
         $tmin = $rt->component_wise('min', $t0, $t1);
         $tmax = $rt->component_wise('max', $t0, $t1);
         $tEnter = $rt->component_wise('max', $rt->component_wise('max', $rt->swizzle($tmin, 'x'), $rt->swizzle($tmin, 'y')), $rt->swizzle($tmin, 'z'));
@@ -231,7 +231,7 @@ my $run_pixel = sub {
         $tStart = $rt->component_wise('max', $tEnter, $rt->f(0));
         $stepSize = $rt->binary('/', $rt->f(1.5), $rt->construct(1, $_u_volumeSize), 1, 'float');
         $t = $tStart;
-        $prevField = $getField__vec3->($rt->binary('+', $ro, $rt->binary('*', $rd, $t, 3, 'float'), 3, 'float'));
+        $prevField = $getField__vec3->($rt->construct(3, $rt->binary('+', $ro, $rt->binary('*', $rd, $t, 3, 'float'), 3, 'float')));
         if ($rt->binary('<', $prevField, $rt->f(0))) {
             $result->[2] = 1;
             $result->[0] = $tStart;
@@ -252,7 +252,7 @@ my $run_pixel = sub {
             if ($rt->binary('>', $t, $tExit)) {
                 last;
             }
-            $p = $rt->binary('+', $ro, $rt->binary('*', $rd, $t, 3, 'float'), 3, 'float');
+            $p = $rt->construct(3, $rt->binary('+', $ro, $rt->binary('*', $rd, $t, 3, 'float'), 3, 'float'));
             $field = $getField__vec3->($p);
             $tHi = $rt->f(0.0);
             $tLo = $rt->f(0.0);
@@ -270,7 +270,7 @@ my $run_pixel = sub {
                         last;
                     }
                     $tMid = $rt->binary('*', $rt->binary('+', $tLo, $tHi, 1, 'float'), $rt->f(0.5), 1, 'float');
-                    $fMid = $getField__vec3->($rt->binary('+', $ro, $rt->binary('*', $rd, $tMid, 3, 'float'), 3, 'float'));
+                    $fMid = $getField__vec3->($rt->construct(3, $rt->binary('+', $ro, $rt->binary('*', $rd, $tMid, 3, 'float'), 3, 'float')));
                     if ($rt->binary('<', $rt->binary('*', $prevField, $fMid, 1, 'float'), $rt->f(0))) {
                         $tHi = $tMid;
                     } else {
@@ -301,11 +301,11 @@ my $run_pixel = sub {
         $rim = $rt->component_wise('pow', $rt->binary('-', $rt->f(1), $rt->component_wise('max', $rt->dot($n, $rt->unary('-', $rd)), $rt->f(0)), 1, 'float'), $rt->f(3));
         $volColor = $sampleVolume__vec3->($p);
         $baseColor = $rt->swizzle($volColor, 'rgb');
-        $colorVariance = $rt->length($rt->binary('-', $rt->swizzle($volColor, 'rgb'), $rt->construct(3, $rt->swizzle($volColor, 'r')), 3, 'float'));
+        $colorVariance = $rt->length($rt->binary('-', $rt->swizzle($volColor, 'rgb'), $rt->construct_raw(3, $rt->swizzle($volColor, 'r')), 3, 'float'));
         if ($rt->binary('<', $colorVariance, $rt->f(0.01))) {
             @{$baseColor} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0.75)))};
         }
-        return $rt->binary('+', $rt->binary('+', $rt->binary('*', $baseColor, $rt->binary('+', $amb, $rt->binary('*', $diff, $rt->f(0.69999999999999996), 1, 'float'), 1, 'float'), 3, 'float'), $rt->binary('*', $spec, $rt->f(0.20000000000000001), 1, 'float'), 3, 'float'), $rt->binary('*', $rim, $rt->f(0.14999999999999999), 1, 'float'), 3, 'float');
+        return $rt->construct(3, $rt->binary('+', $rt->binary('+', $rt->binary('*', $baseColor, $rt->binary('+', $amb, $rt->binary('*', $diff, $rt->f(0.69999999999999996), 1, 'float'), 1, 'float'), 3, 'float'), $rt->binary('*', $spec, $rt->f(0.20000000000000001), 1, 'float'), 3, 'float'), $rt->binary('*', $rim, $rt->f(0.14999999999999999), 1, 'float'), 3, 'float'));
     };
     $shadeVoxel__vec3_vec3_vec3_ivec3 = sub {
         my ($p, $rd, $n, $voxel) = @_;
@@ -319,21 +319,21 @@ my $run_pixel = sub {
         $amb = $rt->f(0.29999999999999999);
         $volColor = $sampleVoxel__ivec3->($voxel);
         $baseColor = $rt->swizzle($volColor, 'rgb');
-        $colorVariance = $rt->length($rt->binary('-', $rt->swizzle($volColor, 'rgb'), $rt->construct(3, $rt->swizzle($volColor, 'r')), 3, 'float'));
+        $colorVariance = $rt->length($rt->binary('-', $rt->swizzle($volColor, 'rgb'), $rt->construct_raw(3, $rt->swizzle($volColor, 'r')), 3, 'float'));
         $faceShade = $rt->f(0.0);
         if ($rt->binary('<', $colorVariance, $rt->f(0.01))) {
             $faceShade = $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->component_wise('abs', $rt->swizzle($n, 'x')), $rt->f(0.90000000000000002), 1, 'float'), $rt->binary('*', $rt->component_wise('abs', $rt->swizzle($n, 'y')), $rt->f(1), 1, 'float'), 1, 'float'), $rt->binary('*', $rt->component_wise('abs', $rt->swizzle($n, 'z')), $rt->f(0.84999999999999998), 1, 'float'), 1, 'float');
             @{$baseColor} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('*', $rt->f(0.69999999999999996), $faceShade, 1, 'float')))};
         }
-        return $rt->binary('*', $baseColor, $rt->binary('+', $amb, $rt->binary('*', $diff, $rt->f(0.69999999999999996), 1, 'float'), 1, 'float'), 3, 'float');
+        return $rt->construct(3, $rt->binary('*', $baseColor, $rt->binary('+', $amb, $rt->binary('*', $diff, $rt->f(0.69999999999999996), 1, 'float'), 1, 'float'), 3, 'float'));
     };
     $main__void = sub {
         my ($alpha, $color, $depth, $fullRes, $hit, $normal, $p, $rd, $ro, $uv);
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution));
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
         if ($rt->binary('<', $rt->swizzle($fullRes, 'x'), $rt->f(1))) {
             @{$fullRes} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(1024), $rt->f(1024)))};
         }
-        $uv = $rt->binary('/', $rt->binary('-', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $rt->binary('*', $rt->f(0.5), $fullRes, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->f(0.5), $rt->swizzle($fullRes, 'y'), 1, 'float'), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $rt->binary('*', $rt->f(0.5), $fullRes, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->f(0.5), $rt->swizzle($fullRes, 'y'), 1, 'float'), 2, 'float'));
         $ro = $rt->construct(3, $rt->f(0));
         $rd = $rt->normalize($rt->matrix_mult($_u_cubeBasis, $rt->construct(3, $rt->swizzle($uv, 'x'), $rt->unary('-', $rt->swizzle($uv, 'y')), $rt->f(1)), 3));
         $color = $rt->construct(3, 0.0);
@@ -345,7 +345,7 @@ my $run_pixel = sub {
             $hit = $voxelTrace__vec3_vec3->($ro, $rd);
             $p = $rt->construct(3, 0.0);
             if ($rt->binary('>', $hit->[0], $rt->f(0))) {
-                $p = $rt->binary('+', $ro, $rt->binary('*', $rd, $hit->[0], 3, 'float'), 3, 'float');
+                $p = $rt->construct(3, $rt->binary('+', $ro, $rt->binary('*', $rd, $hit->[0], 3, 'float'), 3, 'float'));
                 @{$color} = map { $rt->f32($_) } @{($shadeVoxel__vec3_vec3_vec3_ivec3->($p, $rd, $hit->[1], $hit->[2]))};
                 @{$normal} = map { $rt->f32($_) } @{($hit->[1])};
                 $depth = $rt->binary('/', $hit->[0], $g->{MAX_DIST}, 1, 'float');

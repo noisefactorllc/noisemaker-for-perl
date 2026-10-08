@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint__uint, $hash__uint, $srgb_to_linear__float, $cube_root__float, $oklab_l__vec3, $normalized_sine__float, $computeRotationBias__int_float_float_float_int_int, $main__void);
+    my ($hash_uint_lcg__uint, $hash__uint, $srgb_to_linear__float, $cube_root__float, $oklab_l__vec3, $normalized_sine__float, $computeRotationBias__int_float_float_float_int_int, $main__void);
     my $_retc;
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
@@ -26,7 +26,7 @@ my $run_pixel = sub {
     $g->{outRGBA} = $rt->construct(4, 0.0);
     $g->{TAU} = $rt->f(6.2831853071795862);
     $g->{RIGHT_ANGLE} = $rt->f(1.5707963267948966);
-    $hash_uint__uint = sub {
+    $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
         $state = $rt->binary('+', $rt->binary('*', $seed, $rt->i(747796405), 1, 'uint'), $rt->i(2891336453), 1, 'uint');
@@ -35,7 +35,7 @@ my $run_pixel = sub {
     };
     $hash__uint = sub {
         my ($seed) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($seed)), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($seed)), $rt->f(4294967295), 1, 'float');
     };
     $srgb_to_linear__float = sub {
         my ($value) = @_;

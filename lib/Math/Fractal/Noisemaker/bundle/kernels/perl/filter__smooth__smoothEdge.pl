@@ -23,7 +23,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($L, $Le, $Ln, $Ls, $Lw, $coord, $edgeH, $edgeV, $globalCoord, $maxCoord, $texSize);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         if ($rt->binary('==', $_u_smoothType, $rt->i(0))) {

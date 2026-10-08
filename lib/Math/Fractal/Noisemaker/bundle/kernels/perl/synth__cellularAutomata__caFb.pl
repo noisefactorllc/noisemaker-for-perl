@@ -191,7 +191,7 @@ my $run_pixel = sub {
                 if ((($rt->binary('==', $x, $rt->i(0))) && ($rt->binary('==', $y, $rt->i(0))) ? 1 : 0)) {
                     next;
                 }
-                $offset = $rt->binary('*', $rt->construct(2, $rt->construct(1, $x), $rt->construct(1, $y)), $texelSize, 2, 'float');
+                $offset = $rt->construct(2, $rt->binary('*', $rt->construct_raw(2, $rt->construct(1, $x), $rt->construct(1, $y)), $texelSize, 2, 'float'));
                 $n = $rt->swizzle($rt->texture($_u_bufTex, $rt->binary('+', $uv, $offset, 2, 'float')), 'r');
                 $count = $rt->binary('+', $count, $rt->construct(1, $rt->binary('>', $n, $rt->f(0.5)), 'int'), 1, 'int');
             }
@@ -201,15 +201,15 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($alive, $animSpeed, $bufState, $bufferIsEmpty, $currentState, $neighbors, $newState, $nextState, $prevFrame, $prevLum, $r, $state, $texSize, $texelSize, $uv);
         $texSize = $rt->construct(2, $rt->texture_size($_u_bufTex));
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float');
-        $texelSize = $rt->binary('/', $rt->f(1), $texSize, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float'));
+        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $texSize, 2, 'float'));
         $state = $rt->swizzle($rt->texture($_u_bufTex, $uv), 'r');
         $bufState = $rt->texture($_u_bufTex, $uv);
         $bufferIsEmpty = (((((($rt->binary('==', $rt->swizzle($bufState, 'r'), $rt->f(0))) && ($rt->binary('==', $rt->swizzle($bufState, 'g'), $rt->f(0))) ? 1 : 0)) && ($rt->binary('==', $rt->swizzle($bufState, 'b'), $rt->f(0))) ? 1 : 0)) && ($rt->binary('==', $rt->swizzle($bufState, 'a'), $rt->f(0))) ? 1 : 0);
         $alive = $rt->f(0.0);
         $r = $rt->f(0.0);
         if ((($_u_resetState) || ($bufferIsEmpty) ? 1 : 0)) {
-            $r = $random__vec2->($rt->binary('+', $uv, $rt->construct(2, $rt->construct(1, $_u_seed)), 2, 'float'));
+            $r = $random__vec2->($rt->construct(2, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->construct(1, $_u_seed)), 2, 'float')));
             $alive = $rt->component_wise('step', $rt->f(0.5), $r);
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $alive, $alive, $alive, $rt->f(1)))};
             return;

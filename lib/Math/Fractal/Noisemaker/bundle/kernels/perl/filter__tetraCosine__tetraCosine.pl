@@ -65,7 +65,7 @@ my $run_pixel = sub {
                 }
             }
         }
-        return $rt->binary('+', $rgb, $rt->construct(3, $m), 3, 'float');
+        return $rt->construct(3, $rt->binary('+', $rgb, $rt->construct_raw(3, $m), 3, 'float'));
     };
     $oklab2linear__vec3 = sub {
         my ($lab) = @_;
@@ -86,8 +86,8 @@ my $run_pixel = sub {
         my ($linear) = @_;
         $linear = $rt->copy($linear, 'float');
         my ($high, $low);
-        $low = $rt->binary('*', $linear, $rt->f(12.92), 3, 'float');
-        $high = $rt->binary('-', $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $rt->component_wise('max', $linear, $rt->construct(3, $rt->f(0))), $rt->construct(3, $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float'))), 3, 'float'), $rt->f(0.055), 3, 'float');
+        $low = $rt->construct(3, $rt->binary('*', $linear, $rt->f(12.92), 3, 'float'));
+        $high = $rt->construct(3, $rt->binary('-', $rt->construct(3, $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $rt->component_wise('max', $linear, $rt->construct(3, $rt->f(0))), $rt->construct(3, $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float'))), 3, 'float')), $rt->f(0.055), 3, 'float'));
         return $rt->component_wise('mix', $high, $low, $rt->component_wise('step', $linear, $rt->construct(3, $rt->f(0.0031308))));
     };
     $oklab2rgb__vec3 = sub {
@@ -118,13 +118,13 @@ my $run_pixel = sub {
         $amp = $rt->copy($amp, 'float');
         $freq = $rt->copy($freq, 'float');
         $phase = $rt->copy($phase, 'float');
-        return $rt->component_wise('clamp', $rt->binary('+', $offset, $rt->binary('*', $amp, $rt->component_wise('cos', $rt->binary('*', $g->{TAU}, $rt->binary('+', $rt->binary('*', $freq, $t, 3, 'float'), $phase, 3, 'float'), 3, 'float')), 3, 'float'), 3, 'float'), $rt->f(0), $rt->f(1));
+        return $rt->component_wise('clamp', $rt->construct(3, $rt->binary('+', $offset, $rt->construct(3, $rt->binary('*', $amp, $rt->component_wise('cos', $rt->binary('*', $g->{TAU}, $rt->binary('+', $rt->binary('*', $freq, $t, 3, 'float'), $phase, 3, 'float'), 3, 'float')), 3, 'float')), 3, 'float')), $rt->f(0), $rt->f(1));
     };
     $main__void = sub {
         my ($amp, $blendedColor, $finalColor, $freq, $globalCoord, $inputColor, $lum, $offset, $paletteColor, $phase, $t, $texSize, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->construct(2, $rt->texture_size($_u_inputTex));
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float'));
         $inputColor = $rt->texture($_u_inputTex, $uv);
         $lum = $rt->dot($rt->swizzle($inputColor, 'rgb'), $rt->construct(3, $rt->f(0.29899999999999999), $rt->f(0.58699999999999997), $rt->f(0.114)));
         $t = $rt->binary('+', $rt->binary('*', $lum, $_u_repeat, 1, 'float'), $_u_offset, 1, 'float');

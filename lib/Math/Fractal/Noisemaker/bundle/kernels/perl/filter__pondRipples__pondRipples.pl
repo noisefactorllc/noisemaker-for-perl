@@ -24,8 +24,8 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($amountGain, $aspectRatio, $co, $col, $damping, $dir, $dx, $dy, $globalCoord, $phase, $r, $rDelta, $rot, $rotDelta, $rotatedDir, $s, $sampleUV, $uv, $w, $x);
         $aspectRatio = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         @{$uv} = map { $rt->f32($_) } @{($rt->binary('-', $uv, $rt->f(0.5), 2, 'float'))};
         $uv = $rt->assign_swizzle($uv, 'x', $rt->binary('*', $rt->swizzle($uv, 'x'), $aspectRatio, 1, 'float'));
         $r = $rt->length($uv);
@@ -53,16 +53,16 @@ my $run_pixel = sub {
                 $rDelta = $rt->binary('*', $w, $rt->f(0.5), 1, 'float');
             }
         }
-        $dir = (($rt->binary('>', $r, $rt->f(0))) ? ($rt->binary('/', $uv, $r, 2, 'float')) : ($rt->construct(2, $rt->f(0))));
+        $dir = $rt->construct(2, (($rt->binary('>', $r, $rt->f(0))) ? ($rt->binary('/', $uv, $r, 2, 'float')) : ($rt->construct(2, $rt->f(0)))));
         $rot = $rt->binary('*', $rt->binary('*', $rt->binary('*', $rotDelta, $rt->f(2), 1, 'float'), $rt->f(3.1415926535900001), 1, 'float'), $rt->f(0.25), 1, 'float');
         $s = $rt->component_wise('sin', $rot);
         $co = $rt->component_wise('cos', $rot);
-        $rotatedDir = $rt->matrix_mult($rt->construct(4, $co, $rt->unary('-', $s), $s, $co), $dir, 2);
+        $rotatedDir = $rt->construct(2, $rt->matrix_mult($rt->construct(4, $co, $rt->unary('-', $s), $s, $co), $dir, 2));
         @{$uv} = map { $rt->f32($_) } @{($rt->binary('*', $rotatedDir, $rt->binary('+', $r, $rDelta, 1, 'float'), 2, 'float'))};
         $uv = $rt->assign_swizzle($uv, 'x', $rt->binary('/', $rt->swizzle($uv, 'x'), $aspectRatio, 1, 'float'));
         @{$uv} = map { $rt->f32($_) } @{($rt->binary('+', $uv, $rt->f(0.5), 2, 'float'))};
         if ($rt->binary('==', $_u_WRAP, $rt->i(0))) {
-            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
+            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
         } else {
             if ($rt->binary('==', $_u_WRAP, $rt->i(1))) {
                 @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('mod', $uv, $rt->f(1)))};

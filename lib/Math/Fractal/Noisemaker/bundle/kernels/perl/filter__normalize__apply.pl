@@ -16,7 +16,7 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($color, $coord, $globalCoord, $maxVal, $minVal, $normalized, $stats);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         $stats = $rt->texel_fetch($_u_statsTex, $rt->construct(2, $rt->i(0), $rt->i(0), 'int'), $rt->i(0));
@@ -26,7 +26,7 @@ my $run_pixel = sub {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
             return;
         }
-        $normalized = $rt->binary('/', $rt->binary('-', $rt->swizzle($color, 'rgb'), $minVal, 3, 'float'), $rt->binary('-', $maxVal, $minVal, 1, 'float'), 3, 'float');
+        $normalized = $rt->construct(3, $rt->binary('/', $rt->binary('-', $rt->swizzle($color, 'rgb'), $minVal, 3, 'float'), $rt->binary('-', $maxVal, $minVal, 1, 'float'), 3, 'float'));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalized, $rt->swizzle($color, 'a')))};
     };
     $main__void->();

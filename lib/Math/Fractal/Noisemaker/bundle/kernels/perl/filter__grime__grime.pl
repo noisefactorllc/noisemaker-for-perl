@@ -71,9 +71,9 @@ my $run_pixel = sub {
         $cell = $rt->component_wise('floor', $coord);
         $f = $rt->component_wise('fract', $coord);
         $tl = $hash31__vec3->($rt->construct(3, $cell, $s));
-        $tr = $hash31__vec3->($rt->construct(3, $rt->binary('+', $cell, $rt->construct(2, $rt->f(1), $rt->f(0)), 2, 'float'), $s));
-        $bl = $hash31__vec3->($rt->construct(3, $rt->binary('+', $cell, $rt->construct(2, $rt->f(0), $rt->f(1)), 2, 'float'), $s));
-        $br = $hash31__vec3->($rt->construct(3, $rt->binary('+', $cell, $rt->construct(2, $rt->f(1), $rt->f(1)), 2, 'float'), $s));
+        $tr = $hash31__vec3->($rt->construct(3, $rt->binary('+', $cell, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float'), $s));
+        $bl = $hash31__vec3->($rt->construct(3, $rt->binary('+', $cell, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float'), $s));
+        $br = $hash31__vec3->($rt->construct(3, $rt->binary('+', $cell, $rt->construct_raw(2, $rt->f(1), $rt->f(1)), 2, 'float'), $s));
         $st = $rt->construct(2, $fade__float->($rt->swizzle($f, 'x')), $fade__float->($rt->swizzle($f, 'y')));
         return $rt->component_wise('mix', $rt->component_wise('mix', $tl, $tr, $rt->swizzle($st, 'x')), $rt->component_wise('mix', $bl, $br, $rt->swizzle($st, 'x')), $rt->swizzle($st, 'y'));
     };
@@ -82,7 +82,7 @@ my $run_pixel = sub {
         my ($angle, $radius);
         $angle = $rt->binary('*', $s, $rt->f(0.13750000000000001), 1, 'float');
         $radius = $rt->binary('*', $rt->f(0.34999999999999998), $rt->binary('+', $rt->f(0.25), $rt->binary('*', $rt->f(0.75), $rt->component_wise('sin', $rt->binary('*', $s, $rt->f(1.3700000000000001), 1, 'float')), 1, 'float'), 1, 'float'), 1, 'float');
-        return $rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $radius, 2, 'float');
+        return $rt->construct(2, $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $radius, 2, 'float'));
     };
     $simple_multires__vec2_vec2_float = sub {
         my ($uv, $base_freq, $s) = @_;
@@ -104,8 +104,8 @@ my $run_pixel = sub {
                 last;
             }
             $os = $rt->binary('+', $s, $rt->binary('*', $rt->construct(1, $i), $rt->f(37.109999999999999), 1, 'float'), 1, 'float');
-            $off = $rt->binary('/', $seed_offset__float->($os), $freq, 2, 'float');
-            $accum = $rt->binary('+', $accum, $rt->binary('*', $value_noise__vec2_float->($rt->binary('+', $rt->binary('*', $uv, $freq, 2, 'float'), $off, 2, 'float'), $os), $amp, 1, 'float'), 1, 'float');
+            $off = $rt->construct(2, $rt->binary('/', $seed_offset__float->($os), $freq, 2, 'float'));
+            $accum = $rt->binary('+', $accum, $rt->binary('*', $value_noise__vec2_float->($rt->construct(2, $rt->binary('+', $rt->binary('*', $uv, $freq, 2, 'float'), $off, 2, 'float')), $os), $amp, 1, 'float'), 1, 'float');
             $total = $rt->binary('+', $total, $amp, 1, 'float');
             @{$freq} = map { $rt->f32($_) } @{($rt->binary('*', $freq, $rt->f(2), 2, 'float'))};
             $amp = $rt->binary('*', $amp, $rt->f(0.5), 1, 'float');
@@ -145,7 +145,7 @@ my $run_pixel = sub {
         $freq = $rt->copy($freq, 'float');
         my ($off);
         $off = $seed_offset__float->($rt->binary('+', $s, $rt->f(7), 1, 'float'));
-        return $rt->component_wise('pow', $clamp01__float->($value_noise__vec2_float->($rt->binary('+', $rt->binary('*', $uv, $freq, 2, 'float'), $off, 2, 'float'), $rt->binary('+', $s, $rt->f(13), 1, 'float'))), $rt->f(4));
+        return $rt->component_wise('pow', $clamp01__float->($value_noise__vec2_float->($rt->construct(2, $rt->binary('+', $rt->binary('*', $uv, $freq, 2, 'float'), $off, 2, 'float')), $rt->binary('+', $s, $rt->f(13), 1, 'float'))), $rt->f(4));
     };
     $refracted_exponential__vec2_vec2_vec2_float_float = sub {
         my ($uv, $freq, $px, $disp, $s) = @_;
@@ -163,9 +163,9 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($base_color, $blend_mask, $dropout, $dusty, $final_rgb, $freq_mask, $freq_specks, $globalCoord, $globalUV, $mask_gradient, $mask_power, $mask_refracted, $mask_value, $px, $s, $sparse_mask, $sparse_noise, $specks, $specks_field, $str, $tileSize, $trimmed);
         $tileSize = $rt->construct(2, $rt->texture_size($_u_inputTex));
-        $globalCoord = $rt->binary('+', $rt->binary('*', $ctx->{uv}, $tileSize, 2, 'float'), $_u_tileOffset, 2, 'float');
-        $globalUV = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $px = $rt->binary('/', $rt->f(1), $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->binary('*', $ctx->{uv}, $tileSize, 2, 'float'), $_u_tileOffset, 2, 'float'));
+        $globalUV = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $px = $rt->construct(2, $rt->binary('/', $rt->f(1), $_u_fullResolution, 2, 'float'));
         $base_color = $rt->texture($_u_inputTex, $ctx->{uv});
         $str = $rt->component_wise('max', $_u_strength, $rt->f(0));
         $s = $_u_seed;
@@ -175,12 +175,12 @@ my $run_pixel = sub {
         $mask_value = $clamp01__float->($rt->component_wise('mix', $mask_refracted, $mask_gradient, $rt->f(0.125)));
         $mask_power = $clamp01__float->($rt->binary('*', $rt->binary('*', $mask_value, $mask_value, 1, 'float'), $rt->f(0.40000000000000002), 1, 'float'));
         $dusty = $rt->component_wise('mix', $rt->swizzle($base_color, 'rgb'), $rt->construct(3, $rt->f(0.14999999999999999)), $mask_power);
-        $freq_specks = $rt->binary('*', $_u_fullResolution, $rt->f(0.10000000000000001), 2, 'float');
-        $dropout = (($rt->binary('<', $hash21__vec2->($rt->binary('+', $rt->binary('*', $globalUV, $_u_fullResolution, 2, 'float'), $rt->construct(2, $rt->binary('+', $s, $rt->f(37), 1, 'float'), $rt->binary('*', $s, $rt->f(1.3700000000000001), 1, 'float')), 2, 'float')), $rt->f(0.40000000000000002))) ? ($rt->f(1)) : ($rt->f(0)));
+        $freq_specks = $rt->construct(2, $rt->binary('*', $_u_fullResolution, $rt->f(0.10000000000000001), 2, 'float'));
+        $dropout = (($rt->binary('<', $hash21__vec2->($rt->construct(2, $rt->binary('+', $rt->binary('*', $globalUV, $_u_fullResolution, 2, 'float'), $rt->construct_raw(2, $rt->binary('+', $s, $rt->f(37), 1, 'float'), $rt->binary('*', $s, $rt->f(1.3700000000000001), 1, 'float')), 2, 'float'))), $rt->f(0.40000000000000002))) ? ($rt->f(1)) : ($rt->f(0)));
         $specks_field = $rt->binary('*', $refracted_exponential__vec2_vec2_vec2_float_float->($globalUV, $freq_specks, $px, $rt->f(0.25), $rt->binary('+', $s, $rt->f(71), 1, 'float')), $dropout, 1, 'float');
         $trimmed = $clamp01__float->($rt->binary('/', $rt->binary('-', $specks_field, $rt->f(0.29999999999999999), 1, 'float'), $rt->f(0.69999999999999996), 1, 'float'));
         $specks = $rt->binary('-', $rt->f(1), $rt->component_wise('sqrt', $trimmed), 1, 'float');
-        $sparse_mask = (($rt->binary('<', $hash21__vec2->($rt->binary('+', $rt->binary('*', $globalUV, $_u_fullResolution, 2, 'float'), $rt->construct(2, $rt->binary('+', $s, $rt->f(113), 1, 'float'), $rt->binary('+', $s, $rt->f(171), 1, 'float')), 2, 'float')), $rt->f(0.25))) ? ($rt->f(1)) : ($rt->f(0)));
+        $sparse_mask = (($rt->binary('<', $hash21__vec2->($rt->construct(2, $rt->binary('+', $rt->binary('*', $globalUV, $_u_fullResolution, 2, 'float'), $rt->construct_raw(2, $rt->binary('+', $s, $rt->f(113), 1, 'float'), $rt->binary('+', $s, $rt->f(171), 1, 'float')), 2, 'float'))), $rt->f(0.25))) ? ($rt->f(1)) : ($rt->f(0)));
         $sparse_noise = $rt->binary('*', $exponential_noise__vec2_vec2_float->($globalUV, $_u_fullResolution, $rt->binary('+', $s, $rt->f(131), 1, 'float')), $sparse_mask, 1, 'float');
         @{$dusty} = map { $rt->f32($_) } @{($rt->component_wise('mix', $dusty, $rt->construct(3, $sparse_noise), $rt->f(0.14999999999999999)))};
         @{$dusty} = map { $rt->f32($_) } @{($rt->binary('*', $dusty, $specks, 3, 'float'))};

@@ -51,9 +51,9 @@ my $run_pixel = sub {
         $f = $rt->component_wise('fract', $p);
         @{$f} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('*', $f, $f, 2, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 2, 'float'), 2, 'float'), 2, 'float'))};
         $a = $hash21__vec2->($i);
-        $b = $hash21__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(1), $rt->f(0)), 2, 'float'));
-        $c = $hash21__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(0), $rt->f(1)), 2, 'float'));
-        $d = $hash21__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(1), $rt->f(1)), 2, 'float'));
+        $b = $hash21__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float')));
+        $c = $hash21__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float')));
+        $d = $hash21__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(1), $rt->f(1)), 2, 'float')));
         return $rt->component_wise('mix', $rt->component_wise('mix', $a, $b, $rt->swizzle($f, 'x')), $rt->component_wise('mix', $c, $d, $rt->swizzle($f, 'x')), $rt->swizzle($f, 'y'));
     };
     $simplexNoise__vec2_float_float_float = sub {
@@ -63,9 +63,9 @@ my $run_pixel = sub {
         $angle = $rt->binary('+', $rt->binary('*', $t, $g->{TAU}, 1, 'float'), $phase, 1, 'float');
         $cx = $rt->binary('*', $rt->component_wise('cos', $angle), $radius, 1, 'float');
         $cy = $rt->binary('*', $rt->component_wise('sin', $angle), $radius, 1, 'float');
-        $n = $noise__vec2->($rt->binary('+', $p, $rt->construct(2, $cx, $cy), 2, 'float'));
-        $n = $rt->binary('+', $n, $rt->binary('*', $noise__vec2->($rt->binary('+', $rt->binary('*', $p, $rt->f(2), 2, 'float'), $rt->binary('*', $rt->construct(2, $rt->unary('-', $cy), $cx), $rt->f(0.75), 2, 'float'), 2, 'float')), $rt->f(0.5), 1, 'float'), 1, 'float');
-        $n = $rt->binary('+', $n, $rt->binary('*', $noise__vec2->($rt->binary('+', $rt->binary('*', $p, $rt->f(4), 2, 'float'), $rt->binary('*', $rt->construct(2, $cx, $rt->unary('-', $cy)), $rt->f(0.5), 2, 'float'), 2, 'float')), $rt->f(0.25), 1, 'float'), 1, 'float');
+        $n = $noise__vec2->($rt->construct(2, $rt->binary('+', $p, $rt->construct_raw(2, $cx, $cy), 2, 'float')));
+        $n = $rt->binary('+', $n, $rt->binary('*', $noise__vec2->($rt->construct(2, $rt->binary('+', $rt->binary('*', $p, $rt->f(2), 2, 'float'), $rt->binary('*', $rt->construct_raw(2, $rt->unary('-', $cy), $cx), $rt->f(0.75), 2, 'float'), 2, 'float'))), $rt->f(0.5), 1, 'float'), 1, 'float');
+        $n = $rt->binary('+', $n, $rt->binary('*', $noise__vec2->($rt->construct(2, $rt->binary('+', $rt->binary('*', $p, $rt->f(4), 2, 'float'), $rt->binary('*', $rt->construct_raw(2, $cx, $rt->unary('-', $cy)), $rt->f(0.5), 2, 'float'), 2, 'float'))), $rt->f(0.25), 1, 'float'), 1, 'float');
         return $rt->binary('/', $n, $rt->f(1.75), 1, 'float');
     };
     $wrapFloat__float_float_int = sub {
@@ -91,7 +91,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_for0_first, $aspect, $baseFreq, $col, $dims, $displaceBase, $displaceScale, $dx, $dy, $finalUV, $freq, $freqScaled, $fullRes, $height, $multiplier, $noiseCoord, $numOctaves, $octave, $offset, $phase, $radius, $refX, $refY, $sampleCoord, $uv, $width);
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution));
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
         $dims = $rt->fresh($fullRes);
         $width = $rt->swizzle($dims, 'x');
         $height = $rt->swizzle($dims, 'y');
@@ -103,8 +103,8 @@ my $run_pixel = sub {
         } else {
             $freq = $rt->assign_swizzle($freq, 'x', $rt->binary('/', $rt->swizzle($freq, 'x'), $aspect, 1, 'float'));
         }
-        $uv = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float');
-        $sampleCoord = $rt->binary('*', $uv, $dims, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
+        $sampleCoord = $rt->construct(2, $rt->binary('*', $uv, $dims, 2, 'float'));
         $numOctaves = $rt->component_wise('max', $rt->construct(1, $_u_octaves, 'int'), $rt->i(1));
         $displaceBase = $_u_displacement;
         $octave = $rt->i(1);
@@ -121,15 +121,15 @@ my $run_pixel = sub {
                 last;
             }
             $multiplier = $rt->component_wise('pow', $rt->f(2), $rt->construct(1, $octave));
-            $freqScaled = $rt->binary('*', $rt->binary('*', $freq, $rt->f(0.5), 2, 'float'), $multiplier, 2, 'float');
+            $freqScaled = $rt->construct(2, $rt->binary('*', $rt->binary('*', $freq, $rt->f(0.5), 2, 'float'), $multiplier, 2, 'float'));
             if ((($rt->binary('>=', $rt->swizzle($freqScaled, 'x'), $width)) || ($rt->binary('>=', $rt->swizzle($freqScaled, 'y'), $height)) ? 1 : 0)) {
                 last;
             }
             $phase = $rt->binary('*', $rt->construct(1, $octave), $rt->f(2.399), 1, 'float');
             $radius = $rt->binary('/', $rt->f(0.5), $rt->component_wise('sqrt', $multiplier), 1, 'float');
-            $noiseCoord = $rt->binary('*', $rt->binary('/', $sampleCoord, $dims, 2, 'float'), $freqScaled, 2, 'float');
-            $refX = $simplexNoise__vec2_float_float_float->($rt->binary('+', $noiseCoord, $rt->construct(2, $rt->f(17), $rt->f(29)), 2, 'float'), $rt->binary('*', $_u_time, $_u_speed, 1, 'float'), $phase, $radius);
-            $refY = $simplexNoise__vec2_float_float_float->($rt->binary('+', $noiseCoord, $rt->construct(2, $rt->f(23), $rt->f(31)), 2, 'float'), $rt->binary('*', $_u_time, $_u_speed, 1, 'float'), $phase, $radius);
+            $noiseCoord = $rt->construct(2, $rt->binary('*', $rt->binary('/', $sampleCoord, $dims, 2, 'float'), $freqScaled, 2, 'float'));
+            $refX = $simplexNoise__vec2_float_float_float->($rt->construct(2, $rt->binary('+', $noiseCoord, $rt->construct_raw(2, $rt->f(17), $rt->f(29)), 2, 'float')), $rt->binary('*', $_u_time, $_u_speed, 1, 'float'), $phase, $radius);
+            $refY = $simplexNoise__vec2_float_float_float->($rt->construct(2, $rt->binary('+', $noiseCoord, $rt->construct_raw(2, $rt->f(23), $rt->f(31)), 2, 'float')), $rt->binary('*', $_u_time, $_u_speed, 1, 'float'), $phase, $radius);
             $refX = $rt->binary('-', $rt->binary('*', $refX, $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float');
             $refY = $rt->binary('-', $rt->binary('*', $refY, $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float');
             $displaceScale = $rt->binary('/', $displaceBase, $multiplier, 1, 'float');
@@ -137,7 +137,7 @@ my $run_pixel = sub {
             @{$sampleCoord} = map { $rt->f32($_) } @{($rt->binary('+', $sampleCoord, $offset, 2, 'float'))};
             @{$sampleCoord} = map { $rt->f32($_) } @{($rt->construct(2, $wrapFloat__float_float_int->($rt->swizzle($sampleCoord, 'x'), $width, $rt->construct(1, $_u_wrap, 'int')), $wrapFloat__float_float_int->($rt->swizzle($sampleCoord, 'y'), $height, $rt->construct(1, $_u_wrap, 'int'))))};
         }
-        $finalUV = $rt->binary('/', $rt->construct(2, $wrapFloat__float_float_int->($rt->swizzle($sampleCoord, 'x'), $width, $rt->construct(1, $_u_wrap, 'int')), $wrapFloat__float_float_int->($rt->swizzle($sampleCoord, 'y'), $height, $rt->construct(1, $_u_wrap, 'int'))), $dims, 2, 'float');
+        $finalUV = $rt->construct(2, $rt->binary('/', $rt->construct_raw(2, $wrapFloat__float_float_int->($rt->swizzle($sampleCoord, 'x'), $width, $rt->construct(1, $_u_wrap, 'int')), $wrapFloat__float_float_int->($rt->swizzle($sampleCoord, 'y'), $height, $rt->construct(1, $_u_wrap, 'int'))), $dims, 2, 'float'));
         $col = $rt->construct(4, 0.0);
         $dx = $rt->construct(2, 0.0);
         $dy = $rt->construct(2, 0.0);

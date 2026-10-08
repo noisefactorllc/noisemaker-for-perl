@@ -20,7 +20,7 @@ my $run_pixel = sub {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
             return;
         }
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $trailColor = $rt->texture($_u_trailTex, $uv);
         $persistence = $rt->component_wise('clamp', $rt->binary('-', $rt->f(1), $_u_decay, 1, 'float'), $rt->f(0), $rt->f(1));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('*', $trailColor, $persistence, 4, 'float'))};

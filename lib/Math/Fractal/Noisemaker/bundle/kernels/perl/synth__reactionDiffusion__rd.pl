@@ -26,7 +26,7 @@ my $run_pixel = sub {
         $p2 = $rt->copy($p2, 'float');
         my ($t2);
         $t2 = $rt->binary('*', $t, $t, 1, 'float');
-        return $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('*', $p0, $rt->f(0.5), 4, 'float'), $rt->binary('-', $rt->f(1), $t, 1, 'float'), 4, 'float'), $rt->binary('-', $rt->f(1), $t, 1, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('*', $p1, $rt->f(0.5), 4, 'float'), $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->f(2)), $t2, 1, 'float'), $rt->binary('*', $rt->f(2), $t, 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('*', $p2, $rt->f(0.5), 4, 'float'), $t2, 4, 'float'), 4, 'float');
+        return $rt->construct(4, $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('*', $p0, $rt->f(0.5), 4, 'float'), $rt->binary('-', $rt->f(1), $t, 1, 'float'), 4, 'float'), $rt->binary('-', $rt->f(1), $t, 1, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('*', $p1, $rt->f(0.5), 4, 'float'), $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->f(2)), $t2, 1, 'float'), $rt->binary('*', $rt->f(2), $t, 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('*', $p2, $rt->f(0.5), 4, 'float'), $t2, 4, 'float'), 4, 'float'));
     };
     $quadratic__sampler2D_vec2_vec2 = sub {
         my ($tex, $uv, $texelSize) = @_;
@@ -34,18 +34,18 @@ my $run_pixel = sub {
         $texelSize = $rt->copy($texelSize, 'float');
         my ($baseCoord, $f, $texCoord, $v00, $v01, $v02, $v10, $v11, $v12, $v20, $v21, $v22, $y0, $y1, $y2);
         @{$uv} = map { $rt->f32($_) } @{($rt->binary('+', $uv, $texelSize, 2, 'float'))};
-        $texCoord = $rt->binary('/', $uv, $texelSize, 2, 'float');
+        $texCoord = $rt->construct(2, $rt->binary('/', $uv, $texelSize, 2, 'float'));
         $baseCoord = $rt->component_wise('floor', $rt->binary('-', $texCoord, $rt->f(0.5), 2, 'float'));
         $f = $rt->component_wise('fract', $rt->binary('-', $texCoord, $rt->f(0.5), 2, 'float'));
-        $v00 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
-        $v10 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
-        $v20 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
-        $v01 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
-        $v11 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
-        $v21 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
-        $v02 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
-        $v12 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
-        $v22 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v00 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
+        $v10 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
+        $v20 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
+        $v01 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v11 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v21 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v02 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v12 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v22 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
         $y0 = $quadratic3__vec4_vec4_vec4_float->($v00, $v10, $v20, $rt->swizzle($f, 'x'));
         $y1 = $quadratic3__vec4_vec4_vec4_float->($v01, $v11, $v21, $rt->swizzle($f, 'x'));
         $y2 = $quadratic3__vec4_vec4_vec4_float->($v02, $v12, $v22, $rt->swizzle($f, 'x'));
@@ -64,7 +64,7 @@ my $run_pixel = sub {
         $b1 = $rt->binary('/', $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->f(3), $t3, 1, 'float'), $rt->binary('*', $rt->f(6), $t2, 1, 'float'), 1, 'float'), $rt->f(4), 1, 'float'), $rt->f(6), 1, 'float');
         $b2 = $rt->binary('/', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->f(3)), $t3, 1, 'float'), $rt->binary('*', $rt->f(3), $t2, 1, 'float'), 1, 'float'), $rt->binary('*', $rt->f(3), $t, 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), $rt->f(6), 1, 'float');
         $b3 = $rt->binary('/', $t3, $rt->f(6), 1, 'float');
-        return $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $p0, $b0, 4, 'float'), $rt->binary('*', $p1, $b1, 4, 'float'), 4, 'float'), $rt->binary('*', $p2, $b2, 4, 'float'), 4, 'float'), $rt->binary('*', $p3, $b3, 4, 'float'), 4, 'float');
+        return $rt->construct(4, $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $p0, $b0, 4, 'float'), $rt->binary('*', $p1, $b1, 4, 'float'), 4, 'float'), $rt->binary('*', $p2, $b2, 4, 'float'), 4, 'float'), $rt->binary('*', $p3, $b3, 4, 'float'), 4, 'float'));
     };
     $bicubic__sampler2D_vec2_vec2 = sub {
         my ($tex, $uv, $texelSize) = @_;
@@ -72,13 +72,13 @@ my $run_pixel = sub {
         $texelSize = $rt->copy($texelSize, 'float');
         my ($baseCoord, $f, $row0, $row1, $row2, $row3, $texCoord);
         @{$uv} = map { $rt->f32($_) } @{($rt->binary('+', $uv, $texelSize, 2, 'float'))};
-        $texCoord = $rt->binary('/', $uv, $texelSize, 2, 'float');
+        $texCoord = $rt->construct(2, $rt->binary('/', $uv, $texelSize, 2, 'float'));
         $baseCoord = $rt->component_wise('floor', $rt->binary('-', $texCoord, $rt->f(1), 2, 'float'));
         $f = $rt->component_wise('fract', $rt->binary('-', $texCoord, $rt->f(1), 2, 'float'));
-        $row0 = $bicubic4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(2.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
-        $row1 = $bicubic4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(2.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
-        $row2 = $bicubic4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(2.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
-        $row3 = $bicubic4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(2.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
+        $row0 = $bicubic4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(2.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
+        $row1 = $bicubic4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(2.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
+        $row2 = $bicubic4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(2.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
+        $row3 = $bicubic4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(2.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
         return $bicubic4__vec4_vec4_vec4_vec4_float->($row0, $row1, $row2, $row3, $rt->swizzle($f, 'y'));
     };
     $catmullRom3__vec4_vec4_vec4_float = sub {
@@ -89,8 +89,8 @@ my $run_pixel = sub {
         my ($m, $t2, $t3);
         $t2 = $rt->binary('*', $t, $t, 1, 'float');
         $t3 = $rt->binary('*', $t2, $t, 1, 'float');
-        $m = $rt->binary('*', $rt->f(0.5), $rt->binary('-', $p2, $p0, 4, 'float'), 4, 'float');
-        return $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->f(2), $t3, 1, 'float'), $rt->binary('*', $rt->f(3), $t2, 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), $p1, 4, 'float'), $rt->binary('*', $rt->binary('+', $rt->binary('-', $t3, $rt->binary('*', $rt->f(2), $t2, 1, 'float'), 1, 'float'), $t, 1, 'float'), $m, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->f(2)), $t3, 1, 'float'), $rt->binary('*', $rt->f(3), $t2, 1, 'float'), 1, 'float'), $p2, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('-', $t3, $t2, 1, 'float'), $m, 4, 'float'), 4, 'float');
+        $m = $rt->construct(4, $rt->binary('*', $rt->f(0.5), $rt->binary('-', $p2, $p0, 4, 'float'), 4, 'float'));
+        return $rt->construct(4, $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->f(2), $t3, 1, 'float'), $rt->binary('*', $rt->f(3), $t2, 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), $p1, 4, 'float'), $rt->binary('*', $rt->binary('+', $rt->binary('-', $t3, $rt->binary('*', $rt->f(2), $t2, 1, 'float'), 1, 'float'), $t, 1, 'float'), $m, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->f(2)), $t3, 1, 'float'), $rt->binary('*', $rt->f(3), $t2, 1, 'float'), 1, 'float'), $p2, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('-', $t3, $t2, 1, 'float'), $m, 4, 'float'), 4, 'float'));
     };
     $catmullRom4__vec4_vec4_vec4_vec4_float = sub {
         my ($p0, $p1, $p2, $p3, $t) = @_;
@@ -98,7 +98,7 @@ my $run_pixel = sub {
         $p1 = $rt->copy($p1, 'float');
         $p2 = $rt->copy($p2, 'float');
         $p3 = $rt->copy($p3, 'float');
-        return $rt->binary('+', $p1, $rt->binary('*', $rt->binary('*', $rt->f(0.5), $t, 1, 'float'), $rt->binary('+', $rt->binary('-', $p2, $p0, 4, 'float'), $rt->binary('*', $t, $rt->binary('+', $rt->binary('-', $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->f(2), $p0, 4, 'float'), $rt->binary('*', $rt->f(5), $p1, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->f(4), $p2, 4, 'float'), 4, 'float'), $p3, 4, 'float'), $rt->binary('*', $t, $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->f(3), $rt->binary('-', $p1, $p2, 4, 'float'), 4, 'float'), $p3, 4, 'float'), $p0, 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float');
+        return $rt->construct(4, $rt->binary('+', $p1, $rt->binary('*', $rt->binary('*', $rt->f(0.5), $t, 1, 'float'), $rt->binary('+', $rt->binary('-', $p2, $p0, 4, 'float'), $rt->binary('*', $t, $rt->binary('+', $rt->binary('-', $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->f(2), $p0, 4, 'float'), $rt->binary('*', $rt->f(5), $p1, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->f(4), $p2, 4, 'float'), 4, 'float'), $p3, 4, 'float'), $rt->binary('*', $t, $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->f(3), $rt->binary('-', $p1, $p2, 4, 'float'), 4, 'float'), $p3, 4, 'float'), $p0, 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'));
     };
     $catmullRom3x3__sampler2D_vec2_vec2 = sub {
         my ($tex, $uv, $texelSize) = @_;
@@ -106,18 +106,18 @@ my $run_pixel = sub {
         $texelSize = $rt->copy($texelSize, 'float');
         my ($baseCoord, $f, $texCoord, $v00, $v01, $v02, $v10, $v11, $v12, $v20, $v21, $v22, $y0, $y1, $y2);
         @{$uv} = map { $rt->f32($_) } @{($rt->binary('+', $uv, $texelSize, 2, 'float'))};
-        $texCoord = $rt->binary('/', $uv, $texelSize, 2, 'float');
+        $texCoord = $rt->construct(2, $rt->binary('/', $uv, $texelSize, 2, 'float'));
         $baseCoord = $rt->component_wise('floor', $rt->binary('-', $texCoord, $rt->f(1), 2, 'float'));
         $f = $rt->component_wise('fract', $rt->binary('-', $texCoord, $rt->f(1), 2, 'float'));
-        $v00 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
-        $v10 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
-        $v20 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
-        $v01 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
-        $v11 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
-        $v21 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
-        $v02 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
-        $v12 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
-        $v22 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v00 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
+        $v10 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
+        $v20 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float'));
+        $v01 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v11 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v21 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v02 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v12 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
+        $v22 = $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float'));
         $y0 = $catmullRom3__vec4_vec4_vec4_float->($v00, $v10, $v20, $rt->swizzle($f, 'x'));
         $y1 = $catmullRom3__vec4_vec4_vec4_float->($v01, $v11, $v21, $rt->swizzle($f, 'x'));
         $y2 = $catmullRom3__vec4_vec4_vec4_float->($v02, $v12, $v22, $rt->swizzle($f, 'x'));
@@ -129,13 +129,13 @@ my $run_pixel = sub {
         $texelSize = $rt->copy($texelSize, 'float');
         my ($baseCoord, $f, $row0, $row1, $row2, $row3, $texCoord);
         @{$uv} = map { $rt->f32($_) } @{($rt->binary('+', $uv, $texelSize, 2, 'float'))};
-        $texCoord = $rt->binary('/', $uv, $texelSize, 2, 'float');
+        $texCoord = $rt->construct(2, $rt->binary('/', $uv, $texelSize, 2, 'float'));
         $baseCoord = $rt->component_wise('floor', $rt->binary('-', $texCoord, $rt->f(1), 2, 'float'));
         $f = $rt->component_wise('fract', $rt->binary('-', $texCoord, $rt->f(1), 2, 'float'));
-        $row0 = $catmullRom4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(2.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
-        $row1 = $catmullRom4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(2.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
-        $row2 = $catmullRom4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(2.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
-        $row3 = $catmullRom4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->unary('-', $rt->f(0.5)), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(0.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(1.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct(2, $rt->f(2.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
+        $row0 = $catmullRom4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(2.5), $rt->unary('-', $rt->f(0.5))), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
+        $row1 = $catmullRom4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(2.5), $rt->f(0.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
+        $row2 = $catmullRom4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(2.5), $rt->f(1.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
+        $row3 = $catmullRom4__vec4_vec4_vec4_vec4_float->($rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(0.5)), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(0.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(1.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->texture($tex, $rt->binary('*', $rt->binary('+', $baseCoord, $rt->construct_raw(2, $rt->f(2.5), $rt->f(2.5)), 2, 'float'), $texelSize, 2, 'float')), $rt->swizzle($f, 'x'));
         return $catmullRom4__vec4_vec4_vec4_vec4_float->($row0, $row1, $row2, $row3, $rt->swizzle($f, 'y'));
     };
     $cosineMix__float_float_float = sub {
@@ -146,7 +146,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($base, $baseIdx, $blend, $globalCoord, $inputColor, $inputUv, $intensity, $maxIdx, $minIdx, $next, $nextIdx, $rdColor, $scaling, $smoothWeights, $state, $texSize, $texSizeI, $texelPos, $texelSize, $uv, $v0, $v00, $v01, $v1, $v10, $v11, $weights);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $state = $rt->f(0);
         $base = $rt->construct(2, 0.0);
         $baseIdx = $rt->construct(2, 0.0, 'int');
@@ -173,10 +173,10 @@ my $run_pixel = sub {
         } else {
             if ($rt->binary('==', $_u_smoothing, $rt->i(2))) {
                 $texSize = $rt->construct(2, $rt->texture_size($_u_fbTex));
-                $texelPos = $rt->binary('-', $rt->binary('/', $rt->binary('*', $globalCoord, $texSize, 2, 'float'), $_u_fullResolution, 2, 'float'), $rt->construct(2, $rt->f(0.5)), 2, 'float');
+                $texelPos = $rt->construct(2, $rt->binary('-', $rt->binary('/', $rt->binary('*', $globalCoord, $texSize, 2, 'float'), $_u_fullResolution, 2, 'float'), $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'));
                 $base = $rt->component_wise('floor', $texelPos);
                 $weights = $rt->component_wise('fract', $texelPos);
-                $next = $rt->binary('+', $base, $rt->construct(2, $rt->f(1)), 2, 'float');
+                $next = $rt->construct(2, $rt->binary('+', $base, $rt->construct_raw(2, $rt->f(1)), 2, 'float'));
                 $texSizeI = $rt->texture_size($_u_fbTex);
                 $minIdx = $rt->construct(2, $rt->i(0), 'int');
                 $maxIdx = $rt->binary('-', $texSizeI, $rt->construct(2, $rt->i(1), 'int'), 2, 'int');
@@ -193,37 +193,37 @@ my $run_pixel = sub {
             } else {
                 if ($rt->binary('==', $_u_smoothing, $rt->i(3))) {
                     $texSize = $rt->construct(2, $rt->texture_size($_u_fbTex));
-                    $texelSize = $rt->binary('/', $rt->f(1), $texSize, 2, 'float');
-                    $scaling = $rt->binary('/', $_u_fullResolution, $texSize, 2, 'float');
-                    $uv = $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $scaling, $rt->f(0.5), 2, 'float'), 2, 'float'), $_u_fullResolution, 2, 'float');
+                    $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $texSize, 2, 'float'));
+                    $scaling = $rt->construct(2, $rt->binary('/', $_u_fullResolution, $texSize, 2, 'float'));
+                    $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $scaling, $rt->f(0.5), 2, 'float'), 2, 'float'), $_u_fullResolution, 2, 'float'));
                     $state = $rt->swizzle($catmullRom3x3__sampler2D_vec2_vec2->($_u_fbTex, $uv, $texelSize), 'g');
                 } else {
                     if ($rt->binary('==', $_u_smoothing, $rt->i(4))) {
                         $texSize = $rt->construct(2, $rt->texture_size($_u_fbTex));
-                        $texelSize = $rt->binary('/', $rt->f(1), $texSize, 2, 'float');
-                        $scaling = $rt->binary('/', $_u_fullResolution, $texSize, 2, 'float');
-                        $uv = $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $scaling, $rt->f(0.5), 2, 'float'), 2, 'float'), $_u_fullResolution, 2, 'float');
+                        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $texSize, 2, 'float'));
+                        $scaling = $rt->construct(2, $rt->binary('/', $_u_fullResolution, $texSize, 2, 'float'));
+                        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $scaling, $rt->f(0.5), 2, 'float'), 2, 'float'), $_u_fullResolution, 2, 'float'));
                         $state = $rt->swizzle($catmullRom4x4__sampler2D_vec2_vec2->($_u_fbTex, $uv, $texelSize), 'g');
                     } else {
                         if ($rt->binary('==', $_u_smoothing, $rt->i(5))) {
                             $texSize = $rt->construct(2, $rt->texture_size($_u_fbTex));
-                            $texelSize = $rt->binary('/', $rt->f(1), $texSize, 2, 'float');
-                            $scaling = $rt->binary('/', $_u_fullResolution, $texSize, 2, 'float');
-                            $uv = $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $scaling, $rt->f(0.5), 2, 'float'), 2, 'float'), $_u_fullResolution, 2, 'float');
+                            $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $texSize, 2, 'float'));
+                            $scaling = $rt->construct(2, $rt->binary('/', $_u_fullResolution, $texSize, 2, 'float'));
+                            $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $scaling, $rt->f(0.5), 2, 'float'), 2, 'float'), $_u_fullResolution, 2, 'float'));
                             $state = $rt->swizzle($quadratic__sampler2D_vec2_vec2->($_u_fbTex, $uv, $texelSize), 'g');
                         } else {
                             if ($rt->binary('==', $_u_smoothing, $rt->i(6))) {
                                 $texSize = $rt->construct(2, $rt->texture_size($_u_fbTex));
-                                $texelSize = $rt->binary('/', $rt->f(1), $texSize, 2, 'float');
-                                $scaling = $rt->binary('/', $_u_fullResolution, $texSize, 2, 'float');
-                                $uv = $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $scaling, $rt->f(0.5), 2, 'float'), 2, 'float'), $_u_fullResolution, 2, 'float');
+                                $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $texSize, 2, 'float'));
+                                $scaling = $rt->construct(2, $rt->binary('/', $_u_fullResolution, $texSize, 2, 'float'));
+                                $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $scaling, $rt->f(0.5), 2, 'float'), 2, 'float'), $_u_fullResolution, 2, 'float'));
                                 $state = $rt->swizzle($bicubic__sampler2D_vec2_vec2->($_u_fbTex, $uv, $texelSize), 'g');
                             } else {
                                 $texSize = $rt->construct(2, $rt->texture_size($_u_fbTex));
-                                $texelPos = $rt->binary('-', $rt->binary('/', $rt->binary('*', $globalCoord, $texSize, 2, 'float'), $_u_fullResolution, 2, 'float'), $rt->construct(2, $rt->f(0.5)), 2, 'float');
+                                $texelPos = $rt->construct(2, $rt->binary('-', $rt->binary('/', $rt->binary('*', $globalCoord, $texSize, 2, 'float'), $_u_fullResolution, 2, 'float'), $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'));
                                 $base = $rt->component_wise('floor', $texelPos);
                                 $weights = $rt->component_wise('fract', $texelPos);
-                                $next = $rt->binary('+', $base, $rt->construct(2, $rt->f(1)), 2, 'float');
+                                $next = $rt->construct(2, $rt->binary('+', $base, $rt->construct_raw(2, $rt->f(1)), 2, 'float'));
                                 $texSizeI = $rt->texture_size($_u_fbTex);
                                 $minIdx = $rt->construct(2, $rt->i(0), 'int');
                                 $maxIdx = $rt->binary('-', $texSizeI, $rt->construct(2, $rt->i(1), 'int'), 2, 'int');
@@ -254,7 +254,7 @@ my $run_pixel = sub {
         $inputColor = $rt->construct(3, 0.0);
         $inputUv = $rt->construct(2, 0.0);
         if ($rt->binary('>', $blend, $rt->f(0))) {
-            $inputUv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+            $inputUv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
             $inputColor = $rt->swizzle($rt->texture($_u_inputTex, $inputUv), 'rgb');
             @{$rdColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rdColor, $inputColor, $blend))};
         }

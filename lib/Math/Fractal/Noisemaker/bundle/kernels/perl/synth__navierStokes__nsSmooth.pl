@@ -27,7 +27,7 @@ my $run_pixel = sub {
         $p2 = $rt->copy($p2, 'float');
         my ($t2);
         $t2 = $rt->binary('*', $t, $t, 1, 'float');
-        return $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('*', $p0, $rt->f(0.5), 4, 'float'), $rt->binary('-', $rt->f(1), $t, 1, 'float'), 4, 'float'), $rt->binary('-', $rt->f(1), $t, 1, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('*', $p1, $rt->f(0.5), 4, 'float'), $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->f(2)), $t2, 1, 'float'), $rt->binary('*', $rt->f(2), $t, 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('*', $p2, $rt->f(0.5), 4, 'float'), $t2, 4, 'float'), 4, 'float');
+        return $rt->construct(4, $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('*', $p0, $rt->f(0.5), 4, 'float'), $rt->binary('-', $rt->f(1), $t, 1, 'float'), 4, 'float'), $rt->binary('-', $rt->f(1), $t, 1, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('*', $p1, $rt->f(0.5), 4, 'float'), $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->f(2)), $t2, 1, 'float'), $rt->binary('*', $rt->f(2), $t, 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('*', $p2, $rt->f(0.5), 4, 'float'), $t2, 4, 'float'), 4, 'float'));
     };
     $bicubic4v__vec4_vec4_vec4_vec4_float = sub {
         my ($p0, $p1, $p2, $p3, $t) = @_;
@@ -42,7 +42,7 @@ my $run_pixel = sub {
         $b1 = $rt->binary('/', $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->f(3), $t3, 1, 'float'), $rt->binary('*', $rt->f(6), $t2, 1, 'float'), 1, 'float'), $rt->f(4), 1, 'float'), $rt->f(6), 1, 'float');
         $b2 = $rt->binary('/', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->f(3)), $t3, 1, 'float'), $rt->binary('*', $rt->f(3), $t2, 1, 'float'), 1, 'float'), $rt->binary('*', $rt->f(3), $t, 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), $rt->f(6), 1, 'float');
         $b3 = $rt->binary('/', $t3, $rt->f(6), 1, 'float');
-        return $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $p0, $b0, 4, 'float'), $rt->binary('*', $p1, $b1, 4, 'float'), 4, 'float'), $rt->binary('*', $p2, $b2, 4, 'float'), 4, 'float'), $rt->binary('*', $p3, $b3, 4, 'float'), 4, 'float');
+        return $rt->construct(4, $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $p0, $b0, 4, 'float'), $rt->binary('*', $p1, $b1, 4, 'float'), 4, 'float'), $rt->binary('*', $p2, $b2, 4, 'float'), 4, 'float'), $rt->binary('*', $p3, $b3, 4, 'float'), 4, 'float'));
     };
     $catmull3v__vec4_vec4_vec4_float = sub {
         my ($p0, $p1, $p2, $t) = @_;
@@ -52,8 +52,8 @@ my $run_pixel = sub {
         my ($m, $t2, $t3);
         $t2 = $rt->binary('*', $t, $t, 1, 'float');
         $t3 = $rt->binary('*', $t2, $t, 1, 'float');
-        $m = $rt->binary('*', $rt->f(0.5), $rt->binary('-', $p2, $p0, 4, 'float'), 4, 'float');
-        return $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->f(2), $t3, 1, 'float'), $rt->binary('*', $rt->f(3), $t2, 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), $p1, 4, 'float'), $rt->binary('*', $rt->binary('+', $rt->binary('-', $t3, $rt->binary('*', $rt->f(2), $t2, 1, 'float'), 1, 'float'), $t, 1, 'float'), $m, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->f(2)), $t3, 1, 'float'), $rt->binary('*', $rt->f(3), $t2, 1, 'float'), 1, 'float'), $p2, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('-', $t3, $t2, 1, 'float'), $m, 4, 'float'), 4, 'float');
+        $m = $rt->construct(4, $rt->binary('*', $rt->f(0.5), $rt->binary('-', $p2, $p0, 4, 'float'), 4, 'float'));
+        return $rt->construct(4, $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->f(2), $t3, 1, 'float'), $rt->binary('*', $rt->f(3), $t2, 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), $p1, 4, 'float'), $rt->binary('*', $rt->binary('+', $rt->binary('-', $t3, $rt->binary('*', $rt->f(2), $t2, 1, 'float'), 1, 'float'), $t, 1, 'float'), $m, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->f(2)), $t3, 1, 'float'), $rt->binary('*', $rt->f(3), $t2, 1, 'float'), 1, 'float'), $p2, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->binary('-', $t3, $t2, 1, 'float'), $m, 4, 'float'), 4, 'float'));
     };
     $catmull4v__vec4_vec4_vec4_vec4_float = sub {
         my ($p0, $p1, $p2, $p3, $t) = @_;
@@ -61,15 +61,15 @@ my $run_pixel = sub {
         $p1 = $rt->copy($p1, 'float');
         $p2 = $rt->copy($p2, 'float');
         $p3 = $rt->copy($p3, 'float');
-        return $rt->binary('+', $p1, $rt->binary('*', $rt->binary('*', $rt->f(0.5), $t, 1, 'float'), $rt->binary('+', $rt->binary('-', $p2, $p0, 4, 'float'), $rt->binary('*', $t, $rt->binary('+', $rt->binary('-', $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->f(2), $p0, 4, 'float'), $rt->binary('*', $rt->f(5), $p1, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->f(4), $p2, 4, 'float'), 4, 'float'), $p3, 4, 'float'), $rt->binary('*', $t, $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->f(3), $rt->binary('-', $p1, $p2, 4, 'float'), 4, 'float'), $p3, 4, 'float'), $p0, 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float');
+        return $rt->construct(4, $rt->binary('+', $p1, $rt->binary('*', $rt->binary('*', $rt->f(0.5), $t, 1, 'float'), $rt->binary('+', $rt->binary('-', $p2, $p0, 4, 'float'), $rt->binary('*', $t, $rt->binary('+', $rt->binary('-', $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->f(2), $p0, 4, 'float'), $rt->binary('*', $rt->f(5), $p1, 4, 'float'), 4, 'float'), $rt->binary('*', $rt->f(4), $p2, 4, 'float'), 4, 'float'), $p3, 4, 'float'), $rt->binary('*', $t, $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->f(3), $rt->binary('-', $p1, $p2, 4, 'float'), 4, 'float'), $p3, 4, 'float'), $p0, 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'), 4, 'float'));
     };
     $main__void = sub {
         my ($_for0_first, $_for1_first, $_for2_first, $_for3_first, $_for4_first, $_for5_first, $_for6_first, $_for7_first, $baseI, $f, $i, $idx, $j, $maxIdx, $minIdx, $p, $r0, $r1, $r2, $r3, $sampled, $texSize, $texelPos, $uv, $v0, $v00, $v01, $v1, $v10, $v11, $w);
         $texSize = $rt->texture_size($_u_canvasTex);
         $minIdx = $rt->construct(2, $rt->i(0), 'int');
         $maxIdx = $rt->binary('-', $texSize, $rt->construct(2, $rt->i(1), 'int'), 2, 'int');
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
-        $texelPos = $rt->binary('-', $rt->binary('*', $uv, $rt->construct(2, $texSize), 2, 'float'), $rt->construct(2, $rt->f(0.5)), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $texelPos = $rt->construct(2, $rt->binary('-', $rt->binary('*', $uv, $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'), $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'));
         $baseI = $rt->construct(2, $rt->component_wise('floor', $texelPos), 'int');
         $f = $rt->component_wise('fract', $texelPos);
         $sampled = $rt->construct(4, 0.0);
@@ -122,7 +122,7 @@ my $run_pixel = sub {
                             if (!($rt->binary('<', $i, $rt->i(3)))) {
                                 last;
                             }
-                            $p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(3), 1, 'int'), $i, 1, 'int'))] = $fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx);
+                            @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(3), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))};
                         }
                     }
                     $r0 = $catmull3v__vec4_vec4_vec4_float->($p->[int($rt->i(0))], $p->[int($rt->i(1))], $p->[int($rt->i(2))], $rt->swizzle($f, 'x'));
@@ -152,7 +152,7 @@ my $run_pixel = sub {
                                 if (!($rt->binary('<', $i, $rt->i(4)))) {
                                     last;
                                 }
-                                $p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(4), 1, 'int'), $i, 1, 'int'))] = $fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx);
+                                @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(4), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))};
                             }
                         }
                         $r0 = $catmull4v__vec4_vec4_vec4_vec4_float->($p->[int($rt->i(0))], $p->[int($rt->i(1))], $p->[int($rt->i(2))], $p->[int($rt->i(3))], $rt->swizzle($f, 'x'));
@@ -183,7 +183,7 @@ my $run_pixel = sub {
                                     if (!($rt->binary('<', $i, $rt->i(3)))) {
                                         last;
                                     }
-                                    $p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(3), 1, 'int'), $i, 1, 'int'))] = $fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx);
+                                    @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(3), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))};
                                 }
                             }
                             $r0 = $quad3v__vec4_vec4_vec4_float->($p->[int($rt->i(0))], $p->[int($rt->i(1))], $p->[int($rt->i(2))], $rt->swizzle($f, 'x'));
@@ -213,7 +213,7 @@ my $run_pixel = sub {
                                         if (!($rt->binary('<', $i, $rt->i(4)))) {
                                             last;
                                         }
-                                        $p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(4), 1, 'int'), $i, 1, 'int'))] = $fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx);
+                                        @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(4), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))};
                                     }
                                 }
                                 $r0 = $bicubic4v__vec4_vec4_vec4_vec4_float->($p->[int($rt->i(0))], $p->[int($rt->i(1))], $p->[int($rt->i(2))], $p->[int($rt->i(3))], $rt->swizzle($f, 'x'));

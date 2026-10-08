@@ -45,7 +45,7 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($d);
-        $d = $rt->binary('-', $rt->component_wise('abs', $p), $rt->construct(3, $rt->f(0.45000000000000001)), 3, 'float');
+        $d = $rt->construct(3, $rt->binary('-', $rt->component_wise('abs', $p), $rt->construct(3, $rt->f(0.45000000000000001)), 3, 'float'));
         return $rt->binary('+', $rt->length($rt->component_wise('max', $d, $rt->f(0))), $rt->component_wise('min', $rt->component_wise('max', $rt->swizzle($d, 'x'), $rt->component_wise('max', $rt->swizzle($d, 'y'), $rt->swizzle($d, 'z'))), $rt->f(0)), 1, 'float');
     };
     $octahedronSDF__vec3 = sub {
@@ -107,7 +107,7 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($d);
-        $d = $rt->binary('-', $rt->component_wise('abs', $rt->construct(2, $rt->length($rt->swizzle($p, 'xz')), $rt->swizzle($p, 'y'))), $rt->construct(2, $rt->f(0.34999999999999998), $rt->f(0.45000000000000001)), 2, 'float');
+        $d = $rt->construct(2, $rt->binary('-', $rt->component_wise('abs', $rt->construct(2, $rt->length($rt->swizzle($p, 'xz')), $rt->swizzle($p, 'y'))), $rt->construct(2, $rt->f(0.34999999999999998), $rt->f(0.45000000000000001)), 2, 'float'));
         return $rt->binary('+', $rt->component_wise('min', $rt->component_wise('max', $rt->swizzle($d, 'x'), $rt->swizzle($d, 'y')), $rt->f(0)), $rt->length($rt->component_wise('max', $d, $rt->f(0))), 1, 'float');
     };
     $coneSDF__vec3 = sub {
@@ -168,7 +168,7 @@ my $run_pixel = sub {
         my ($p, $freq, $loopOffset) = @_;
         $p = $rt->copy($p, 'float');
         my ($cp, $sdf);
-        $cp = $rt->binary('-', $p, $rt->f(0.5), 3, 'float');
+        $cp = $rt->construct(3, $rt->binary('-', $p, $rt->f(0.5), 3, 'float'));
         $sdf = $shapeSDF__vec3_int->($cp, $loopOffset);
         return $rt->binary('*', $rt->binary('-', $rt->f(0.5), $sdf, 1, 'float'), $freq, 1, 'float');
     };
@@ -192,16 +192,16 @@ my $run_pixel = sub {
         $yAtlas = $rt->construct(1, $rt->swizzle($ctx->{frag_coord}, 'y'), 'int');
         $y = $rt->binary('%', $yAtlas, $volSize, 1, 'int');
         $z = $rt->binary('/', $yAtlas, $volSize, 1, 'int');
-        $p = $rt->binary('/', $rt->construct(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float');
+        $p = $rt->construct(3, $rt->binary('/', $rt->construct_raw(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float'));
         $lf1 = $map__float_float_float_float_float->($_u_loopAScale, $rt->f(1), $rt->f(100), $rt->f(6), $rt->f(1));
         $lf2 = $map__float_float_float_float_float->($_u_loopBScale, $rt->f(1), $rt->f(100), $rt->f(6), $rt->f(1));
         $d = $computeValue__vec3_float_float->($p, $lf1, $lf2);
         $eps = $rt->binary('/', $rt->f(1), $volSizeF, 1, 'float');
-        $dx = $computeValue__vec3_float_float->($rt->binary('+', $p, $rt->construct(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float'), $lf1, $lf2);
-        $dy = $computeValue__vec3_float_float->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float'), $lf1, $lf2);
-        $dz = $computeValue__vec3_float_float->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $eps), 3, 'float'), $lf1, $lf2);
-        $gradient = $rt->binary('/', $rt->construct(3, $rt->binary('-', $dx, $d, 1, 'float'), $rt->binary('-', $dy, $d, 1, 'float'), $rt->binary('-', $dz, $d, 1, 'float')), $eps, 3, 'float');
-        $normal = $rt->normalize($rt->binary('+', $rt->unary('-', $gradient), $rt->construct(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
+        $dx = $computeValue__vec3_float_float->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float')), $lf1, $lf2);
+        $dy = $computeValue__vec3_float_float->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float')), $lf1, $lf2);
+        $dz = $computeValue__vec3_float_float->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $eps), 3, 'float')), $lf1, $lf2);
+        $gradient = $rt->construct(3, $rt->binary('/', $rt->construct_raw(3, $rt->binary('-', $dx, $d, 1, 'float'), $rt->binary('-', $dy, $d, 1, 'float'), $rt->binary('-', $dz, $d, 1, 'float')), $eps, 3, 'float'));
+        $normal = $rt->normalize($rt->binary('+', $rt->unary('-', $gradient), $rt->construct_raw(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $d, $d, $d, $rt->f(1)))};
         @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->binary('*', $normal, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'), $d))};
     };

@@ -23,16 +23,16 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($globalCoord, $globalUV, $localUV, $offset);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $globalUV = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $globalUV = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         $globalUV = $rt->assign_swizzle($globalUV, 'x', $rt->binary('*', $rt->swizzle($globalUV, 'x'), $_u_aspect, 1, 'float'));
         $offset = $rt->construct(2, $rt->binary('+', $rt->unary('-', $_u_x), $rt->binary('*', $_u_time, $rt->unary('-', $_u_speedX), 1, 'float'), 1, 'float'), $rt->binary('+', $_u_y, $rt->binary('*', $_u_time, $_u_speedY, 1, 'float'), 1, 'float'));
         $offset = $rt->assign_swizzle($offset, 'x', $rt->binary('*', $rt->swizzle($offset, 'x'), $_u_aspect, 1, 'float'));
         @{$globalUV} = map { $rt->f32($_) } @{($rt->binary('+', $globalUV, $offset, 2, 'float'))};
         $globalUV = $rt->assign_swizzle($globalUV, 'x', $rt->binary('/', $rt->swizzle($globalUV, 'x'), $_u_aspect, 1, 'float'));
-        $localUV = $rt->binary('/', $rt->binary('-', $rt->binary('*', $globalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float');
+        $localUV = $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $globalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
         if ($rt->binary('==', $_u_wrap, $rt->i(0))) {
-            @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $localUV, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
+            @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $localUV, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
         } else {
             if ($rt->binary('==', $_u_wrap, $rt->i(1))) {
                 @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('fract', $localUV))};

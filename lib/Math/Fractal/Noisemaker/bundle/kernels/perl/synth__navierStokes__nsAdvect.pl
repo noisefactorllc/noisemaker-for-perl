@@ -29,7 +29,7 @@ my $run_pixel = sub {
         my ($baseI, $f, $maxIdx, $minIdx, $texelPos, $v0, $v00, $v01, $v1, $v10, $v11);
         $minIdx = $rt->construct(2, $rt->i(0), 'int');
         $maxIdx = $rt->binary('-', $texSize, $rt->construct(2, $rt->i(1), 'int'), 2, 'int');
-        $texelPos = $rt->binary('-', $rt->binary('*', $uv, $rt->construct(2, $texSize), 2, 'float'), $rt->construct(2, $rt->f(0.5)), 2, 'float');
+        $texelPos = $rt->construct(2, $rt->binary('-', $rt->binary('*', $uv, $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'), $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'));
         $baseI = $rt->construct(2, $rt->component_wise('floor', $texelPos), 'int');
         $f = $rt->component_wise('fract', $texelPos);
         $v00 = $fetchTex__ivec2_ivec2_ivec2->($baseI, $minIdx, $maxIdx);
@@ -44,7 +44,7 @@ my $run_pixel = sub {
         my ($advected, $backUv, $dDecay, $dt, $fragCoord, $here, $newDye, $newVel, $texSize, $u, $uv, $vDecay);
         $texSize = $rt->texture_size($_u_bufTex);
         $fragCoord = $rt->swizzle($ctx->{frag_coord}, 'xy');
-        $uv = $rt->binary('/', $fragCoord, $rt->construct(2, $texSize), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $fragCoord, $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
         $here = $rt->texel_fetch($_u_bufTex, $rt->component_wise('clamp', $rt->construct(2, $fragCoord, 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $texSize, $rt->construct(2, $rt->i(1), 'int'), 2, 'int')), $rt->i(0));
         $u = $rt->swizzle($here, 'rg');
         $dt = $rt->binary('*', $rt->component_wise('clamp', $_u_speed, $rt->f(0), $rt->f(200)), $rt->f(0.0001), 1, 'float');

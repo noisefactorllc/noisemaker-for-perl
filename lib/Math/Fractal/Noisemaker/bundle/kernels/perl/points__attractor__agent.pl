@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint__uint, $hash__uint, $lorenz__vec3, $rossler__vec3, $aizawa__vec3, $thomas__vec3, $halvorsen__vec3, $chen__vec3, $dadras__vec3, $stepAttractor__vec3_int_float, $main__void);
+    my ($hash_uint_lcg__uint, $hash__uint, $lorenz__vec3, $rossler__vec3, $aizawa__vec3, $thomas__vec3, $halvorsen__vec3, $chen__vec3, $dadras__vec3, $stepAttractor__vec3_int_float, $main__void);
     my $_retc;
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
@@ -20,7 +20,7 @@ my $run_pixel = sub {
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
-    $hash_uint__uint = sub {
+    $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
         $state = $rt->binary('+', $rt->binary('*', $seed, $rt->i(747796405), 1, 'uint'), $rt->i(2891336453), 1, 'uint');
@@ -29,7 +29,7 @@ my $run_pixel = sub {
     };
     $hash__uint = sub {
         my ($seed) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($seed)), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($seed)), $rt->f(4294967295), 1, 'float');
     };
     $lorenz__vec3 = sub {
         my ($p) = @_;
@@ -125,7 +125,7 @@ my $run_pixel = sub {
                 }
             }
         }
-        return $rt->binary('+', $p, $rt->binary('*', $dp, $dt, 3, 'float'), 3, 'float');
+        return $rt->construct(3, $rt->binary('+', $p, $rt->binary('*', $dp, $dt, 3, 'float'), 3, 'float'));
     };
     $main__void = sub {
         my ($agentSeed, $col, $coord, $dt, $initSeed, $needs3DInit, $newPos, $pos, $respawnSeed, $stateSize, $texSize, $vel);

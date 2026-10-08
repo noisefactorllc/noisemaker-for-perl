@@ -76,12 +76,12 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($freq, $globalCoord, $res, $rotRad, $scaledTime, $scrollOffset, $scrolledPos, $spatialPhase, $spatialPos, $st, $t, $timeNoise, $timePhase, $val, $valueNoise);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $res = $rt->fresh($_u_fullResolution);
         if ($rt->binary('<', $rt->swizzle($res, 'x'), $rt->f(1))) {
             @{$res} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(1024), $rt->f(1024)))};
         }
-        $st = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $res, 2, 'float');
+        $st = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $res, 2, 'float'));
         @{$st} = map { $rt->f32($_) } @{($rt->binary('-', $st, $rt->f(0.5), 2, 'float'))};
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('*', $rt->swizzle($st, 'x'), $_u_aspect, 1, 'float'));
         $rotRad = $rt->binary('/', $rt->binary('*', $_u_rotation, $g->{PI}, 1, 'float'), $rt->f(180), 1, 'float');

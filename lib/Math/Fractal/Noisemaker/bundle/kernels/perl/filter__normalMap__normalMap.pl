@@ -108,7 +108,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_for0_first, $channelCount, $dims, $dx, $dy, $globalCoord, $global_id, $height, $height_i, $i, $offset, $sample_coord, $texel, $value, $width, $width_i, $x_value, $y_value, $z_value);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $global_id = $rt->construct(3, $rt->construct(1, $rt->swizzle($ctx->{frag_coord}, 'x'), 'uint'), $rt->construct(1, $rt->swizzle($ctx->{frag_coord}, 'y'), 'uint'), $rt->i(0), 'uint');
         $width = $as_u32__float->($rt->swizzle($_u_size, 'x'));
         $height = $as_u32__float->($rt->swizzle($_u_size, 'y'));

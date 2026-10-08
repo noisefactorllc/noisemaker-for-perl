@@ -23,7 +23,7 @@ my $run_pixel = sub {
         if ((($rt->binary('<=', $rt->swizzle($dims, 'x'), $rt->f(0))) || ($rt->binary('<=', $rt->swizzle($dims, 'y'), $rt->f(0))) ? 1 : 0)) {
             return $rt->f(0);
         }
-        $delta = $rt->component_wise('abs', $rt->binary('-', $uv, $rt->construct(2, $rt->f(0.5)), 2, 'float'));
+        $delta = $rt->component_wise('abs', $rt->binary('-', $uv, $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'));
         $aspect = $rt->binary('/', $rt->swizzle($dims, 'x'), $rt->component_wise('max', $rt->swizzle($dims, 'y'), $rt->f(1)), 1, 'float');
         $scaled = $rt->construct(2, $rt->binary('*', $rt->swizzle($delta, 'x'), $aspect, 1, 'float'), $rt->swizzle($delta, 'y'));
         $maxRadius = $rt->length($rt->construct(2, $rt->binary('*', $aspect, $rt->f(0.5), 1, 'float'), $rt->f(0.5)));
@@ -35,12 +35,12 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($brightnessRgb, $dims, $edgeBlend, $finalRgb, $globalCoord, $globalUV, $mask, $texSize, $texel, $tileDims, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
         $tileDims = $rt->construct(2, $texSize);
-        $dims = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims));
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $tileDims, 2, 'float');
-        $globalUV = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $dims, 2, 'float');
+        $dims = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims)));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $tileDims, 2, 'float'));
+        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $dims, 2, 'float'));
         $texel = $rt->texture($_u_inputTex, $uv);
         $mask = $computeVignetteMask__vec2_vec2->($globalUV, $dims);
         $brightnessRgb = $rt->construct(3, $_u_vignetteBrightness);

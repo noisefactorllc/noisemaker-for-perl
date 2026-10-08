@@ -17,8 +17,8 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($globalCoord, $globalUV, $localUV, $texSize, $warpedUV);
         $texSize = $rt->texture_size($_u_inputTex);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $globalUV = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $globalUV = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         $warpedUV = $rt->fresh($globalUV);
         if ($rt->binary('==', $_u_flipMode, $rt->i(1))) {
             $warpedUV = $rt->assign_swizzle($warpedUV, 'x', $rt->binary('-', $rt->f(1), $rt->swizzle($warpedUV, 'x'), 1, 'float'));
@@ -92,7 +92,7 @@ my $run_pixel = sub {
                 }
             }
         }
-        $localUV = $rt->component_wise('fract', $rt->binary('/', $rt->binary('-', $rt->binary('*', $warpedUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $texSize), 2, 'float'));
+        $localUV = $rt->component_wise('fract', $rt->binary('/', $rt->binary('-', $rt->binary('*', $warpedUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $localUV))};
     };
     $main__void->();

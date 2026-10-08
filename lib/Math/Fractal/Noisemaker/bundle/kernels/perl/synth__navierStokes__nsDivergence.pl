@@ -16,12 +16,12 @@ my $run_pixel = sub {
         my ($div, $fragCoord, $texSize, $texel, $uB, $uL, $uR, $uT, $uv);
         $texSize = $rt->texture_size($_u_velTex);
         $fragCoord = $rt->swizzle($ctx->{frag_coord}, 'xy');
-        $texel = $rt->binary('/', $rt->f(1), $rt->construct(2, $texSize), 2, 'float');
-        $uv = $rt->binary('/', $fragCoord, $rt->construct(2, $texSize), 2, 'float');
-        $uR = $rt->swizzle($rt->texture($_u_velTex, $rt->binary('+', $uv, $rt->construct(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float')), 'rg');
-        $uL = $rt->swizzle($rt->texture($_u_velTex, $rt->binary('-', $uv, $rt->construct(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float')), 'rg');
-        $uT = $rt->swizzle($rt->texture($_u_velTex, $rt->binary('+', $uv, $rt->construct(2, $rt->f(0), $rt->swizzle($texel, 'y')), 2, 'float')), 'rg');
-        $uB = $rt->swizzle($rt->texture($_u_velTex, $rt->binary('-', $uv, $rt->construct(2, $rt->f(0), $rt->swizzle($texel, 'y')), 2, 'float')), 'rg');
+        $texel = $rt->construct(2, $rt->binary('/', $rt->f(1), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $fragCoord, $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $uR = $rt->swizzle($rt->texture($_u_velTex, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float')), 'rg');
+        $uL = $rt->swizzle($rt->texture($_u_velTex, $rt->binary('-', $uv, $rt->construct_raw(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float')), 'rg');
+        $uT = $rt->swizzle($rt->texture($_u_velTex, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->f(0), $rt->swizzle($texel, 'y')), 2, 'float')), 'rg');
+        $uB = $rt->swizzle($rt->texture($_u_velTex, $rt->binary('-', $uv, $rt->construct_raw(2, $rt->f(0), $rt->swizzle($texel, 'y')), 2, 'float')), 'rg');
         if ($rt->binary('<', $rt->swizzle($fragCoord, 'x'), $rt->f(1))) {
             $uL = $rt->assign_swizzle($uL, 'x', $rt->unary('-', $rt->swizzle($uR, 'x')));
         }

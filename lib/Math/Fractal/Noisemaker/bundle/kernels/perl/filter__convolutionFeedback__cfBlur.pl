@@ -57,7 +57,7 @@ my $run_pixel = sub {
                 $weightSum = $rt->binary('+', $weightSum, $weight, 1, 'float');
             }
         }
-        $blurred = $rt->binary('/', $sum, $weightSum, 3, 'float');
+        $blurred = $rt->construct(3, $rt->binary('/', $sum, $weightSum, 3, 'float'));
         $result = $rt->component_wise('mix', $rt->swizzle($center, 'rgb'), $blurred, $_u_blurAmount);
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($center, 'a')))};
     };

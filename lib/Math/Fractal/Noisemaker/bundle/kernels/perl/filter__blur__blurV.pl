@@ -18,10 +18,10 @@ my $run_pixel = sub {
     $g->{PI} = $rt->f(3.1415926535900001);
     $main__void = sub {
         my ($_for0_first, $globalCoord, $i, $offset, $radius, $sigma, $sigma2, $sum, $texSize, $texelSize, $uv, $weight, $weightSum, $x);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $texSize), 2, 'float');
-        $texelSize = $rt->binary('/', $rt->f(1), $rt->construct(2, $texSize), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
         $radius = $rt->construct(1, $rt->binary('*', $_u_radiusY, $_u_renderScale, 1, 'float'), 'int');
         if ($rt->binary('<=', $radius, $rt->i(0))) {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $uv))};
@@ -44,7 +44,7 @@ my $run_pixel = sub {
             $x = $rt->construct(1, $i);
             $weight = $rt->component_wise('exp', $rt->binary('/', $rt->unary('-', $rt->binary('*', $x, $x, 1, 'float')), $rt->binary('*', $rt->f(2), $sigma2, 1, 'float'), 1, 'float'));
             $offset = $rt->construct(2, $rt->f(0), $rt->binary('*', $rt->construct(1, $i), $rt->swizzle($texelSize, 'y'), 1, 'float'));
-            @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->binary('*', $rt->texture($_u_inputTex, $rt->binary('+', $uv, $offset, 2, 'float')), $weight, 4, 'float'), 4, 'float'))};
+            @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->construct(4, $rt->binary('*', $rt->texture($_u_inputTex, $rt->binary('+', $uv, $offset, 2, 'float')), $weight, 4, 'float')), 4, 'float'))};
             $weightSum = $rt->binary('+', $weightSum, $weight, 1, 'float');
         }
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('/', $sum, $weightSum, 4, 'float'))};

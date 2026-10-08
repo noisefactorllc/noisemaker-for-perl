@@ -46,13 +46,13 @@ my $run_pixel = sub {
         $f = $rt->component_wise('fract', $p);
         @{$f} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('*', $f, $f, 3, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 3, 'float'), 3, 'float'), 3, 'float'))};
         $n000 = $hash31__vec3->($i);
-        $n100 = $hash31__vec3->($rt->binary('+', $i, $rt->construct(3, $rt->f(1), $rt->f(0), $rt->f(0)), 3, 'float'));
-        $n010 = $hash31__vec3->($rt->binary('+', $i, $rt->construct(3, $rt->f(0), $rt->f(1), $rt->f(0)), 3, 'float'));
-        $n110 = $hash31__vec3->($rt->binary('+', $i, $rt->construct(3, $rt->f(1), $rt->f(1), $rt->f(0)), 3, 'float'));
-        $n001 = $hash31__vec3->($rt->binary('+', $i, $rt->construct(3, $rt->f(0), $rt->f(0), $rt->f(1)), 3, 'float'));
-        $n101 = $hash31__vec3->($rt->binary('+', $i, $rt->construct(3, $rt->f(1), $rt->f(0), $rt->f(1)), 3, 'float'));
-        $n011 = $hash31__vec3->($rt->binary('+', $i, $rt->construct(3, $rt->f(0), $rt->f(1), $rt->f(1)), 3, 'float'));
-        $n111 = $hash31__vec3->($rt->binary('+', $i, $rt->construct(3, $rt->f(1), $rt->f(1), $rt->f(1)), 3, 'float'));
+        $n100 = $hash31__vec3->($rt->construct(3, $rt->binary('+', $i, $rt->construct_raw(3, $rt->f(1), $rt->f(0), $rt->f(0)), 3, 'float')));
+        $n010 = $hash31__vec3->($rt->construct(3, $rt->binary('+', $i, $rt->construct_raw(3, $rt->f(0), $rt->f(1), $rt->f(0)), 3, 'float')));
+        $n110 = $hash31__vec3->($rt->construct(3, $rt->binary('+', $i, $rt->construct_raw(3, $rt->f(1), $rt->f(1), $rt->f(0)), 3, 'float')));
+        $n001 = $hash31__vec3->($rt->construct(3, $rt->binary('+', $i, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $rt->f(1)), 3, 'float')));
+        $n101 = $hash31__vec3->($rt->construct(3, $rt->binary('+', $i, $rt->construct_raw(3, $rt->f(1), $rt->f(0), $rt->f(1)), 3, 'float')));
+        $n011 = $hash31__vec3->($rt->construct(3, $rt->binary('+', $i, $rt->construct_raw(3, $rt->f(0), $rt->f(1), $rt->f(1)), 3, 'float')));
+        $n111 = $hash31__vec3->($rt->construct(3, $rt->binary('+', $i, $rt->construct_raw(3, $rt->f(1), $rt->f(1), $rt->f(1)), 3, 'float')));
         $x0 = $rt->component_wise('mix', $n000, $n100, $rt->swizzle($f, 'x'));
         $x1 = $rt->component_wise('mix', $n010, $n110, $rt->swizzle($f, 'x'));
         $x2 = $rt->component_wise('mix', $n001, $n101, $rt->swizzle($f, 'x'));
@@ -77,7 +77,7 @@ my $run_pixel = sub {
         my ($mode);
         $mode = $rt->construct(1, $_u_wrap, 'int');
         if ($rt->binary('==', $mode, $rt->i(0))) {
-            return $rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'));
+            return $rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')));
         } else {
             if ($rt->binary('==', $mode, $rt->i(1))) {
                 return $rt->component_wise('fract', $uv);
@@ -92,8 +92,8 @@ my $run_pixel = sub {
         $xRandom = $simplexRandom__float_float_vec3->($rt->binary('+', $_u_time, $rt->binary('*', $_u_speed, $rt->f(0.10000000000000001), 1, 'float'), 1, 'float'), $spd, $g->{X_NOISE_SEED});
         $yRandom = $simplexRandom__float_float_vec3->($rt->binary('+', $_u_time, $rt->binary('*', $_u_speed, $rt->f(0.10000000000000001), 1, 'float'), 1, 'float'), $spd, $g->{Y_NOISE_SEED});
         $offsetScale = $rt->binary('*', $r, $rt->binary('+', $rt->f(0.01), $rt->binary('*', $_u_speed, $rt->f(0.02), 1, 'float'), 1, 'float'), 1, 'float');
-        $offset = $rt->binary('*', $rt->binary('-', $rt->construct(2, $xRandom, $yRandom), $rt->f(0.5), 2, 'float'), $offsetScale, 2, 'float');
-        $sampleCoord = $rt->binary('+', $ctx->{uv}, $offset, 2, 'float');
+        $offset = $rt->construct(2, $rt->binary('*', $rt->binary('-', $rt->construct_raw(2, $xRandom, $yRandom), $rt->f(0.5), 2, 'float'), $offsetScale, 2, 'float'));
+        $sampleCoord = $rt->construct(2, $rt->binary('+', $ctx->{uv}, $offset, 2, 'float'));
         @{$sampleCoord} = map { $rt->f32($_) } @{($applyWrap__vec2->($sampleCoord))};
         $sampled = $rt->texture($_u_inputTex, $sampleCoord);
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($sampled)};

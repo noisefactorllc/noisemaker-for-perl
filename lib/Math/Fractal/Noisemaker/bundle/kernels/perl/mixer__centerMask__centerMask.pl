@@ -39,7 +39,7 @@ my $run_pixel = sub {
             return $rt->component_wise('min', $rt->binary('+', $color1, $color2, 4, 'float'), $rt->construct(4, $rt->f(1)));
         }
         if ($rt->binary('==', $m, $rt->i(1))) {
-            return $rt->binary('-', $rt->f(1), $rt->component_wise('min', $rt->binary('/', $rt->binary('-', $rt->f(1), $color1, 4, 'float'), $rt->component_wise('max', $color2, $rt->construct(4, $rt->f(0.001))), 4, 'float'), $rt->construct(4, $rt->f(1))), 4, 'float');
+            return $rt->construct(4, $rt->binary('-', $rt->f(1), $rt->component_wise('min', $rt->construct(4, $rt->binary('/', $rt->construct(4, $rt->binary('-', $rt->f(1), $color1, 4, 'float')), $rt->component_wise('max', $color2, $rt->construct(4, $rt->f(0.001))), 4, 'float')), $rt->construct(4, $rt->f(1))), 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(2))) {
             return $rt->component_wise('min', $color1, $color2);
@@ -48,10 +48,10 @@ my $run_pixel = sub {
             return $rt->component_wise('abs', $rt->binary('-', $color1, $color2, 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(4))) {
-            return $rt->component_wise('min', $rt->binary('/', $color1, $rt->component_wise('max', $rt->binary('-', $rt->f(1), $color2, 4, 'float'), $rt->construct(4, $rt->f(0.001))), 4, 'float'), $rt->construct(4, $rt->f(1)));
+            return $rt->component_wise('min', $rt->construct(4, $rt->binary('/', $color1, $rt->component_wise('max', $rt->binary('-', $rt->f(1), $color2, 4, 'float'), $rt->construct(4, $rt->f(0.001))), 4, 'float')), $rt->construct(4, $rt->f(1)));
         }
         if ($rt->binary('==', $m, $rt->i(5))) {
-            return $rt->binary('-', $rt->binary('+', $color1, $color2, 4, 'float'), $rt->binary('*', $rt->binary('*', $rt->f(2), $color1, 4, 'float'), $color2, 4, 'float'), 4, 'float');
+            return $rt->construct(4, $rt->binary('-', $rt->binary('+', $color1, $color2, 4, 'float'), $rt->binary('*', $rt->binary('*', $rt->f(2), $color1, 4, 'float'), $color2, 4, 'float'), 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(6))) {
             return $rt->construct(4, $blendOverlay__float_float->($rt->swizzle($color2, 'r'), $rt->swizzle($color1, 'r')), $blendOverlay__float_float->($rt->swizzle($color2, 'g'), $rt->swizzle($color1, 'g')), $blendOverlay__float_float->($rt->swizzle($color2, 'b'), $rt->swizzle($color1, 'b')), $rt->f(1));
@@ -63,19 +63,19 @@ my $run_pixel = sub {
             return $color2;
         }
         if ($rt->binary('==', $m, $rt->i(9))) {
-            return $rt->binary('*', $color1, $color2, 4, 'float');
+            return $rt->construct(4, $rt->binary('*', $color1, $color2, 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(10))) {
-            return $rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->component_wise('abs', $rt->binary('-', $rt->binary('-', $rt->construct(4, $rt->f(1)), $color1, 4, 'float'), $color2, 4, 'float')), 4, 'float');
+            return $rt->construct(4, $rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->component_wise('abs', $rt->binary('-', $rt->binary('-', $rt->construct_raw(4, $rt->f(1)), $color1, 4, 'float'), $color2, 4, 'float')), 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(11))) {
             return $rt->construct(4, $blendOverlay__float_float->($rt->swizzle($color1, 'r'), $rt->swizzle($color2, 'r')), $blendOverlay__float_float->($rt->swizzle($color1, 'g'), $rt->swizzle($color2, 'g')), $blendOverlay__float_float->($rt->swizzle($color1, 'b'), $rt->swizzle($color2, 'b')), $rt->f(1));
         }
         if ($rt->binary('==', $m, $rt->i(12))) {
-            return $rt->binary('+', $rt->binary('-', $rt->component_wise('min', $color1, $color2), $rt->component_wise('max', $color1, $color2), 4, 'float'), $rt->construct(4, $rt->f(1)), 4, 'float');
+            return $rt->construct(4, $rt->binary('+', $rt->construct(4, $rt->binary('-', $rt->component_wise('min', $color1, $color2), $rt->component_wise('max', $color1, $color2), 4, 'float')), $rt->construct(4, $rt->f(1)), 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(13))) {
-            return $rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->binary('*', $rt->binary('-', $rt->construct(4, $rt->f(1)), $color1, 4, 'float'), $rt->binary('-', $rt->construct(4, $rt->f(1)), $color2, 4, 'float'), 4, 'float'), 4, 'float');
+            return $rt->construct(4, $rt->binary('-', $rt->construct_raw(4, $rt->f(1)), $rt->binary('*', $rt->binary('-', $rt->construct_raw(4, $rt->f(1)), $color1, 4, 'float'), $rt->binary('-', $rt->construct_raw(4, $rt->f(1)), $color2, 4, 'float'), 4, 'float'), 4, 'float'));
         }
         if ($rt->binary('==', $m, $rt->i(14))) {
             return $rt->construct(4, $blendSoftLight__float_float->($rt->swizzle($color1, 'r'), $rt->swizzle($color2, 'r')), $blendSoftLight__float_float->($rt->swizzle($color1, 'g'), $rt->swizzle($color2, 'g')), $blendSoftLight__float_float->($rt->swizzle($color1, 'b'), $rt->swizzle($color2, 'b')), $rt->f(1));
@@ -110,13 +110,13 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($blended, $centerColor, $color, $corner, $dist01, $edgeColor, $f_high, $f_low, $globalCoord, $h, $mask, $minRes, $p, $scaledPower, $st, $width);
-        $st = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $st = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $edgeColor = $rt->texture($_u_inputTex, $st);
         $centerColor = $rt->texture($_u_tex, $st);
         $minRes = $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'));
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $p = $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->f(0.5), $minRes, 1, 'float'), 2, 'float');
-        $corner = $rt->binary('/', $_u_fullResolution, $minRes, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $p = $rt->construct(2, $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->f(0.5), $minRes, 1, 'float'), 2, 'float'));
+        $corner = $rt->construct(2, $rt->binary('/', $_u_fullResolution, $minRes, 2, 'float'));
         $dist01 = $clamp01__float->($distanceMetric__vec2_vec2_int->($p, $corner, $_u_shape));
         $scaledPower = $rt->component_wise('mix', $rt->f(0.10000000000000001), $rt->f(25.050000000000001), $rt->binary('/', $rt->binary('+', $_u_power, $rt->f(100), 1, 'float'), $rt->f(200), 1, 'float'));
         $mask = $rt->component_wise('pow', $dist01, $scaledPower);

@@ -21,7 +21,7 @@ use Exporter 'import';
 
 our @EXPORT_OK = qw(
     u32 umul uadd usub ushl ushr uand uor uxor
-    glsl_mod pcg3d hash_uint32 hash_uint
+    glsl_mod pcg3d hash_uint32 hash_uint hash_uint_lcg
     float_bits_to_uint uint_bits_to_float
     pack_half_2x16 unpack_half_2x16
     fdiv
@@ -133,6 +133,17 @@ sub hash_uint32 {
     $r = umul($r, 0x846CA68B);
     $r = uxor($r, ushr($r, 16));
     return $r;
+}
+
+# LCG-seeded xor-shift-multiply mix (hashUintLcg in glsl-runtime.js): the
+# other pinned `uint hash_uint(uint)` body, used by render/pointsEmit init, the
+# points/* agents and filter3d/flow3d. The murmur finalizer above shares the
+# GLSL name, so the build routes the two by body.
+sub hash_uint_lcg {
+    my ($x) = @_;
+    my $state = uadd(umul(u32($x), 747796405), 2891336453);
+    my $word  = umul(uxor(ushr($state, ushr($state, 28) + 4), $state), 277803737);
+    return uxor(ushr($word, 22), $word);
 }
 
 # stdlib.hashUint is a bare alias for hashUint32 in glsl-runtime.js.

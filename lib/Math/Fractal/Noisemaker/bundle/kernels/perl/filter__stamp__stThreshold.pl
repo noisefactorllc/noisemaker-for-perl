@@ -27,9 +27,9 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($p3);
-        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
+        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
         @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
-        return $rt->component_wise('fract', $rt->binary('*', $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float'), $rt->swizzle($p3, 'z'), 1, 'float'));
+        return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
     };
     $vnoise__vec2 = sub {
         my ($p) = @_;
@@ -37,8 +37,8 @@ my $run_pixel = sub {
         my ($f, $i, $u);
         $i = $rt->component_wise('floor', $p);
         $f = $rt->component_wise('fract', $p);
-        $u = $rt->binary('*', $rt->binary('*', $f, $f, 2, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 2, 'float'), 2, 'float'), 2, 'float');
-        return $rt->component_wise('mix', $rt->component_wise('mix', $hash12__vec2->($i), $hash12__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(1), $rt->f(0)), 2, 'float')), $rt->swizzle($u, 'x')), $rt->component_wise('mix', $hash12__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(0), $rt->f(1)), 2, 'float')), $hash12__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(1), $rt->f(1)), 2, 'float')), $rt->swizzle($u, 'x')), $rt->swizzle($u, 'y'));
+        $u = $rt->construct(2, $rt->binary('*', $rt->binary('*', $f, $f, 2, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 2, 'float'), 2, 'float'), 2, 'float'));
+        return $rt->component_wise('mix', $rt->component_wise('mix', $hash12__vec2->($i), $hash12__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float'))), $rt->swizzle($u, 'x')), $rt->component_wise('mix', $hash12__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float'))), $hash12__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(1), $rt->f(1)), 2, 'float'))), $rt->swizzle($u, 'x')), $rt->swizzle($u, 'y'));
     };
     $fbm__vec2 = sub {
         my ($p) = @_;
@@ -70,12 +70,12 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($aa, $b, $blur, $globalCoord, $grain, $lumBlur, $m, $outColor, $src, $t, $uv);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $src = $rt->texture($_u_inputTex, $uv);
         $blur = $rt->texture($_u_blurTex, $uv);
-        $globalCoord = $rt->binary('+', $rt->component_wise('floor', $rt->swizzle($ctx->{frag_coord}, 'xy')), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->component_wise('floor', $rt->swizzle($ctx->{frag_coord}, 'xy')), $_u_tileOffset, 2, 'float'));
         $lumBlur = $lum__vec3->($rt->swizzle($blur, 'rgb'));
-        $grain = $rt->binary('*', $rt->binary('*', $rt->binary('-', $fbm__vec2->($rt->binary('/', $globalCoord, $rt->f(3), 2, 'float')), $rt->f(0.5), 1, 'float'), $rt->binary('/', $_u_roughness, $rt->f(100), 1, 'float'), 1, 'float'), $rt->f(0.34999999999999998), 1, 'float');
+        $grain = $rt->binary('*', $rt->binary('*', $rt->binary('-', $fbm__vec2->($rt->construct(2, $rt->binary('/', $globalCoord, $rt->f(3), 2, 'float'))), $rt->f(0.5), 1, 'float'), $rt->binary('/', $_u_roughness, $rt->f(100), 1, 'float'), 1, 'float'), $rt->f(0.34999999999999998), 1, 'float');
         $t = $rt->binary('+', $lumBlur, $grain, 1, 'float');
         $b = $rt->binary('/', $_u_balance, $rt->f(100), 1, 'float');
         $aa = $rt->binary('+', $rt->component_wise('max', $rt->fwidth($t), $rt->f(0.01)), $rt->binary('*', $rt->binary('/', $_u_roughness, $rt->f(100), 1, 'float'), $rt->f(0.050000000000000003), 1, 'float'), 1, 'float');

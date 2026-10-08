@@ -35,9 +35,9 @@ my $run_pixel = sub {
                 last;
             }
             if ($rt->binary('<=', $srgb->[int($i)], $rt->f(0.04045))) {
-                $linear->[int($i)] = $rt->binary('/', $srgb->[int($i)], $rt->f(12.92), 1, 'float');
+                $linear->[int($i)] = $rt->f32($rt->binary('/', $srgb->[int($i)], $rt->f(12.92), 1, 'float'));
             } else {
-                $linear->[int($i)] = $rt->component_wise('pow', $rt->binary('/', $rt->binary('+', $srgb->[int($i)], $rt->f(0.055), 1, 'float'), $rt->f(1.0549999999999999), 1, 'float'), $rt->f(2.3999999999999999));
+                $linear->[int($i)] = $rt->f32($rt->component_wise('pow', $rt->binary('/', $rt->binary('+', $srgb->[int($i)], $rt->f(0.055), 1, 'float'), $rt->f(1.0549999999999999), 1, 'float'), $rt->f(2.3999999999999999)));
             }
         }
         return $linear;
@@ -58,9 +58,9 @@ my $run_pixel = sub {
                 last;
             }
             if ($rt->binary('<=', $linear->[int($i)], $rt->f(0.0031308))) {
-                $srgb->[int($i)] = $rt->binary('*', $linear->[int($i)], $rt->f(12.92), 1, 'float');
+                $srgb->[int($i)] = $rt->f32($rt->binary('*', $linear->[int($i)], $rt->f(12.92), 1, 'float'));
             } else {
-                $srgb->[int($i)] = $rt->binary('-', $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $linear->[int($i)], $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float')), 1, 'float'), $rt->f(0.055), 1, 'float');
+                $srgb->[int($i)] = $rt->f32($rt->binary('-', $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $linear->[int($i)], $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float')), 1, 'float'), $rt->f(0.055), 1, 'float'));
             }
         }
         return $srgb;
@@ -70,12 +70,12 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         $aspectRatio = $rt->copy($aspectRatio, 'float');
         my ($centered, $dist, $inner, $outer, $scale);
-        $centered = $rt->binary('-', $uv, $rt->f(0.5), 2, 'float');
+        $centered = $rt->construct(2, $rt->binary('-', $uv, $rt->f(0.5), 2, 'float'));
         $scale = $rt->construct(2, 0.0);
         if ($rt->binary('>', $roundness, $rt->f(0))) {
             @{$scale} = map { $rt->f32($_) } @{($rt->component_wise('mix', $aspectRatio, $rt->construct(2, $rt->f(1)), $roundness))};
         } else {
-            @{$scale} = map { $rt->f32($_) } @{($rt->component_wise('mix', $aspectRatio, $rt->binary('*', $aspectRatio, $rt->construct(2, $rt->binary('+', $rt->f(1), $rt->component_wise('abs', $roundness), 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->component_wise('abs', $roundness), $rt->f(0.5), 1, 'float'), 1, 'float')), 2, 'float'), $rt->unary('-', $roundness)))};
+            @{$scale} = map { $rt->f32($_) } @{($rt->component_wise('mix', $aspectRatio, $rt->binary('*', $aspectRatio, $rt->construct_raw(2, $rt->binary('+', $rt->f(1), $rt->component_wise('abs', $roundness), 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->component_wise('abs', $roundness), $rt->f(0.5), 1, 'float'), 1, 'float')), 2, 'float'), $rt->unary('-', $roundness)))};
         }
         @{$centered} = map { $rt->f32($_) } @{($rt->binary('*', $centered, $scale, 2, 'float'))};
         $dist = $rt->binary('*', $rt->length($centered), $rt->f(2), 1, 'float');
@@ -99,18 +99,18 @@ my $run_pixel = sub {
             $darken = $rt->component_wise('mix', $darken, $rt->f(1), $protection);
         }
         if ($rt->binary('>', $amount, $rt->f(0))) {
-            return $rt->binary('*', $rgb, $darken, 3, 'float');
+            return $rt->construct(3, $rt->binary('*', $rgb, $darken, 3, 'float'));
         } else {
-            return $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('-', $rt->f(1), $rgb, 3, 'float'), $darken, 3, 'float'), 3, 'float');
+            return $rt->construct(3, $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('-', $rt->f(1), $rgb, 3, 'float'), $darken, 3, 'float'), 3, 'float'));
         }
     };
     $main__void = sub {
         my ($aspectRatio, $color, $coord, $fullRes, $globalCoord, $globalUV, $rgb, $texSize, $uv, $vignetteMask);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->construct(2, $rt->texture_size($_u_inputTex));
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($texSize));
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float');
-        $globalUV = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float');
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($texSize)));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float'));
+        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         if ($rt->binary('<', $rt->component_wise('abs', $_u_vignetteAmount), $rt->f(0.001))) {

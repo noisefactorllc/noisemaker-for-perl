@@ -1,0 +1,1311 @@
+{
+ "oracleRevision": "5b686a45b5c56329adf0c63cbcf572eb6f23fad1",
+ "capturedFrom": "glsl-transpiler 3.0.3 with the oracle compile options of scripts/upstream/compile-glsl.js (transpile, lowerFloatLiterals, the poolLocalVectors parameter copy) run on the GlslCpuRuntime stdlib of src/csl/glsl-runtime.js",
+ "expected": "float32 bit patterns of fragColor.rgb, one triple per input",
+ "inputs": [
+  {
+   "eps": 4.471663236618042,
+   "nx": -0.38592529296875,
+   "ny": -0.22208404541015625,
+   "nz": -1.7813568115234375,
+   "nv": 1.6993180513381958,
+   "w": [
+    -0.24458551406860352,
+    0.5191569328308105,
+    1.9262633323669434
+   ],
+   "w2": [
+    1.1514472961425781,
+    1.1073875427246094,
+    -0.4802818298339844
+   ],
+   "q": [
+    -1.1182746887207031,
+    0.8990975618362427
+   ]
+  },
+  {
+   "eps": 1.4035446643829346,
+   "nx": 1.6849998235702515,
+   "ny": 1.132105827331543,
+   "nz": -0.5862817764282227,
+   "nv": 1.8457975387573242,
+   "w": [
+    -0.7977914810180664,
+    -1.6345415115356445,
+    -0.5649040937423706
+   ],
+   "w2": [
+    0.5924077033996582,
+    -0.04301595687866211,
+    -0.19384336471557617
+   ],
+   "q": [
+    -0.10571050643920898,
+    0.5876851081848145
+   ]
+  },
+  {
+   "eps": 0.7286467552185059,
+   "nx": -1.896572470664978,
+   "ny": 1.3739044666290283,
+   "nz": -0.3449091911315918,
+   "nv": 1.445692539215088,
+   "w": [
+    0.6066327095031738,
+    -0.947568416595459,
+    -1.3935770988464355
+   ],
+   "w2": [
+    -1.6598905324935913,
+    0.36217713356018066,
+    0.27408313751220703
+   ],
+   "q": [
+    0.6421747207641602,
+    -1.6831083297729492
+   ]
+  }
+ ],
+ "cases": [
+  {
+   "label": "vec3 r = vec3(nx - nv, ny - nv, nz - nv) / eps;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(nx - nv, ny - nv, nz - nv) / eps;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3203318273,
+     3202088842,
+     3209118779
+    ],
+    [
+     3186270537,
+     3204590734,
+     3218984138
+    ],
+    [
+     3230845000,
+     3184117285,
+     3223144092
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(nx - nv, ny - nv, nz - nv) + w;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(nx - nv, ny - nv, nz - nv) + w;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3222608874,
+     3216211141,
+     3217487605
+    ],
+    [
+     3212142106,
+     3222686068,
+     3225407124
+    ],
+    [
+     3224310938,
+     3212999238,
+     3226192278
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(nx - nv, ny - nv, nz - nv) + call3(w);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(nx - nv, ny - nv, nz - nv) + call3(w);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3222068689,
+     3208455246,
+     1036023008
+    ],
+    [
+     3214657555,
+     3226226812,
+     3225807398
+    ],
+    [
+     3221271565,
+     3216046802,
+     3229025547
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = (w * eps + w) + call3(w);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = (w * eps + w) + call3(w);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3216646005,
+     1082179126,
+     1096930571
+    ],
+    [
+     3225309772,
+     3234662794,
+     3221301428
+    ],
+    [
+     1075335364,
+     3225205352,
+     3230616694
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = (call3(w) - w) * eps;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = (call3(w) - w) * eps;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1058238102,
+     1077795811,
+     1089199973
+    ],
+    [
+     3199842972,
+     3214387441,
+     3188271282
+    ],
+    [
+     1057434517,
+     3196553430,
+     3204186658
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = call3(w) * eps + nx;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = call3(w) * eps + nx;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3211221607,
+     1084022305,
+     1098486849
+    ],
+    [
+     1045389136,
+     3219497379,
+     1061296274
+    ],
+    [
+     3211604456,
+     3224797891,
+     3227115120
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(call3(w)) * eps + w;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(call3(w)) * eps + w;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3208850319,
+     1085920400,
+     1099909501
+    ],
+    [
+     3222401048,
+     3231949336,
+     3216961681
+    ],
+    [
+     1070190611,
+     3220409486,
+     3225005405
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(call2(q), nx) * eps + nv;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(call2(q), nx) * eps + nv;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3232232501,
+     1087328750,
+     3168295296
+    ],
+    [
+     1069652905,
+     1077003894,
+     1082572449
+    ],
+    [
+     1073583463,
+     3194145760,
+     1031968048
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(call3(w).x, nx - nv, nv) * eps;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(call3(w).x, nx - nv, nv) * eps;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3204746855,
+     3239391533,
+     1089677617
+    ],
+    [
+     3216884265,
+     3194428015,
+     1076219229
+    ],
+    [
+     1064850398,
+     3223051381,
+     1065801161
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = call3(w).xyz * eps + nx;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = call3(w).xyz * eps + nx;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3211221607,
+     1084022305,
+     1098486849
+    ],
+    [
+     1045389136,
+     3219497379,
+     1061296274
+    ],
+    [
+     3211604456,
+     3224797891,
+     3227115120
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(call3(w).xy * eps + nx, nv);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(call3(w).xy * eps + nx, nv);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3211221607,
+     1084022305,
+     1071219521
+    ],
+    [
+     1045389136,
+     3219497379,
+     1072448280
+    ],
+    [
+     3211604456,
+     3224797891,
+     1069091956
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(w + call3(w)) * eps + w;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(w + call3(w)) * eps + w;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3220018246,
+     1090653984,
+     1104425509
+    ],
+    [
+     3227097562,
+     3236760521,
+     3222419107
+    ],
+    [
+     1073820188,
+     3223713406,
+     3229264408
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = -call3(w) + w + w2;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = -call3(w) + w + w2;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1065543278,
+     1055084808,
+     3221765137
+    ],
+    [
+     1062851092,
+     1062017288,
+     3184102256
+    ],
+    [
+     3222838322,
+     1060747452,
+     1064507428
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = (vec3(nx - nv, nx, nv) + w) * call3(w);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = (vec3(nx - nv, nx, nv) + w) * call3(w);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1049239820,
+     1042372143,
+     1095720161
+    ],
+    [
+     1065458120,
+     3187675876,
+     3210250175
+    ],
+    [
+     3228112020,
+     1080990792,
+     3185366665
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w2 * eps + vec3(nx - nv) * w - w2 / eps;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w2 * eps + vec3(nx - nv) * w - w2 / eps;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1085069394,
+     1080543517,
+     3233927881
+    ],
+    [
+     1057596673,
+     1047442116,
+     3174080869
+    ],
+    [
+     3212148252,
+     1077658756,
+     1083139708
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(vec2(call3(w)) * eps + nx, nv);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(vec2(call3(w)) * eps + nx, nv);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3211221607,
+     1084022305,
+     1071219521
+    ],
+    [
+     1045389136,
+     3219497379,
+     1072448280
+    ],
+    [
+     3211604456,
+     3224797891,
+     1069091956
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(w * eps + w) * eps;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(w * eps + w) * eps;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3233775627,
+     1095449904,
+     1111262684
+    ],
+    [
+     3224125143,
+     3232789371,
+     3220434376
+    ],
+    [
+     1061395439,
+     3214460323,
+     3219172879
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = (call3(w) - w) * eps + w2;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = (call3(w) - w) * eps + w2;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1071454699,
+     1082285482,
+     1088192749
+    ],
+    [
+     1047210727,
+     3214748285,
+     3198669769
+    ],
+    [
+     3213943168,
+     1036491206,
+     3193920260
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(nx * eps - nv, w.yz * eps) - w2;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(nx * eps - nv, w.yz * eps) - w2;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3230823074,
+     1067149279,
+     1091666059
+    ],
+    [
+     3180722955,
+     3222278813,
+     3206109616
+    ],
+    [
+     3214243914,
+     3213278271,
+     3215265438
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(call3(w) * eps + w);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(call3(w) * eps + w);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3208850319,
+     1085920400,
+     1099909501
+    ],
+    [
+     3222401048,
+     3231949336,
+     3216961681
+    ],
+    [
+     1070190611,
+     3220409486,
+     3225005405
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = (w - w2) * (nx - nv) + call3(w) * eps;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = (w - w2) * (nx - nv) + call3(w) * eps;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1075391319,
+     1087404024,
+     1093629523
+    ],
+    [
+     3215009068,
+     3226355447,
+     3210607955
+    ],
+    [
+     3235077772,
+     1079707627,
+     1082269124
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = -(w * eps) + vec3(nx - ny, nv, nz);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = -(w * eps) + vec3(nx - ny, nv, nz);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1064176509,
+     3206498045,
+     3240513983
+    ],
+    [
+     1070995645,
+     1082423927,
+     1045662559
+    ],
+    [
+     3228408209,
+     1074312816,
+     1059825396
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w; r += call3(w) * eps;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w; r += call3(w) * eps;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3208850319,
+     1085920400,
+     1099909501
+    ],
+    [
+     3222401048,
+     3231949336,
+     3216961681
+    ],
+    [
+     1070190611,
+     3220409486,
+     3225005405
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w; r *= call3(w) - w;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w; r *= call3(w) - w;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3170960987,
+     1051744004,
+     1078671064
+    ],
+    [
+     1045636126,
+     1068539594,
+     1029493037
+    ],
+    [
+     1054937657,
+     1051738494,
+     1064369515
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w; r -= vec3(nx - nv, nx, nv) * eps;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w; r -= vec3(nx - nv, nx, nv) * eps;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1091651419,
+     1074768946,
+     3233121598
+    ],
+    [
+     3205657972,
+     3229612042,
+     3226072256
+    ],
+    [
+     1078112135,
+     1054762194,
+     3223100226
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = nx > 0.0 ? w * eps + w : call3(w);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = nx > 0.0 ? w * eps + w : call3(w);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3186435616,
+     1066884698,
+     1080346375
+    ],
+    [
+     3220533642,
+     3229314999,
+     3215838075
+    ],
+    [
+     1068132158,
+     3215444600,
+     3221515219
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = call3(w * eps + w);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = call3(w * eps + w);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3221016532,
+     1084498344,
+     1100070398
+    ],
+    [
+     3225251151,
+     3234602742,
+     3221259919
+    ],
+    [
+     1074088741,
+     3223258111,
+     3228755525
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(dot(w, w2) * nx, length(w) - nv, nz);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(dot(w, w2) * nx, length(w) - nv, nz);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1048163555,
+     1050609948,
+     3219391360
+    ],
+    [
+     3204225922,
+     1030793024,
+     3205895824
+    ],
+    [
+     1079131628,
+     1051776472,
+     3199244272
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = normalize(w * eps + w2) * nx;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = normalize(w * eps + w2) * nx;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3139794139,
+     3189343292,
+     3199603234
+    ],
+    [
+     3199177433,
+     3217197607,
+     3206824755
+    ],
+    [
+     1070207936,
+     1054465861,
+     1064698975
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = mix(w, w2, nx) * eps + nv;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = mix(w, w2, nx) * eps + nv;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3219577603,
+     1077959981,
+     1097299092
+    ],
+    [
+     1082159466,
+     1079259681,
+     1073158630
+    ],
+    [
+     1084269302,
+     3213295960,
+     3220171232
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = abs(w - w2) * eps;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = abs(w - w2) * eps;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1086833481,
+     1076385784,
+     1093414430
+    ],
+    [
+     1073332516,
+     1074722357,
+     1057313579
+    ],
+    [
+     1070818351,
+     1064587199,
+     1067157901
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(1.0) - abs(w * eps);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(1.0) - abs(w * eps);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3183470576,
+     3215533760,
+     3237192350
+    ],
+    [
+     3186964512,
+     3215304390,
+     1045699168
+    ],
+    [
+     1057937335,
+     1050574412,
+     3162290944
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w2; r.xy = call3(w).xy * eps + nx;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w2; r.xy = call3(w).xy * eps + nx;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3211221607,
+     1084022305,
+     3203786624
+    ],
+    [
+     1045389136,
+     3219497379,
+     3192291040
+    ],
+    [
+     3211604456,
+     3224797891,
+     1049384096
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w; r.xy += vec2(nx - nv, ny) * eps;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w; r.xy += vec2(nx - nv, ny) * eps;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3239648000,
+     3203573429,
+     1073123276
+    ],
+    [
+     3213033814,
+     3174740616,
+     3205537166
+    ],
+    [
+     3219788485,
+     1029388936,
+     3216138428
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(distance(w * eps, w2), nx, nv);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(distance(w * eps, w2), nx, nv);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1092034534,
+     3200620544,
+     1071219521
+    ],
+    [
+     1077478949,
+     1071099411,
+     1072448280
+    ],
+    [
+     1076599015,
+     3220357859,
+     1069091956
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = clamp(w * eps + w2, -1.0, 1.0) + w;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = clamp(w * eps + w2, -1.0, 1.0) + w;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3191821204,
+     1069708220,
+     1077626854
+    ],
+    [
+     3215564166,
+     3223886932,
+     3217464151
+    ],
+    [
+     3200870256,
+     3215150727,
+     3221791365
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = fract(w * eps) * 2.0 - 1.0;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = fract(w * eps) * 2.0 - 1.0;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1062209028,
+     3199650304,
+     1047046016
+    ],
+    [
+     1061335544,
+     1054001616,
+     3205886672
+    ],
+    [
+     3186457456,
+     3200451432,
+     1064835624
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = call3((call3(w) - w) * eps);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = call3((call3(w) - w) * eps);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1067693977,
+     1084947176,
+     1095584432
+    ],
+    [
+     3198296995,
+     3218828288,
+     1033113405
+    ],
+    [
+     1067010930,
+     3189349899,
+     3205064759
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = max(w, w2) * eps - min(w * nx, w2);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = max(w, w2) * eps - min(w * nx, w2);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1084341864,
+     1084546813,
+     1091941952
+    ],
+    [
+     1074478969,
+     1076651947,
+     1059981076
+    ],
+    [
+     1074169272,
+     3184084464,
+     3180876046
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = sin(w * eps) * 0.5 + 0.5;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = sin(w * eps) * 0.5 + 0.5;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1030009136,
+     1063098462,
+     1063047174
+    ],
+    [
+     1028445304,
+     1040201190,
+     1041450076
+    ],
+    [
+     1060552978,
+     1043983118,
+     1033496308
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w; for (int i = 0; i < 3; i++) { r = r * eps - call3(r) * 0.25; }",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w; for (int i = 0; i < 3; i++) { r = r * eps - call3(r) * 0.25; }\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3247342554,
+     1107504878,
+     1123816469
+    ],
+    [
+     3212295659,
+     3219143258,
+     3208634592
+    ],
+    [
+     3182665382,
+     3188088278,
+     3188926250
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = vec3(0.0); r += vec3(nx, ny, nz) * eps; r += call3(w).zyx * nv;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(0.0); r += vec3(nx, ny, nz) * eps; r += call3(w).zyx * nv;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1082861783,
+     1065491394,
+     3238172978
+    ],
+    [
+     1066578995,
+     3225362126,
+     3224465522
+    ],
+    [
+     3230396709,
+     3211058792,
+     1071001252
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = smoothstep(vec3(-1.0), vec3(1.0), w * eps) * nx;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = smoothstep(vec3(-1.0), vec3(1.0), w * eps) * nx;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     2147483648,
+     3200620544,
+     3200620544
+    ],
+    [
+     0,
+     0,
+     1028571091
+    ],
+    [
+     3217333840,
+     3187300674,
+     2147483648
+    ]
+   ]
+  },
+  {
+   "label": "vec3 a = vec3(nx - nv, ny - nv, nz - nv) / eps; vec3 r = normalize(-a + vec3(1e-6));",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 a = vec3(nx - nv, ny - nv, nz - nv) / eps; vec3 r = normalize(-a + vec3(1e-6));\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1055772653,
+     1054548094,
+     1061583398
+    ],
+    [
+     1031907964,
+     1049616569,
+     1064642092
+    ],
+    [
+     1063361940,
+     1016795789,
+     1056030381
+    ]
+   ]
+  },
+  {
+   "label": "vec3 a = w * eps + w2; vec3 r = a * nx + nv;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 a = w * eps + w2; vec3 r = a * nx + nv;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1071032584,
+     1052804715,
+     3216523954
+    ],
+    [
+     1064635982,
+     3221612732,
+     1044092378
+    ],
+    [
+     1081104800,
+     1074028177,
+     1077314121
+    ]
+   ]
+  },
+  {
+   "label": "vec3 a = (call3(w) - w) * eps; vec3 r = a * nx + w2;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 a = (call3(w) - w) * eps; vec3 r = a * nx + w2;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1064165231,
+     3172565518,
+     3226782693
+    ],
+    [
+     3164225405,
+     3221391048,
+     3201748450
+    ],
+    [
+     3223999154,
+     1063075373,
+     1067094551
+    ]
+   ]
+  },
+  {
+   "label": "vec3 a = call3(w) * eps; vec3 r = a + w * nv;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 a = call3(w) * eps; vec3 r = a + w * nv;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3211719945,
+     1086681783,
+     1100615754
+    ],
+    [
+     3225231239,
+     3234848630,
+     3220969712
+    ],
+    [
+     1072458653,
+     3222588835,
+     3227610516
+    ]
+   ]
+  },
+  {
+   "label": "vec2 a = q * eps - nx; vec3 r = vec3(a * nv + q, nz);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec2 a = q * eps - nx; vec3 r = vec3(a * nv + q, nz);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3239009306,
+     1090924787,
+     3219391360
+    ],
+    [
+     3227473890,
+     3212836723,
+     3205895824
+    ],
+    [
+     1082257313,
+     3208042483,
+     3199244272
+    ]
+   ]
+  },
+  {
+   "label": "vec3 a = w + call3(w2); vec3 r = a * eps + nx;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 a = w + call3(w2); vec3 r = a * eps + nx;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1091163886,
+     1094393777,
+     1086153094
+    ],
+    [
+     1075418822,
+     3197426183,
+     1062848038
+    ],
+    [
+     3226644777,
+     3220552642,
+     3222709824
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w; r = (call3(w) - w) * eps; r = r * nx + w2;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w; r = (call3(w) - w) * eps; r = r * nx + w2;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1064165230,
+     3172565512,
+     3226782693
+    ],
+    [
+     3164225396,
+     3221391048,
+     3201748449
+    ],
+    [
+     3223999154,
+     1063075372,
+     1067094551
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w; r = w * eps + w2; r = r * nx + nv;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w; r = w * eps + w2; r = r * nx + nv;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1071032584,
+     1052804715,
+     3216523954
+    ],
+    [
+     1064635982,
+     3221612732,
+     1044092378
+    ],
+    [
+     1081104800,
+     1074028177,
+     1077314121
+    ]
+   ]
+  },
+  {
+   "label": "vec3 a[2]; a[0] = w * eps + w2; a[1] = w; vec3 r = a[0] * nx + nv;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 a[2]; a[0] = w * eps + w2; a[1] = w; vec3 r = a[0] * nx + nv;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1071032584,
+     1052804715,
+     3216523954
+    ],
+    [
+     1064635982,
+     3221612732,
+     1044092378
+    ],
+    [
+     1081104800,
+     1074028177,
+     1077314121
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w2; r.xy = (q * eps - nx); r = r * nv + w;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w2; r.xy = (q * eps - nx); r = r * nv + w;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3238093177,
+     1090526390,
+     1066276900
+    ],
+    [
+     3229995384,
+     3226351827,
+     3211539980
+    ],
+    [
+     1082182776,
+     1018072233,
+     3212792189
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w; r += w2 * eps; r = r * nx;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w; r += w2 * eps; r = r * nx;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     3220325317,
+     3221692740,
+     1034878012
+    ],
+    [
+     1030255127,
+     3224815518,
+     3216278689
+    ],
+    [
+     1066555571,
+     1067841514,
+     1074850194
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w; r.xy += q * eps; r = r * nx + nv;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w; r.xy += q * eps; r = r * nx + nv;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1080970907,
+     3176634463,
+     1064613749
+    ],
+    [
+     1048626888,
+     1056342323,
+     1063573728
+    ],
+    [
+     3205996319,
+     1085420370,
+     1082316476
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w; r[1] = nx * eps + nv; r = r * nx;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w; r[1] = nx * eps + nv; r = r * nx;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1036079220,
+     1009188193,
+     3208531725
+    ],
+    [
+     3215724881,
+     1088621426,
+     3212029264
+    ],
+    [
+     3214099542,
+     3187124460,
+     1076438845
+    ]
+   ]
+  },
+  {
+   "label": "float f[2]; f[0] = nx * eps + nv; f[1] = nz; vec3 r = vec3(f[0] * nx, nv, nz);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    float f[2]; f[0] = nx * eps + nv; f[1] = nz; vec3 r = vec3(f[0] * nx, nv, nz);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1009188193,
+     1071219521,
+     3219391360
+    ],
+    [
+     1088621425,
+     1072448280,
+     3205895824
+    ],
+    [
+     3187124460,
+     1069091956,
+     3199244272
+    ]
+   ]
+  },
+  {
+   "label": "vec3 r = w; r.y = nx * eps + nv; r = r * nx;",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = w; r.y = nx * eps + nv; r = r * nx;\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1036079220,
+     1009188193,
+     3208531725
+    ],
+    [
+     3215724881,
+     1088621426,
+     3212029264
+    ],
+    [
+     3214099542,
+     3187124460,
+     1076438845
+    ]
+   ]
+  },
+  {
+   "label": "float s = nx * eps + nv; vec3 r = vec3(s * nx, nv, nz);",
+   "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    float s = nx * eps + nv; vec3 r = vec3(s * nx, nv, nz);\n    fragColor = vec4(r, 0.0);\n}\n",
+   "expected": [
+    [
+     1009188193,
+     1071219521,
+     3219391360
+    ],
+    [
+     1088621425,
+     1072448280,
+     3205895824
+    ],
+    [
+     3187124460,
+     1069091956,
+     3199244272
+    ]
+   ]
+  }
+ ]
+}

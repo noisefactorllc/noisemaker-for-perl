@@ -32,7 +32,7 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         $texelSize = $rt->copy($texelSize, 'float');
         my ($_for0_first, $dx, $dy, $height, $i, $normal, $normalStrength, $offsets, $sampleSize, $sobel_x, $sobel_y, $texSample);
-        $sampleSize = $rt->binary('*', $texelSize, $_u_smoothing, 2, 'float');
+        $sampleSize = $rt->construct(2, $rt->binary('*', $texelSize, $_u_smoothing, 2, 'float'));
         $sobel_x = $rt->new_array($rt->i(9), 1);
         $sobel_x->[int($rt->i(0))] = $rt->unary('-', $rt->f(1));
         $sobel_x->[int($rt->i(1))] = $rt->f(0);
@@ -54,15 +54,15 @@ my $run_pixel = sub {
         $sobel_y->[int($rt->i(7))] = $rt->f(2);
         $sobel_y->[int($rt->i(8))] = $rt->f(1);
         $offsets = $rt->new_array($rt->i(9), 2);
-        $offsets->[int($rt->i(0))] = $rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->unary('-', $rt->swizzle($sampleSize, 'y')));
-        $offsets->[int($rt->i(1))] = $rt->construct(2, $rt->f(0), $rt->unary('-', $rt->swizzle($sampleSize, 'y')));
-        $offsets->[int($rt->i(2))] = $rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->unary('-', $rt->swizzle($sampleSize, 'y')));
-        $offsets->[int($rt->i(3))] = $rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->f(0));
-        $offsets->[int($rt->i(4))] = $rt->construct(2, $rt->f(0), $rt->f(0));
-        $offsets->[int($rt->i(5))] = $rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->f(0));
-        $offsets->[int($rt->i(6))] = $rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->swizzle($sampleSize, 'y'));
-        $offsets->[int($rt->i(7))] = $rt->construct(2, $rt->f(0), $rt->swizzle($sampleSize, 'y'));
-        $offsets->[int($rt->i(8))] = $rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->swizzle($sampleSize, 'y'));
+        @{$offsets->[int($rt->i(0))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->unary('-', $rt->swizzle($sampleSize, 'y'))))};
+        @{$offsets->[int($rt->i(1))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->unary('-', $rt->swizzle($sampleSize, 'y'))))};
+        @{$offsets->[int($rt->i(2))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->unary('-', $rt->swizzle($sampleSize, 'y'))))};
+        @{$offsets->[int($rt->i(3))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->f(0)))};
+        @{$offsets->[int($rt->i(4))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(0)))};
+        @{$offsets->[int($rt->i(5))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->f(0)))};
+        @{$offsets->[int($rt->i(6))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->swizzle($sampleSize, 'y')))};
+        @{$offsets->[int($rt->i(7))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->swizzle($sampleSize, 'y')))};
+        @{$offsets->[int($rt->i(8))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->swizzle($sampleSize, 'y')))};
         $dx = $rt->f(0);
         $dy = $rt->f(0);
         $i = $rt->i(0);
@@ -90,7 +90,7 @@ my $run_pixel = sub {
         my ($st) = @_;
         $st = $rt->copy($st, 'float');
         if ($rt->binary('==', $_u_wrap, $rt->i(0))) {
-            @{$st} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $st, $rt->f(2)), $rt->f(1), 2, 'float')))};
+            @{$st} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $st, $rt->f(2)), $rt->f(1), 2, 'float'))))};
             @{$st} = map { $rt->f32($_) } @{($rt->binary('-', $rt->f(1), $st, 2, 'float'))};
         } else {
             if ($rt->binary('==', $_u_wrap, $rt->i(1))) {
@@ -112,7 +112,7 @@ my $run_pixel = sub {
         $offset = $rt->construct(2, 0.0);
         $offset = $rt->assign_swizzle($offset, 'x', $rt->binary('*', $rt->component_wise('cos', $rt->binary('*', $len, $rt->f(6.2831853071800001), 1, 'float')), $rt->binary('*', $_u_intensity, $rt->f(0.001), 1, 'float'), 1, 'float'));
         $offset = $rt->assign_swizzle($offset, 'y', $rt->binary('*', $rt->component_wise('sin', $rt->binary('*', $len, $rt->f(6.2831853071800001), 1, 'float')), $rt->binary('*', $_u_intensity, $rt->f(0.001), 1, 'float'), 1, 'float'));
-        $displacedUV = $wrapCoords__vec2->($rt->binary('+', $uv, $offset, 2, 'float'));
+        $displacedUV = $wrapCoords__vec2->($rt->construct(2, $rt->binary('+', $uv, $offset, 2, 'float')));
         $col = $rt->construct(4, 0.0);
         $dx = $rt->construct(2, 0.0);
         $dy = $rt->construct(2, 0.0);
@@ -124,7 +124,7 @@ my $run_pixel = sub {
             @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($targetTex, $rt->binary('+', $rt->binary('+', $displacedUV, $rt->binary('*', $dx, $rt->f(0.125), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float')), 4, 'float'))};
             @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($targetTex, $rt->binary('+', $rt->binary('+', $displacedUV, $rt->binary('*', $dx, $rt->f(0.375), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.125), 2, 'float'), 2, 'float')), 4, 'float'))};
             @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($targetTex, $rt->binary('+', $rt->binary('+', $displacedUV, $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.375), 2, 'float'), 2, 'float')), 4, 'float'))};
-            return $rt->binary('*', $col, $rt->f(0.25), 4, 'float');
+            return $rt->construct(4, $rt->binary('*', $col, $rt->f(0.25), 4, 'float'));
         } else {
             return $rt->texture($targetTex, $displacedUV);
         }
@@ -135,8 +135,8 @@ my $run_pixel = sub {
         $texelSize = $rt->copy($texelSize, 'float');
         my ($col, $dx, $dy, $normal, $refractedUV, $refractionOffset);
         $normal = $calculateNormal__vec2_vec2_sampler2D->($uv, $texelSize, $mapTex);
-        $refractionOffset = $rt->binary('*', $rt->swizzle($normal, 'xy'), $rt->binary('*', $_u_intensity, $rt->f(0.012500000000000001), 1, 'float'), 2, 'float');
-        $refractedUV = $wrapCoords__vec2->($rt->binary('+', $uv, $refractionOffset, 2, 'float'));
+        $refractionOffset = $rt->construct(2, $rt->binary('*', $rt->swizzle($normal, 'xy'), $rt->binary('*', $_u_intensity, $rt->f(0.012500000000000001), 1, 'float'), 2, 'float'));
+        $refractedUV = $wrapCoords__vec2->($rt->construct(2, $rt->binary('+', $uv, $refractionOffset, 2, 'float')));
         $col = $rt->construct(4, 0.0);
         $dx = $rt->construct(2, 0.0);
         $dy = $rt->construct(2, 0.0);
@@ -148,7 +148,7 @@ my $run_pixel = sub {
             @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($targetTex, $rt->binary('+', $rt->binary('+', $refractedUV, $rt->binary('*', $dx, $rt->f(0.125), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float')), 4, 'float'))};
             @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($targetTex, $rt->binary('+', $rt->binary('+', $refractedUV, $rt->binary('*', $dx, $rt->f(0.375), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.125), 2, 'float'), 2, 'float')), 4, 'float'))};
             @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($targetTex, $rt->binary('+', $rt->binary('+', $refractedUV, $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.375), 2, 'float'), 2, 'float')), 4, 'float'))};
-            return $rt->binary('*', $col, $rt->f(0.25), 4, 'float');
+            return $rt->construct(4, $rt->binary('*', $col, $rt->f(0.25), 4, 'float'));
         } else {
             return $rt->texture($targetTex, $refractedUV);
         }
@@ -162,14 +162,14 @@ my $run_pixel = sub {
         $normal = $calculateNormal__vec2_vec2_sampler2D->($uv, $texelSize, $mapTex);
         $incident = $rt->construct(3, $rt->normalize($rt->binary('-', $globalUV, $rt->f(0.5), 2, 'float')), $rt->f(100));
         $reflectionVec = $rt->reflect($incident, $normal);
-        $reflectionOffset = $rt->binary('*', $rt->swizzle($reflectionVec, 'xy'), $rt->binary('*', $_u_intensity, $rt->f(5.0000000000000002e-05), 1, 'float'), 2, 'float');
-        $redOffset = $rt->binary('*', $reflectionOffset, $rt->binary('+', $rt->f(1), $rt->binary('*', $_u_aberration, $rt->f(0.0074999999999999997), 1, 'float'), 1, 'float'), 2, 'float');
+        $reflectionOffset = $rt->construct(2, $rt->binary('*', $rt->swizzle($reflectionVec, 'xy'), $rt->binary('*', $_u_intensity, $rt->f(5.0000000000000002e-05), 1, 'float'), 2, 'float'));
+        $redOffset = $rt->construct(2, $rt->binary('*', $reflectionOffset, $rt->binary('+', $rt->f(1), $rt->binary('*', $_u_aberration, $rt->f(0.0074999999999999997), 1, 'float'), 1, 'float'), 2, 'float'));
         $greenOffset = $rt->fresh($reflectionOffset);
-        $blueOffset = $rt->binary('*', $reflectionOffset, $rt->binary('-', $rt->f(1), $rt->binary('*', $_u_aberration, $rt->f(0.0074999999999999997), 1, 'float'), 1, 'float'), 2, 'float');
-        $redUV = $wrapCoords__vec2->($rt->binary('+', $uv, $redOffset, 2, 'float'));
-        $greenUV = $wrapCoords__vec2->($rt->binary('+', $uv, $greenOffset, 2, 'float'));
-        $blueUV = $wrapCoords__vec2->($rt->binary('+', $uv, $blueOffset, 2, 'float'));
-        $alphaUV = $wrapCoords__vec2->($rt->binary('+', $uv, $reflectionOffset, 2, 'float'));
+        $blueOffset = $rt->construct(2, $rt->binary('*', $reflectionOffset, $rt->binary('-', $rt->f(1), $rt->binary('*', $_u_aberration, $rt->f(0.0074999999999999997), 1, 'float'), 1, 'float'), 2, 'float'));
+        $redUV = $wrapCoords__vec2->($rt->construct(2, $rt->binary('+', $uv, $redOffset, 2, 'float')));
+        $greenUV = $wrapCoords__vec2->($rt->construct(2, $rt->binary('+', $uv, $greenOffset, 2, 'float')));
+        $blueUV = $wrapCoords__vec2->($rt->construct(2, $rt->binary('+', $uv, $blueOffset, 2, 'float')));
+        $alphaUV = $wrapCoords__vec2->($rt->construct(2, $rt->binary('+', $uv, $reflectionOffset, 2, 'float')));
         $a = $rt->f(0.0);
         $alphaChannel = $rt->f(0.0);
         $b = $rt->f(0.0);
@@ -191,10 +191,10 @@ my $run_pixel = sub {
             $_g = $rt->f(0);
             $b = $rt->f(0);
             $a = $rt->f(0);
-            $o1 = $rt->binary('+', $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.375)), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float');
-            $o2 = $rt->binary('+', $rt->binary('*', $dx, $rt->f(0.125), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float');
-            $o3 = $rt->binary('+', $rt->binary('*', $dx, $rt->f(0.375), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.125), 2, 'float'), 2, 'float');
-            $o4 = $rt->binary('+', $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.125)), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.375), 2, 'float'), 2, 'float');
+            $o1 = $rt->construct(2, $rt->binary('+', $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.375)), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float'));
+            $o2 = $rt->construct(2, $rt->binary('+', $rt->binary('*', $dx, $rt->f(0.125), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float'));
+            $o3 = $rt->construct(2, $rt->binary('+', $rt->binary('*', $dx, $rt->f(0.375), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.125), 2, 'float'), 2, 'float'));
+            $o4 = $rt->construct(2, $rt->binary('+', $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.125)), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.375), 2, 'float'), 2, 'float'));
             $r = $rt->binary('+', $r, $rt->swizzle($rt->texture($targetTex, $rt->binary('+', $redUV, $o1, 2, 'float')), 'r'), 1, 'float');
             $r = $rt->binary('+', $r, $rt->swizzle($rt->texture($targetTex, $rt->binary('+', $redUV, $o2, 2, 'float')), 'r'), 1, 'float');
             $r = $rt->binary('+', $r, $rt->swizzle($rt->texture($targetTex, $rt->binary('+', $redUV, $o3, 2, 'float')), 'r'), 1, 'float');
@@ -211,7 +211,7 @@ my $run_pixel = sub {
             $a = $rt->binary('+', $a, $rt->swizzle($rt->texture($targetTex, $rt->binary('+', $alphaUV, $o2, 2, 'float')), 'a'), 1, 'float');
             $a = $rt->binary('+', $a, $rt->swizzle($rt->texture($targetTex, $rt->binary('+', $alphaUV, $o3, 2, 'float')), 'a'), 1, 'float');
             $a = $rt->binary('+', $a, $rt->swizzle($rt->texture($targetTex, $rt->binary('+', $alphaUV, $o4, 2, 'float')), 'a'), 1, 'float');
-            return $rt->binary('*', $rt->construct(4, $r, $_g, $b, $a), $rt->f(0.25), 4, 'float');
+            return $rt->construct(4, $rt->binary('*', $rt->construct_raw(4, $r, $_g, $b, $a), $rt->f(0.25), 4, 'float'));
         } else {
             $redChannel = $rt->swizzle($rt->texture($targetTex, $redUV), 'r');
             $greenChannel = $rt->swizzle($rt->texture($targetTex, $greenUV), 'g');
@@ -222,10 +222,10 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($color, $fullRes, $globalUV, $texelSize, $uv);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
-        $texelSize = $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float');
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution));
-        $globalUV = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float'));
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
+        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
         $color = $rt->construct(4, 0.0);
         if ($rt->binary('==', $_u_mode, $rt->i(0))) {
             if ($rt->binary('==', $_u_mapSource, $rt->i(0))) {

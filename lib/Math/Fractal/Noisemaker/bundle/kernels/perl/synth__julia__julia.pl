@@ -78,7 +78,7 @@ my $run_pixel = sub {
             return $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->component_wise('cos', $theta), $rt->f(0.5), 1, 'float'), $rt->binary('*', $rt->component_wise('cos', $rt->binary('*', $rt->f(2), $theta, 1, 'float')), $rt->f(0.25), 1, 'float'), 1, 'float'), $rt->binary('-', $rt->binary('*', $rt->component_wise('sin', $theta), $rt->f(0.5), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $rt->binary('*', $rt->f(2), $theta, 1, 'float')), $rt->f(0.25), 1, 'float'), 1, 'float'));
         }
         if ($rt->binary('==', $pathType, $rt->i(2))) {
-            return $rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $theta), $rt->component_wise('sin', $theta)), $radius, 2, 'float');
+            return $rt->construct(2, $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $theta), $rt->component_wise('sin', $theta)), $radius, 2, 'float'));
         }
         if ($rt->binary('==', $pathType, $rt->i(3))) {
             return $rt->construct(2, $rt->binary('+', $rt->unary('-', $rt->f(1)), $rt->binary('*', $rt->component_wise('cos', $theta), $rt->f(0.25), 1, 'float'), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $theta), $rt->f(0.25), 1, 'float'));
@@ -165,7 +165,7 @@ my $run_pixel = sub {
         $reDF = $rt->copy($reDF, 'float');
         $imDF = $rt->copy($imDF, 'float');
         my ($angle, $cs, $scale, $sn, $uv);
-        $uv = $rt->binary('/', $rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float'));
         $angle = $rt->binary('/', $rt->binary('*', $rt->unary('-', $_u_rotation), $g->{TAU}, 1, 'float'), $rt->f(360), 1, 'float');
         $cs = $rt->component_wise('cos', $angle);
         $sn = $rt->component_wise('sin', $angle);
@@ -207,7 +207,7 @@ my $run_pixel = sub {
                 last;
             }
             $zF = $rt->construct(2, $rt->swizzle($zRe, 'x'), $rt->swizzle($zIm, 'x'));
-            @{$dz} = map { $rt->f32($_) } @{($rt->binary('*', $rt->f(2), $cmul__vec2_vec2->($zF, $dz), 2, 'float'))};
+            @{$dz} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('*', $rt->f(2), $cmul__vec2_vec2->($zF, $dz), 2, 'float')))};
             $zRe2 = $df64_mul__vec2_vec2->($zRe, $zRe);
             $zIm2 = $df64_mul__vec2_vec2->($zIm, $zIm);
             $zReIm = $df64_mul__vec2_vec2->($zRe, $zIm);
@@ -352,8 +352,8 @@ my $run_pixel = sub {
         $c = $rt->copy($c, 'float');
         my ($d0, $d1, $d2, $lightDir, $normal, $rad);
         $d0 = $iterateSmooth__vec2_vec2_int_float->($fragCoord, $c, $maxIter, $zm);
-        $d1 = $iterateSmooth__vec2_vec2_int_float->($rt->binary('+', $fragCoord, $rt->construct(2, $rt->f(1), $rt->f(0)), 2, 'float'), $c, $maxIter, $zm);
-        $d2 = $iterateSmooth__vec2_vec2_int_float->($rt->binary('+', $fragCoord, $rt->construct(2, $rt->f(0), $rt->f(1)), 2, 'float'), $c, $maxIter, $zm);
+        $d1 = $iterateSmooth__vec2_vec2_int_float->($rt->construct(2, $rt->binary('+', $fragCoord, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float')), $c, $maxIter, $zm);
+        $d2 = $iterateSmooth__vec2_vec2_int_float->($rt->construct(2, $rt->binary('+', $fragCoord, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float')), $c, $maxIter, $zm);
         $normal = $rt->normalize($rt->construct(3, $rt->binary('-', $d1, $d0, 1, 'float'), $rt->binary('-', $d2, $d0, 1, 'float'), $rt->f(0.050000000000000003)));
         $rad = $rt->binary('/', $rt->binary('*', $angle, $g->{TAU}, 1, 'float'), $rt->f(360), 1, 'float');
         $lightDir = $rt->normalize($rt->construct(3, $rt->component_wise('cos', $rad), $rt->component_wise('sin', $rad), $rt->f(0.69999999999999996)));
@@ -361,7 +361,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($c, $effectiveZoom, $globalCoord, $imDF, $phase, $r, $reDF, $value);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $c = $resolveC__void->();
         $effectiveZoom = $rt->f(0.0);
         $phase = $rt->f(0.0);

@@ -53,9 +53,9 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($blendedColor, $globalCoord, $idx, $inputColor, $lum, $pal, $paletteColor, $t, $texSize, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->construct(2, $rt->texture_size($_u_inputTex));
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float'));
         $inputColor = $rt->texture($_u_inputTex, $uv);
         $idx = $rt->component_wise('clamp', $_u_paletteIndex, $rt->i(0), $rt->binary('-', $g->{PALETTE_COUNT}, $rt->i(1), 1, 'int'));
         $lum = $rt->dot($rt->swizzle($inputColor, 'rgb'), $rt->construct(3, $rt->f(0.29899999999999999), $rt->f(0.58699999999999997), $rt->f(0.114)));

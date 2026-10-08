@@ -84,7 +84,7 @@ my $run_pixel = sub {
         my ($c, $f, $t, $v00, $v01, $v10, $v11);
         $c = $rt->construct(2, $rt->component_wise('floor', $pos), 'int');
         $f = $rt->component_wise('fract', $pos);
-        $t = $rt->binary('*', $rt->binary('-', $rt->f(1), $rt->component_wise('cos', $rt->binary('*', $f, $rt->f(3.1415926500000002), 2, 'float')), 2, 'float'), $rt->f(0.5), 2, 'float');
+        $t = $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('-', $rt->f(1), $rt->component_wise('cos', $rt->binary('*', $f, $rt->f(3.1415926500000002), 2, 'float')), 2, 'float')), $rt->f(0.5), 2, 'float'));
         $v00 = $rt->component_wise('pow', $gridVal__ivec2_uint->($c, $sd), $rt->f(4));
         $v10 = $rt->component_wise('pow', $gridVal__ivec2_uint->($rt->binary('+', $c, $rt->construct(2, $rt->i(1), $rt->i(0), 'int'), 2, 'int'), $sd), $rt->f(4));
         $v01 = $rt->component_wise('pow', $gridVal__ivec2_uint->($rt->binary('+', $c, $rt->construct(2, $rt->i(0), $rt->i(1), 'int'), 2, 'int'), $sd), $rt->f(4));
@@ -97,12 +97,12 @@ my $run_pixel = sub {
         $freq = $rt->copy($freq, 'float');
         my ($a);
         $a = $rt->f(0);
-        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->binary('*', $uv, $freq, 2, 'float'), $sd), $rt->f(0.5), 1, 'float'), 1, 'float');
-        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(2), 2, 'float'), $rt->binary('+', $sd, $rt->i(10000), 1, 'uint')), $rt->f(0.25), 1, 'float'), 1, 'float');
-        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(4), 2, 'float'), $rt->binary('+', $sd, $rt->i(20000), 1, 'uint')), $rt->f(0.125), 1, 'float'), 1, 'float');
-        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(8), 2, 'float'), $rt->binary('+', $sd, $rt->i(30000), 1, 'uint')), $rt->f(0.0625), 1, 'float'), 1, 'float');
-        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(16), 2, 'float'), $rt->binary('+', $sd, $rt->i(40000), 1, 'uint')), $rt->f(0.03125), 1, 'float'), 1, 'float');
-        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(32), 2, 'float'), $rt->binary('+', $sd, $rt->i(50000), 1, 'uint')), $rt->f(0.015625), 1, 'float'), 1, 'float');
+        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $uv, $freq, 2, 'float')), $sd), $rt->f(0.5), 1, 'float'), 1, 'float');
+        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(2), 2, 'float')), $rt->binary('+', $sd, $rt->i(10000), 1, 'uint')), $rt->f(0.25), 1, 'float'), 1, 'float');
+        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(4), 2, 'float')), $rt->binary('+', $sd, $rt->i(20000), 1, 'uint')), $rt->f(0.125), 1, 'float'), 1, 'float');
+        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(8), 2, 'float')), $rt->binary('+', $sd, $rt->i(30000), 1, 'uint')), $rt->f(0.0625), 1, 'float'), 1, 'float');
+        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(16), 2, 'float')), $rt->binary('+', $sd, $rt->i(40000), 1, 'uint')), $rt->f(0.03125), 1, 'float'), 1, 'float');
+        $a = $rt->binary('+', $a, $rt->binary('*', $bicubicExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(32), 2, 'float')), $rt->binary('+', $sd, $rt->i(50000), 1, 'uint')), $rt->f(0.015625), 1, 'float'), 1, 'float');
         return $rt->binary('/', $a, $rt->f(0.984375), 1, 'float');
     };
     $expFbm4Bilinear__vec2_vec2_uint = sub {
@@ -111,10 +111,10 @@ my $run_pixel = sub {
         $freq = $rt->copy($freq, 'float');
         my ($a);
         $a = $rt->f(0);
-        $a = $rt->binary('+', $a, $rt->binary('*', $bilinearExpGrid__vec2_uint->($rt->binary('*', $uv, $freq, 2, 'float'), $sd), $rt->f(0.5), 1, 'float'), 1, 'float');
-        $a = $rt->binary('+', $a, $rt->binary('*', $bilinearExpGrid__vec2_uint->($rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(2), 2, 'float'), $rt->binary('+', $sd, $rt->i(10000), 1, 'uint')), $rt->f(0.25), 1, 'float'), 1, 'float');
-        $a = $rt->binary('+', $a, $rt->binary('*', $bilinearExpGrid__vec2_uint->($rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(4), 2, 'float'), $rt->binary('+', $sd, $rt->i(20000), 1, 'uint')), $rt->f(0.125), 1, 'float'), 1, 'float');
-        $a = $rt->binary('+', $a, $rt->binary('*', $bilinearExpGrid__vec2_uint->($rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(8), 2, 'float'), $rt->binary('+', $sd, $rt->i(30000), 1, 'uint')), $rt->f(0.0625), 1, 'float'), 1, 'float');
+        $a = $rt->binary('+', $a, $rt->binary('*', $bilinearExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $uv, $freq, 2, 'float')), $sd), $rt->f(0.5), 1, 'float'), 1, 'float');
+        $a = $rt->binary('+', $a, $rt->binary('*', $bilinearExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(2), 2, 'float')), $rt->binary('+', $sd, $rt->i(10000), 1, 'uint')), $rt->f(0.25), 1, 'float'), 1, 'float');
+        $a = $rt->binary('+', $a, $rt->binary('*', $bilinearExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(4), 2, 'float')), $rt->binary('+', $sd, $rt->i(20000), 1, 'uint')), $rt->f(0.125), 1, 'float'), 1, 'float');
+        $a = $rt->binary('+', $a, $rt->binary('*', $bilinearExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(8), 2, 'float')), $rt->binary('+', $sd, $rt->i(30000), 1, 'uint')), $rt->f(0.0625), 1, 'float'), 1, 'float');
         return $rt->binary('/', $a, $rt->f(0.9375), 1, 'float');
     };
     $expRidgedFbm3Cosine__vec2_vec2_uint = sub {
@@ -124,24 +124,24 @@ my $run_pixel = sub {
         my ($a, $v);
         $a = $rt->f(0);
         $v = $rt->f(0.0);
-        $v = $cosineExpGrid__vec2_uint->($rt->binary('*', $uv, $freq, 2, 'float'), $sd);
+        $v = $cosineExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $uv, $freq, 2, 'float')), $sd);
         $a = $rt->binary('+', $a, $rt->binary('*', $rt->binary('-', $rt->f(1), $rt->component_wise('abs', $rt->binary('-', $rt->binary('*', $rt->f(2), $v, 1, 'float'), $rt->f(1), 1, 'float')), 1, 'float'), $rt->f(0.5), 1, 'float'), 1, 'float');
-        $v = $cosineExpGrid__vec2_uint->($rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(2), 2, 'float'), $rt->binary('+', $sd, $rt->i(10000), 1, 'uint'));
+        $v = $cosineExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(2), 2, 'float')), $rt->binary('+', $sd, $rt->i(10000), 1, 'uint'));
         $a = $rt->binary('+', $a, $rt->binary('*', $rt->binary('-', $rt->f(1), $rt->component_wise('abs', $rt->binary('-', $rt->binary('*', $rt->f(2), $v, 1, 'float'), $rt->f(1), 1, 'float')), 1, 'float'), $rt->f(0.25), 1, 'float'), 1, 'float');
-        $v = $cosineExpGrid__vec2_uint->($rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(4), 2, 'float'), $rt->binary('+', $sd, $rt->i(20000), 1, 'uint'));
+        $v = $cosineExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $rt->binary('*', $uv, $freq, 2, 'float'), $rt->f(4), 2, 'float')), $rt->binary('+', $sd, $rt->i(20000), 1, 'uint'));
         $a = $rt->binary('+', $a, $rt->binary('*', $rt->binary('-', $rt->f(1), $rt->component_wise('abs', $rt->binary('-', $rt->binary('*', $rt->f(2), $v, 1, 'float'), $rt->f(1), 1, 'float')), 1, 'float'), $rt->f(0.125), 1, 'float'), 1, 'float');
         return $rt->binary('/', $a, $rt->f(0.875), 1, 'float');
     };
     $main__void = sub {
         my ($aspect, $base, $colored, $combined, $dims, $disp, $dotFreq, $dots, $fullRes, $globalCoord, $globalUV, $mask, $nUV, $result, $ridge, $ridgeFreq, $s, $smear, $smearFreq, $speckFreq, $specks, $uv, $warpFreqX, $warpFreqY, $warpX, $warpY, $warpedUV);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $dims = $rt->texture_size($_u_inputTex);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $dims), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $dims)), 2, 'float'));
         $base = $rt->texture($_u_inputTex, $uv);
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($rt->construct(2, $dims)));
-        $globalUV = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float');
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($rt->construct(2, $dims))));
+        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
         $aspect = $rt->binary('/', $rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y'), 1, 'float');
-        $nUV = $rt->binary('*', $globalUV, $rt->construct(2, $aspect, $rt->f(1)), 2, 'float');
+        $nUV = $rt->construct(2, $rt->binary('*', $globalUV, $rt->construct_raw(2, $aspect, $rt->f(1)), 2, 'float'));
         $s = $rt->binary('*', $rt->construct(1, $_u_seed, 'uint'), $rt->i(17), 1, 'uint');
         $smearFreq = $rt->component_wise('mix', $rt->f(3), $rt->f(6), $hashf__uint->($pcg__uint->($rt->binary('+', $s, $rt->i(10), 1, 'uint'))));
         $dotFreq = $rt->component_wise('mix', $rt->f(32), $rt->f(64), $hashf__uint->($pcg__uint->($rt->binary('+', $s, $rt->i(50), 1, 'uint'))));
@@ -149,10 +149,10 @@ my $run_pixel = sub {
         $ridgeFreq = $rt->component_wise('mix', $rt->f(2), $rt->f(3), $hashf__uint->($pcg__uint->($rt->binary('+', $s, $rt->i(130), 1, 'uint'))));
         $warpFreqX = $rt->component_wise('mix', $rt->f(2), $rt->f(3), $hashf__uint->($pcg__uint->($rt->binary('+', $s, $rt->i(160), 1, 'uint'))));
         $warpFreqY = $rt->component_wise('mix', $rt->f(1), $rt->f(3), $hashf__uint->($pcg__uint->($rt->binary('+', $s, $rt->i(170), 1, 'uint'))));
-        $warpX = $bilinearExpGrid__vec2_uint->($rt->binary('*', $nUV, $rt->construct(2, $warpFreqX, $warpFreqY), 2, 'float'), $rt->binary('+', $s, $rt->i(200), 1, 'uint'));
-        $warpY = $bilinearExpGrid__vec2_uint->($rt->binary('*', $nUV, $rt->construct(2, $warpFreqX, $warpFreqY), 2, 'float'), $rt->binary('+', $s, $rt->i(300), 1, 'uint'));
+        $warpX = $bilinearExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $nUV, $rt->construct_raw(2, $warpFreqX, $warpFreqY), 2, 'float')), $rt->binary('+', $s, $rt->i(200), 1, 'uint'));
+        $warpY = $bilinearExpGrid__vec2_uint->($rt->construct(2, $rt->binary('*', $nUV, $rt->construct_raw(2, $warpFreqX, $warpFreqY), 2, 'float')), $rt->binary('+', $s, $rt->i(300), 1, 'uint'));
         $disp = $rt->binary('+', $rt->f(1), $hashf__uint->($pcg__uint->($rt->binary('+', $s, $rt->i(150), 1, 'uint'))), 1, 'float');
-        $warpedUV = $rt->binary('+', $nUV, $rt->binary('*', $rt->binary('*', $rt->binary('-', $rt->construct(2, $warpX, $warpY), $rt->f(0.5), 2, 'float'), $disp, 2, 'float'), $rt->f(0.12), 2, 'float'), 2, 'float');
+        $warpedUV = $rt->construct(2, $rt->binary('+', $nUV, $rt->binary('*', $rt->binary('*', $rt->binary('-', $rt->construct_raw(2, $warpX, $warpY), $rt->f(0.5), 2, 'float'), $disp, 2, 'float'), $rt->f(0.12), 2, 'float'), 2, 'float'));
         $smear = $expFbm6Bicubic__vec2_vec2_uint->($warpedUV, $rt->construct(2, $smearFreq), $rt->binary('+', $s, $rt->i(100), 1, 'uint'));
         $dots = $expFbm4Bilinear__vec2_vec2_uint->($nUV, $rt->construct(2, $dotFreq), $rt->binary('+', $s, $rt->i(43), 1, 'uint'));
         $dots = $rt->component_wise('clamp', $rt->binary('-', $rt->binary('*', $rt->f(4), $dots, 1, 'float'), $rt->f(1.6000000000000001), 1, 'float'), $rt->f(0), $rt->f(1));
@@ -163,7 +163,7 @@ my $run_pixel = sub {
         $combined = $rt->component_wise('max', $rt->f(0), $rt->binary('-', $combined, $ridge, 1, 'float'));
         $combined = $rt->binary('*', $combined, $rt->binary('+', $rt->f(0.5), $rt->binary('*', $_u_density, $rt->f(2), 1, 'float'), 1, 'float'), 1, 'float');
         $mask = $rt->component_wise('step', $rt->f(0.5), $combined);
-        $colored = $rt->binary('*', $rt->swizzle($base, 'rgb'), $_u_color, 3, 'float');
+        $colored = $rt->construct(3, $rt->binary('*', $rt->swizzle($base, 'rgb'), $_u_color, 3, 'float'));
         $result = $rt->component_wise('mix', $rt->swizzle($base, 'rgb'), $rt->component_wise('mix', $rt->swizzle($base, 'rgb'), $colored, $mask), $_u_alpha);
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($base, 'a')))};
     };

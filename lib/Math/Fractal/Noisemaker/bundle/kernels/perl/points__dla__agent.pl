@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint__uint, $hash__uint, $rand__float, $randomDirection__float, $wrap01__vec2, $sampleGrid__vec2, $neighborhood__vec2_float, $main__void);
+    my ($hash_uint_lcg__uint, $hash__uint, $rand__float, $randomDirection__float, $wrap01__vec2, $sampleGrid__vec2, $neighborhood__vec2_float, $main__void);
     my $_retc;
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
@@ -25,7 +25,7 @@ my $run_pixel = sub {
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
-    $hash_uint__uint = sub {
+    $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
         $state = $rt->binary('+', $rt->binary('*', $seed, $rt->i(747796405), 1, 'uint'), $rt->i(2891336453), 1, 'uint');
@@ -34,15 +34,15 @@ my $run_pixel = sub {
     };
     $hash__uint = sub {
         my ($seed) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($seed)), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($seed)), $rt->f(4294967295), 1, 'float');
     };
     $rand__float = sub {
         my ($seed) = @_;
         my ($bits);
         $bits = $rt->float_bits_to_uint($seed);
-        $bits = $rt->hash_uint($bits);
+        $bits = $rt->hash_uint_lcg($bits);
         $seed = $rt->binary('-', $rt->uint_bits_to_float($rt->binary('|', $bits, $rt->i(1065353216), 1, 'uint')), $rt->f(1), 1, 'float');
-        $bits = $rt->hash_uint($rt->binary('+', $bits, $rt->i(1), 1, 'uint'));
+        $bits = $rt->hash_uint_lcg($rt->binary('+', $bits, $rt->i(1), 1, 'uint'));
         $seed = $rt->binary('-', $rt->uint_bits_to_float($rt->binary('|', $rt->binary('&', $bits, $rt->i(8388607), 1, 'uint'), $rt->i(1065353216), 1, 'uint')), $rt->f(1), 1, 'float');
         return ($seed, $seed);
         return (undef, $seed);
@@ -64,7 +64,7 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         my ($coord, $dims);
         $dims = $rt->texture_size($_u_gridTex);
-        $coord = $rt->construct(2, $rt->binary('*', $wrap01__vec2->($uv), $rt->construct(2, $dims), 2, 'float'), 'int');
+        $coord = $rt->construct(2, $rt->construct(2, $rt->binary('*', $wrap01__vec2->($uv), $rt->construct(2, $dims), 2, 'float')), 'int');
         return $rt->swizzle($rt->texel_fetch($_u_gridTex, $coord, $rt->i(0)), 'a');
     };
     $neighborhood__vec2_float = sub {
@@ -72,13 +72,13 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         my ($accum, $gridDims, $texel);
         $gridDims = $rt->construct(2, $rt->texture_size($_u_gridTex));
-        $texel = $rt->binary('/', $radius, $gridDims, 2, 'float');
+        $texel = $rt->construct(2, $rt->binary('/', $radius, $gridDims, 2, 'float'));
         $accum = $rt->f(0);
         $accum = $rt->binary('+', $accum, $sampleGrid__vec2->($uv), 1, 'float');
-        $accum = $rt->binary('+', $accum, $sampleGrid__vec2->($rt->binary('+', $uv, $rt->construct(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float')), 1, 'float');
-        $accum = $rt->binary('+', $accum, $sampleGrid__vec2->($rt->binary('-', $uv, $rt->construct(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float')), 1, 'float');
-        $accum = $rt->binary('+', $accum, $sampleGrid__vec2->($rt->binary('+', $uv, $rt->construct(2, $rt->f(0), $rt->swizzle($texel, 'y')), 2, 'float')), 1, 'float');
-        $accum = $rt->binary('+', $accum, $sampleGrid__vec2->($rt->binary('-', $uv, $rt->construct(2, $rt->f(0), $rt->swizzle($texel, 'y')), 2, 'float')), 1, 'float');
+        $accum = $rt->binary('+', $accum, $sampleGrid__vec2->($rt->construct(2, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float'))), 1, 'float');
+        $accum = $rt->binary('+', $accum, $sampleGrid__vec2->($rt->construct(2, $rt->binary('-', $uv, $rt->construct_raw(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float'))), 1, 'float');
+        $accum = $rt->binary('+', $accum, $sampleGrid__vec2->($rt->construct(2, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->f(0), $rt->swizzle($texel, 'y')), 2, 'float'))), 1, 'float');
+        $accum = $rt->binary('+', $accum, $sampleGrid__vec2->($rt->construct(2, $rt->binary('-', $uv, $rt->construct_raw(2, $rt->f(0), $rt->swizzle($texel, 'y')), 2, 'float'))), 1, 'float');
         return $rt->binary('*', $accum, $rt->f(0.20000000000000001), 1, 'float');
     };
     $main__void = sub {
@@ -96,7 +96,7 @@ my $run_pixel = sub {
         if ($rt->binary('<=', $seed, $rt->f(0))) {
             $seed = $rt->binary('+', $hash__uint->($agentId), $rt->f(0.001), 1, 'float');
         }
-        $frameSeed = $rt->hash_uint($rt->binary('+', $rt->binary('*', $agentId, $rt->i(31), 1, 'uint'), $rt->float_bits_to_uint($seed), 1, 'uint'));
+        $frameSeed = $rt->hash_uint_lcg($rt->binary('+', $rt->binary('*', $agentId, $rt->i(31), 1, 'uint'), $rt->float_bits_to_uint($seed), 1, 'uint'));
         $seed = $rt->binary('-', $rt->uint_bits_to_float($rt->binary('|', $rt->binary('&', $frameSeed, $rt->i(8388607), 1, 'uint'), $rt->i(1065353216), 1, 'uint')), $rt->f(1), 1, 'float');
         if ($rt->binary('<', $alive, $rt->f(0.5))) {
             @{$g->{outXYZ}} = map { $rt->f32($_) } @{($xyz)};
@@ -110,25 +110,25 @@ my $run_pixel = sub {
         $proximity = $rt->component_wise('smoothstep', $rt->f(0.014999999999999999), $rt->f(0.12), $local);
         $randomDir = do { ($_retc, $seed) = $randomDirection__float->($seed); $_retc };
         $inputW = $rt->binary('/', $_u_inputWeight, $rt->f(100), 1, 'float');
-        $stepDir = $randomDir;
+        $stepDir = $rt->fresh($randomDir);
         $inputCoord = $rt->construct(2, 0.0, 'int');
         $inputDims = $rt->construct(2, 0.0, 'int');
         $inputDir = $rt->construct(2, 0.0);
         $inputVal = $rt->construct(4, 0.0);
         if ($rt->binary('>', $inputW, $rt->f(0))) {
             $inputDims = $rt->texture_size($_u_inputTex);
-            $inputCoord = $rt->construct(2, $rt->binary('*', $wrap01__vec2->($pos), $rt->construct(2, $inputDims), 2, 'float'), 'int');
+            $inputCoord = $rt->construct(2, $rt->construct(2, $rt->binary('*', $wrap01__vec2->($pos), $rt->construct(2, $inputDims), 2, 'float')), 'int');
             $inputVal = $rt->texel_fetch($_u_inputTex, $inputCoord, $rt->i(0));
-            $inputDir = $rt->binary('-', $rt->binary('*', $rt->swizzle($inputVal, 'xy'), $rt->f(2), 2, 'float'), $rt->f(1), 2, 'float');
+            $inputDir = $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->swizzle($inputVal, 'xy'), $rt->f(2), 2, 'float'), $rt->f(1), 2, 'float'));
             if ($rt->binary('>', $rt->length($inputDir), $rt->f(0.01))) {
                 @{$inputDir} = map { $rt->f32($_) } @{($rt->normalize($inputDir))};
                 @{$stepDir} = map { $rt->f32($_) } @{($rt->normalize($rt->component_wise('mix', $randomDir, $inputDir, $inputW)))};
             }
         }
         $stepSize = $rt->binary('*', $rt->binary('*', $rt->binary('/', $_u_stride, $rt->f(10), 1, 'float'), $texel, 1, 'float'), $rt->component_wise('mix', $rt->f(3), $rt->f(0.5), $proximity), 1, 'float');
-        @{$stepDir} = map { $rt->f32($_) } @{($rt->binary('+', $stepDir, $rt->binary('*', do { ($_retc, $seed) = $randomDirection__float->($seed); $_retc }, $rt->f(0.29999999999999999), 2, 'float'), 2, 'float'))};
+        @{$stepDir} = map { $rt->f32($_) } @{($rt->binary('+', $stepDir, $rt->construct(2, $rt->binary('*', do { ($_retc, $seed) = $randomDirection__float->($seed); $_retc }, $rt->f(0.29999999999999999), 2, 'float')), 2, 'float'))};
         @{$stepDir} = map { $rt->f32($_) } @{($rt->normalize($stepDir))};
-        $candidate = $wrap01__vec2->($rt->binary('+', $pos, $rt->binary('*', $stepDir, $stepSize, 2, 'float'), 2, 'float'));
+        $candidate = $wrap01__vec2->($rt->construct(2, $rt->binary('+', $pos, $rt->binary('*', $stepDir, $stepSize, 2, 'float'), 2, 'float')));
         $here = $sampleGrid__vec2->($candidate);
         $nearby = $neighborhood__vec2_float->($candidate, $rt->f(1));
         $stuck = (($rt->binary('>', $nearby, $rt->f(0.29999999999999999))) && ($rt->binary('<', $here, $rt->f(0.5))) ? 1 : 0);

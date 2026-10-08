@@ -42,15 +42,15 @@ my $run_pixel = sub {
     $snow_fract_vec3__vec3 = sub {
         my ($value) = @_;
         $value = $rt->copy($value, 'float');
-        return $rt->binary('-', $value, $rt->component_wise('floor', $value), 3, 'float');
+        return $rt->construct(3, $rt->binary('-', $value, $rt->component_wise('floor', $value), 3, 'float'));
     };
     $snow_hash__vec3 = sub {
         my ($input_sample) = @_;
         $input_sample = $rt->copy($input_sample, 'float');
         my ($combined, $dot_val, $fractional, $scaled, $shifted);
-        $scaled = $snow_fract_vec3__vec3->($rt->binary('*', $input_sample, $rt->f(0.1031), 3, 'float'));
-        $dot_val = $rt->dot($scaled, $rt->binary('+', $rt->swizzle($scaled, 'yzx'), $rt->construct(3, $rt->f(33.329999999999998)), 3, 'float'));
-        $shifted = $rt->binary('+', $scaled, $dot_val, 3, 'float');
+        $scaled = $snow_fract_vec3__vec3->($rt->construct(3, $rt->binary('*', $input_sample, $rt->f(0.1031), 3, 'float')));
+        $dot_val = $rt->dot($scaled, $rt->binary('+', $rt->swizzle($scaled, 'yzx'), $rt->construct_raw(3, $rt->f(33.329999999999998)), 3, 'float'));
+        $shifted = $rt->construct(3, $rt->binary('+', $scaled, $dot_val, 3, 'float'));
         $combined = $rt->binary('*', $rt->binary('+', $rt->swizzle($shifted, 'x'), $rt->swizzle($shifted, 'y'), 1, 'float'), $rt->swizzle($shifted, 'z'), 1, 'float');
         $fractional = $rt->binary('-', $combined, $rt->component_wise('floor', $combined), 1, 'float');
         return $rt->component_wise('clamp', $fractional, $rt->f(0), $rt->f(1));
@@ -67,7 +67,7 @@ my $run_pixel = sub {
         if ((($rt->binary('==', $speed, $rt->f(0))) || ($rt->binary('==', $time, $rt->f(0))) ? 1 : 0)) {
             return $base_value;
         }
-        $time_seed = $rt->binary('+', $seed, $g->{TIME_SEED_OFFSETS}, 3, 'float');
+        $time_seed = $rt->construct(3, $rt->binary('+', $seed, $g->{TIME_SEED_OFFSETS}, 3, 'float'));
         $time_sample = $rt->construct(3, $rt->binary('+', $rt->swizzle($coord, 'x'), $rt->swizzle($time_seed, 'x'), 1, 'float'), $rt->binary('+', $rt->swizzle($coord, 'y'), $rt->swizzle($time_seed, 'y'), 1, 'float'), $rt->binary('+', $rt->f(1), $rt->swizzle($time_seed, 'z'), 1, 'float'));
         $time_value = $snow_hash__vec3->($time_sample);
         $scaled_time = $rt->binary('*', $periodic_value__float_float->($time, $time_value), $speed, 1, 'float');
@@ -76,7 +76,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($alphaVal, $coords, $d, $exponent, $globalCoord, $limiter_mask, $limiter_value, $mixed_rgb, $pixelCoord, $speedVal, $static_color, $static_value, $texel, $timeVal);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $coords = $rt->construct(2, $rt->construct(1, $rt->swizzle($ctx->{frag_coord}, 'x'), 'int'), $rt->construct(1, $rt->swizzle($ctx->{frag_coord}, 'y'), 'int'), 'int');
         $texel = $rt->texel_fetch($_u_inputTex, $coords, $rt->i(0));
         $alphaVal = $rt->component_wise('clamp', $_u_alpha, $rt->f(0), $rt->f(1));

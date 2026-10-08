@@ -26,8 +26,8 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_U, $_for0_first, $_for1_first, $_for2_first, $density, $densitySize, $dr, $dx, $dy, $i, $iRadius, $kVal, $numSamples, $r, $sampleUV, $texelSize, $uv, $wK);
         $densitySize = $rt->construct(2, $rt->texture_size($_u_densityTex));
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $densitySize, 2, 'float');
-        $texelSize = $rt->binary('/', $rt->f(1), $densitySize, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $densitySize, 2, 'float'));
+        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $densitySize, 2, 'float'));
         $wK = $rt->f(0);
         $numSamples = $rt->i(64);
         $dr = $rt->binary('/', $_u_searchRadius, $rt->construct(1, $numSamples), 1, 'float');
@@ -71,7 +71,7 @@ my $run_pixel = sub {
                 if ($rt->binary('>', $r, $_u_searchRadius)) {
                     next;
                 }
-                $sampleUV = $rt->component_wise('fract', $rt->binary('+', $uv, $rt->binary('*', $rt->construct(2, $rt->construct(1, $dx), $rt->construct(1, $dy)), $texelSize, 2, 'float'), 2, 'float'));
+                $sampleUV = $rt->component_wise('fract', $rt->binary('+', $uv, $rt->binary('*', $rt->construct_raw(2, $rt->construct(1, $dx), $rt->construct(1, $dy)), $texelSize, 2, 'float'), 2, 'float'));
                 $density = $rt->swizzle($rt->texture($_u_densityTex, $sampleUV), 'r');
                 $kVal = $rt->binary('*', $_kernel__float_float_float->($r, $_u_muK, $_u_sigmaK), $wK, 1, 'float');
                 $_U = $rt->binary('+', $_U, $rt->binary('*', $density, $kVal, 1, 'float'), 1, 'float');

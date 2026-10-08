@@ -30,8 +30,8 @@ my $run_pixel = sub {
         my ($c) = @_;
         $c = $rt->copy($c, 'float');
         my ($p);
-        $p = $rt->component_wise('abs', $rt->binary('-', $rt->binary('*', $rt->component_wise('fract', $rt->binary('+', $rt->swizzle($c, 'xxx'), $rt->construct(3, $rt->f(1), $rt->binary('/', $rt->f(2), $rt->f(3), 1, 'float'), $rt->binary('/', $rt->f(1), $rt->f(3), 1, 'float')), 3, 'float')), $rt->f(6), 3, 'float'), $rt->f(3), 3, 'float'));
-        return $rt->binary('*', $rt->swizzle($c, 'z'), $rt->component_wise('mix', $rt->construct(3, $rt->f(1)), $rt->component_wise('clamp', $rt->binary('-', $p, $rt->f(1), 3, 'float'), $rt->f(0), $rt->f(1)), $rt->swizzle($c, 'y')), 3, 'float');
+        $p = $rt->component_wise('abs', $rt->construct(3, $rt->binary('-', $rt->construct(3, $rt->binary('*', $rt->component_wise('fract', $rt->binary('+', $rt->swizzle($c, 'xxx'), $rt->construct_raw(3, $rt->f(1), $rt->binary('/', $rt->f(2), $rt->f(3), 1, 'float'), $rt->binary('/', $rt->f(1), $rt->f(3), 1, 'float')), 3, 'float')), $rt->f(6), 3, 'float')), $rt->f(3), 3, 'float')));
+        return $rt->construct(3, $rt->binary('*', $rt->swizzle($c, 'z'), $rt->component_wise('mix', $rt->construct(3, $rt->f(1)), $rt->component_wise('clamp', $rt->binary('-', $p, $rt->f(1), 3, 'float'), $rt->f(0), $rt->f(1)), $rt->swizzle($c, 'y')), 3, 'float'));
     };
     $bitOp__int_int_int_int = sub {
         my ($a, $b, $op, $m) = @_;
@@ -75,10 +75,10 @@ my $run_pixel = sub {
         $angle = $rt->binary('/', $rt->binary('*', $_u_rotation, $g->{PI}, 1, 'float'), $rt->f(180), 1, 'float');
         $c = $rt->component_wise('cos', $angle);
         $s = $rt->component_wise('sin', $angle);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $centered = $rt->binary('-', $globalCoord, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'), 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $centered = $rt->construct(2, $rt->binary('-', $globalCoord, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'), 2, 'float'));
         $rotated = $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->swizzle($centered, 'x'), $c, 1, 'float'), $rt->binary('*', $rt->swizzle($centered, 'y'), $s, 1, 'float'), 1, 'float'), $rt->binary('+', $rt->binary('*', $rt->swizzle($centered, 'x'), $s, 1, 'float'), $rt->binary('*', $rt->swizzle($centered, 'y'), $c, 1, 'float'), 1, 'float'));
-        $coord = $rt->binary('+', $rotated, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'), 2, 'float');
+        $coord = $rt->construct(2, $rt->binary('+', $rotated, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'), 2, 'float'));
         $animOffset = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $rt->binary('*', $_u_time, $rt->construct(1, $rt->construct(1, $rt->unary('-', $_u_speed), 'int')), 1, 'float'), $rt->f(256), 1, 'float')), 'int');
         $x = $rt->binary('+', $rt->binary('+', $rt->construct(1, $rt->component_wise('floor', $rt->binary('/', $rt->swizzle($coord, 'x'), $pixelScale, 1, 'float')), 'int'), $_u_offsetX, 1, 'int'), $animOffset, 1, 'int');
         $y = $rt->binary('+', $rt->construct(1, $rt->component_wise('floor', $rt->binary('/', $rt->swizzle($coord, 'y'), $pixelScale, 1, 'float')), 'int'), $_u_offsetY, 1, 'int');

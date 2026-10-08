@@ -46,9 +46,9 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($_g, $h1, $h2, $h3, $h4);
         $h1 = $hash4__vec4->($p);
-        $h2 = $hash4__vec4->($rt->binary('+', $p, $rt->f(127.09999999999999), 4, 'float'));
-        $h3 = $hash4__vec4->($rt->binary('+', $p, $rt->f(269.5), 4, 'float'));
-        $h4 = $hash4__vec4->($rt->binary('+', $p, $rt->f(419.19999999999999), 4, 'float'));
+        $h2 = $hash4__vec4->($rt->construct(4, $rt->binary('+', $p, $rt->f(127.09999999999999), 4, 'float')));
+        $h3 = $hash4__vec4->($rt->construct(4, $rt->binary('+', $p, $rt->f(269.5), 4, 'float')));
+        $h4 = $hash4__vec4->($rt->construct(4, $rt->binary('+', $p, $rt->f(419.19999999999999), 4, 'float')));
         $_g = $rt->construct(4, $rt->binary('-', $rt->binary('*', $h1, $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'), $rt->binary('-', $rt->binary('*', $h2, $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'), $rt->binary('-', $rt->binary('*', $h3, $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'), $rt->binary('-', $rt->binary('*', $h4, $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'));
         return $rt->normalize($_g);
     };
@@ -69,22 +69,22 @@ my $run_pixel = sub {
         $u = $rt->construct(4, $quintic__float->($rt->swizzle($f, 'x')), $quintic__float->($rt->swizzle($f, 'y')), $quintic__float->($rt->swizzle($f, 'z')), $quintic__float->($rt->swizzle($f, 'w')));
         $iw0 = $wrapW__float->($rt->swizzle($i, 'w'));
         $iw1 = $wrapW__float->($rt->binary('+', $rt->swizzle($i, 'w'), $rt->f(1), 1, 'float'));
-        $n0000 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct(4, $rt->i(0), $rt->i(0), $rt->i(0), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(0), $rt->i(0), $rt->i(0), $rt->i(0)), 4, 'float'));
-        $n1000 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct(4, $rt->i(1), $rt->i(0), $rt->i(0), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(1), $rt->i(0), $rt->i(0), $rt->i(0)), 4, 'float'));
-        $n0100 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct(4, $rt->i(0), $rt->i(1), $rt->i(0), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(0), $rt->i(1), $rt->i(0), $rt->i(0)), 4, 'float'));
-        $n1100 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct(4, $rt->i(1), $rt->i(1), $rt->i(0), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(1), $rt->i(1), $rt->i(0), $rt->i(0)), 4, 'float'));
-        $n0010 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct(4, $rt->i(0), $rt->i(0), $rt->i(1), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(0), $rt->i(0), $rt->i(1), $rt->i(0)), 4, 'float'));
-        $n1010 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct(4, $rt->i(1), $rt->i(0), $rt->i(1), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(1), $rt->i(0), $rt->i(1), $rt->i(0)), 4, 'float'));
-        $n0110 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct(4, $rt->i(0), $rt->i(1), $rt->i(1), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(0), $rt->i(1), $rt->i(1), $rt->i(0)), 4, 'float'));
-        $n1110 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct(4, $rt->i(1), $rt->i(1), $rt->i(1), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(1), $rt->i(1), $rt->i(1), $rt->i(0)), 4, 'float'));
-        $n0001 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct(4, $rt->i(0), $rt->i(0), $rt->i(0), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(0), $rt->i(0), $rt->i(0), $rt->i(1)), 4, 'float'));
-        $n1001 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct(4, $rt->i(1), $rt->i(0), $rt->i(0), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(1), $rt->i(0), $rt->i(0), $rt->i(1)), 4, 'float'));
-        $n0101 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct(4, $rt->i(0), $rt->i(1), $rt->i(0), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(0), $rt->i(1), $rt->i(0), $rt->i(1)), 4, 'float'));
-        $n1101 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct(4, $rt->i(1), $rt->i(1), $rt->i(0), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(1), $rt->i(1), $rt->i(0), $rt->i(1)), 4, 'float'));
-        $n0011 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct(4, $rt->i(0), $rt->i(0), $rt->i(1), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(0), $rt->i(0), $rt->i(1), $rt->i(1)), 4, 'float'));
-        $n1011 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct(4, $rt->i(1), $rt->i(0), $rt->i(1), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(1), $rt->i(0), $rt->i(1), $rt->i(1)), 4, 'float'));
-        $n0111 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct(4, $rt->i(0), $rt->i(1), $rt->i(1), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(0), $rt->i(1), $rt->i(1), $rt->i(1)), 4, 'float'));
-        $n1111 = $rt->dot($grad4__vec4->($rt->binary('+', $rt->construct(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct(4, $rt->i(1), $rt->i(1), $rt->i(1), $rt->i(0)), 4, 'float')), $rt->binary('-', $f, $rt->construct(4, $rt->i(1), $rt->i(1), $rt->i(1), $rt->i(1)), 4, 'float'));
+        $n0000 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'));
+        $n1000 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'));
+        $n0100 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'));
+        $n1100 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'));
+        $n0010 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'));
+        $n1010 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'));
+        $n0110 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'));
+        $n1110 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw0), $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'));
+        $n0001 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1))), 4, 'float'));
+        $n1001 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1))), 4, 'float'));
+        $n0101 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1))), 4, 'float'));
+        $n1101 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1))), 4, 'float'));
+        $n0011 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1))), 4, 'float'));
+        $n1011 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1))), 4, 'float'));
+        $n0111 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(0)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1))), 4, 'float'));
+        $n1111 = $rt->dot($grad4__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $rt->swizzle($i, 'xyz'), $iw1), $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(0))), 4, 'float'))), $rt->binary('-', $f, $rt->construct_raw(4, $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1)), $rt->construct(1, $rt->i(1))), 4, 'float'));
         $nx000 = $rt->component_wise('mix', $n0000, $n1000, $rt->swizzle($u, 'x'));
         $nx100 = $rt->component_wise('mix', $n0100, $n1100, $rt->swizzle($u, 'x'));
         $nx010 = $rt->component_wise('mix', $n0010, $n1010, $rt->swizzle($u, 'x'));
@@ -136,7 +136,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_g, $b, $eps, $globalCoord, $gradient, $noiseVal, $normal, $nx, $ny, $nz, $p, $p4d, $pixelCoord, $scaledP, $volSize, $volSizeF, $w, $x, $y, $z);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $volSize = $_u_volumeSize;
         $volSizeF = $rt->construct(1, $volSize);
         $pixelCoord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
@@ -148,24 +148,24 @@ my $run_pixel = sub {
             @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(0.5), $rt->f(0.5), $rt->f(0)))};
             return;
         }
-        $p = $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->construct(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float'), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float');
-        $scaledP = $rt->binary('*', $p, $_u_scale, 3, 'float');
+        $p = $rt->construct(3, $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->construct_raw(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float'), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'));
+        $scaledP = $rt->construct(3, $rt->binary('*', $p, $_u_scale, 3, 'float'));
         $w = $rt->binary('*', $rt->binary('*', $_u_time, $_u_speed, 1, 'float'), $g->{W_PERIOD}, 1, 'float');
         $p4d = $rt->construct(4, $scaledP, $w);
         $noiseVal = $fbm4D__vec4->($p4d);
         $eps = $rt->binary('/', $rt->f(0.01), $_u_scale, 1, 'float');
-        $nx = $fbm4D__vec4->($rt->construct(4, $rt->binary('+', $scaledP, $rt->construct(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float'), $w));
-        $ny = $fbm4D__vec4->($rt->construct(4, $rt->binary('+', $scaledP, $rt->construct(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float'), $w));
-        $nz = $fbm4D__vec4->($rt->construct(4, $rt->binary('+', $scaledP, $rt->construct(3, $rt->f(0), $rt->f(0), $eps), 3, 'float'), $w));
-        $gradient = $rt->binary('/', $rt->construct(3, $rt->binary('-', $nx, $noiseVal, 1, 'float'), $rt->binary('-', $ny, $noiseVal, 1, 'float'), $rt->binary('-', $nz, $noiseVal, 1, 'float')), $eps, 3, 'float');
-        $normal = $rt->normalize($rt->binary('+', $rt->unary('-', $gradient), $rt->construct(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
+        $nx = $fbm4D__vec4->($rt->construct(4, $rt->binary('+', $scaledP, $rt->construct_raw(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float'), $w));
+        $ny = $fbm4D__vec4->($rt->construct(4, $rt->binary('+', $scaledP, $rt->construct_raw(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float'), $w));
+        $nz = $fbm4D__vec4->($rt->construct(4, $rt->binary('+', $scaledP, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $eps), 3, 'float'), $w));
+        $gradient = $rt->construct(3, $rt->binary('/', $rt->construct_raw(3, $rt->binary('-', $nx, $noiseVal, 1, 'float'), $rt->binary('-', $ny, $noiseVal, 1, 'float'), $rt->binary('-', $nz, $noiseVal, 1, 'float')), $eps, 3, 'float'));
+        $normal = $rt->normalize($rt->binary('+', $rt->unary('-', $gradient), $rt->construct_raw(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
         $b = $rt->f(0.0);
         $_g = $rt->f(0.0);
         if ($rt->binary('==', $_u_COLOR_MODE, $rt->i(0))) {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $noiseVal, $noiseVal, $noiseVal, $rt->f(1)))};
         } else {
-            $_g = $fbm4D__vec4->($rt->binary('+', $rt->construct(4, $scaledP, $w), $rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(1.3300000000000001)), 4, 'float'));
-            $b = $fbm4D__vec4->($rt->binary('+', $rt->construct(4, $scaledP, $w), $rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(2.6699999999999999)), 4, 'float'));
+            $_g = $fbm4D__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $scaledP, $w), $rt->construct_raw(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(1.3300000000000001)), 4, 'float')));
+            $b = $fbm4D__vec4->($rt->construct(4, $rt->binary('+', $rt->construct_raw(4, $scaledP, $w), $rt->construct_raw(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(2.6699999999999999)), 4, 'float')));
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $noiseVal, $_g, $b, $rt->f(1)))};
         }
         @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->binary('*', $normal, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'), $noiseVal))};

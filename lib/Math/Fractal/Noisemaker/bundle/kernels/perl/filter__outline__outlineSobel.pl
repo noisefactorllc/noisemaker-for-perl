@@ -51,7 +51,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_for0_first, $_for1_first, $coord, $dimensions, $globalCoord, $gx, $gy, $idx, $kx, $ky, $magnitude, $metric, $normalized, $offset, $sampleX, $sampleY, $samples);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $dimensions = $rt->texture_size($_u_valueTexture);
         if ((($rt->binary('==', $rt->swizzle($dimensions, 'x'), $rt->i(0))) || ($rt->binary('==', $rt->swizzle($dimensions, 'y'), $rt->i(0))) ? 1 : 0)) {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};

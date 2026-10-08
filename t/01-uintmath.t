@@ -6,7 +6,7 @@ use lib "$FindBin::Bin/../lib";
 
 use Math::Fractal::Noisemaker::UintMath qw(
     u32 umul uadd usub ushl ushr uand uor uxor
-    glsl_mod pcg3d hash_uint32
+    glsl_mod pcg3d hash_uint32 hash_uint_lcg
     float_bits_to_uint uint_bits_to_float
     pack_half_2x16 unpack_half_2x16 fdiv
 );
@@ -41,6 +41,11 @@ for my $c (@pcg) {
 
 my @hash = ([0,0],[1,1753845952],[42,388445122],[4294967295,1734902346],[2654435761,1834104592]);
 is(hash_uint32($_->[0]), $_->[1], "hash_uint32($_->[0])") for @hash;
+
+# hashUintLcg in noisemaker-for-cpu 5b686a4's src/csl/glsl-runtime.js.
+my @lcg = ([0,129708002],[1,2831084092],[63,2778298601],[65536,688544357],
+           [123456789,4272394698],[2147483648,566699590],[4294967295,3861530882]);
+is(hash_uint_lcg($_->[0]), $_->[1], "hash_uint_lcg($_->[0])") for @lcg;
 
 my @fbits = ([0.0,0],[1.0,1065353216],[-1.0,3212836864],[0.5,1056964608],
              [3.14159,1078530000],[1e-40,71362]);

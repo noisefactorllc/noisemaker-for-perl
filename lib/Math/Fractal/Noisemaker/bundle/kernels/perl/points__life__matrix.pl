@@ -7,14 +7,14 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint__uint, $hash__uint, $main__void);
+    my ($hash_uint_lcg__uint, $hash__uint, $main__void);
     my $_retc;
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_typeCount = exists $U->{'typeCount'} ? $U->{'typeCount'} : 0;
     my $_u_matrixSeed = exists $U->{'matrixSeed'} ? $U->{'matrixSeed'} : $rt->f(0.0);
     my $_u_symmetricForces = exists $U->{'symmetricForces'} ? $U->{'symmetricForces'} : 0;
     $g->{fragColor} = $rt->construct(4, 0.0);
-    $hash_uint__uint = sub {
+    $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
         $state = $rt->binary('+', $rt->binary('*', $seed, $rt->i(747796405), 1, 'uint'), $rt->i(2891336453), 1, 'uint');
@@ -23,7 +23,7 @@ my $run_pixel = sub {
     };
     $hash__uint = sub {
         my ($seed) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($seed)), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($seed)), $rt->f(4294967295), 1, 'float');
     };
     $main__void = sub {
         my ($coord, $curveShape, $prefDist, $seed, $strength, $typeA, $typeB);

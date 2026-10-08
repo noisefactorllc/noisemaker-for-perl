@@ -22,7 +22,7 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         my ($a, $b, $dims, $f, $lo, $p);
         $dims = $rt->texture_size($_u_defocusTex);
-        $p = $rt->binary('-', $rt->binary('*', $uv, $rt->construct(2, $dims), 2, 'float'), $rt->f(0.5), 2, 'float');
+        $p = $rt->construct(2, $rt->binary('-', $rt->binary('*', $uv, $rt->construct_raw(2, $rt->construct(2, $dims)), 2, 'float'), $rt->f(0.5), 2, 'float'));
         $lo = $rt->construct(2, $rt->component_wise('floor', $p), 'int');
         $f = $rt->component_wise('fract', $p);
         $a = $rt->component_wise('clamp', $lo, $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $dims, $rt->i(1), 2, 'int'));
@@ -31,7 +31,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($decay, $trailColor, $uv);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $trailColor = $rt->texture($_u_trailTex, $uv);
         $decay = $rt->component_wise('clamp', $rt->binary('/', $_u_intensity, $rt->f(100), 1, 'float'), $rt->f(0), $rt->f(1));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('*', $trailColor, $decay, 4, 'float'), $rt->f(0), $rt->f(1)))};

@@ -40,7 +40,7 @@ my $run_pixel = sub {
         $p = $rt->assign_swizzle($p, 'x', (($rt->binary('>=', $rt->swizzle($p, 'x'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'x'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'x')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
         $p = $rt->assign_swizzle($p, 'y', (($rt->binary('>=', $rt->swizzle($p, 'y'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'y'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'y')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
         $p = $rt->assign_swizzle($p, 'z', (($rt->binary('>=', $rt->swizzle($p, 'z'), $rt->f(0))) ? ($rt->binary('*', $rt->swizzle($p, 'z'), $rt->f(2), 1, 'float')) : ($rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($p, 'z')), $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float'))));
-        return $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float');
+        return $rt->construct(3, $rt->binary('/', $rt->construct(3, $pcg__uvec3->($rt->construct(3, $p, 'uint'))), $rt->construct(1, $rt->construct(1, $rt->i(4294967295), 'uint')), 3, 'float'));
     };
     $smootherstep__float = sub {
         my ($x) = @_;
@@ -58,7 +58,7 @@ my $run_pixel = sub {
         $angle = $rt->binary('*', $rt->swizzle($prng__vec3->($rt->construct(3, $cell, $rt->f(1))), 'r'), $rt->f(6.2831853071800001), 1, 'float');
         $angle = $rt->binary('+', $angle, $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $rt->construct(1, $_u_speed), 1, 'float'), 1, 'float');
         $gradient = $rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle));
-        $dist = $rt->binary('-', $st, $cell, 2, 'float');
+        $dist = $rt->construct(2, $rt->binary('-', $st, $cell, 2, 'float'));
         return $rt->dot($gradient, $dist);
     };
     $perlinNoise__vec2_vec2 = sub {
@@ -71,7 +71,7 @@ my $run_pixel = sub {
         $tl = $grid__vec2_vec2->($st, $cell);
         $tr = $grid__vec2_vec2->($st, $rt->construct(2, $rt->binary('+', $rt->swizzle($cell, 'x'), $rt->f(1), 1, 'float'), $rt->swizzle($cell, 'y')));
         $bl = $grid__vec2_vec2->($st, $rt->construct(2, $rt->swizzle($cell, 'x'), $rt->binary('+', $rt->swizzle($cell, 'y'), $rt->f(1), 1, 'float')));
-        $br = $grid__vec2_vec2->($st, $rt->binary('+', $cell, $rt->f(1), 2, 'float'));
+        $br = $grid__vec2_vec2->($st, $rt->construct(2, $rt->binary('+', $cell, $rt->f(1), 2, 'float')));
         $upper = $smoothlerp__float_float_float->($rt->binary('-', $rt->swizzle($st, 'x'), $rt->swizzle($cell, 'x'), 1, 'float'), $tl, $tr);
         $lower = $smoothlerp__float_float_float->($rt->binary('-', $rt->swizzle($st, 'x'), $rt->swizzle($cell, 'x'), 1, 'float'), $bl, $br);
         $val = $smoothlerp__float_float_float->($rt->binary('-', $rt->swizzle($st, 'y'), $rt->swizzle($cell, 'y'), 1, 'float'), $upper, $lower);
@@ -79,17 +79,17 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($aspectRatio, $col, $dx, $dy, $fullRes, $noiseCoord, $noiseScale, $uv);
-        $fullRes = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution));
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
         $aspectRatio = $rt->binary('/', $rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y'), 1, 'float');
-        $uv = $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float');
-        $noiseCoord = $rt->binary('*', $uv, $rt->construct(2, $aspectRatio, $rt->f(1)), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
+        $noiseCoord = $rt->construct(2, $rt->binary('*', $uv, $rt->construct_raw(2, $aspectRatio, $rt->f(1)), 2, 'float'));
         $noiseScale = $rt->construct(2, $rt->component_wise('abs', $rt->binary('*', $_u_scale, $rt->f(3), 1, 'float')));
-        $dx = $rt->binary('*', $rt->binary('*', $rt->binary('-', $perlinNoise__vec2_vec2->($rt->binary('+', $noiseCoord, $rt->construct(1, $_u_seed), 2, 'float'), $noiseScale), $rt->f(0.5), 1, 'float'), $_u_strength, 1, 'float'), $rt->f(0.01), 1, 'float');
-        $dy = $rt->binary('*', $rt->binary('*', $rt->binary('-', $perlinNoise__vec2_vec2->($rt->binary('+', $rt->binary('+', $noiseCoord, $rt->construct(1, $_u_seed), 2, 'float'), $rt->f(10), 2, 'float'), $noiseScale), $rt->f(0.5), 1, 'float'), $_u_strength, 1, 'float'), $rt->f(0.01), 1, 'float');
+        $dx = $rt->binary('*', $rt->binary('*', $rt->binary('-', $perlinNoise__vec2_vec2->($rt->construct(2, $rt->binary('+', $noiseCoord, $rt->construct(1, $_u_seed), 2, 'float')), $noiseScale), $rt->f(0.5), 1, 'float'), $_u_strength, 1, 'float'), $rt->f(0.01), 1, 'float');
+        $dy = $rt->binary('*', $rt->binary('*', $rt->binary('-', $perlinNoise__vec2_vec2->($rt->construct(2, $rt->binary('+', $rt->binary('+', $noiseCoord, $rt->construct(1, $_u_seed), 2, 'float'), $rt->f(10), 2, 'float')), $noiseScale), $rt->f(0.5), 1, 'float'), $_u_strength, 1, 'float'), $rt->f(0.01), 1, 'float');
         $uv = $rt->assign_swizzle($uv, 'x', $rt->binary('+', $rt->swizzle($uv, 'x'), $dx, 1, 'float'));
         $uv = $rt->assign_swizzle($uv, 'y', $rt->binary('+', $rt->swizzle($uv, 'y'), $dy, 1, 'float'));
         if ($rt->binary('==', $_u_wrap, $rt->i(0))) {
-            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')))};
+            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
         } else {
             if ($rt->binary('==', $_u_wrap, $rt->i(1))) {
                 @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('mod', $uv, $rt->f(1)))};

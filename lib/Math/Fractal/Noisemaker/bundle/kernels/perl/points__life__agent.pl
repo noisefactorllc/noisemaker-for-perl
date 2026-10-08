@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint__uint, $hash__uint, $hash2__uint, $typeColor__int_int, $getGridCell__vec2, $radialForce__float_float_float_float, $wrapPosition__vec2, $limitVec__vec2_float, $main__void);
+    my ($hash_uint_lcg__uint, $hash__uint, $hash2__uint, $typeColor__int_int, $getGridCell__vec2, $radialForce__float_float_float_float, $wrapPosition__vec2, $limitVec__vec2_float, $main__void);
     my $_retc;
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
@@ -33,7 +33,7 @@ my $run_pixel = sub {
     $g->{outRGBA} = $rt->construct(4, 0.0);
     $g->{outData} = $rt->construct(4, 0.0);
     $g->{GRID_SIZE} = $rt->i(16);
-    $hash_uint__uint = sub {
+    $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
         $state = $rt->binary('+', $rt->binary('*', $seed, $rt->i(747796405), 1, 'uint'), $rt->i(2891336453), 1, 'uint');
@@ -42,7 +42,7 @@ my $run_pixel = sub {
     };
     $hash__uint = sub {
         my ($seed) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($seed)), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($seed)), $rt->f(4294967295), 1, 'float');
     };
     $hash2__uint = sub {
         my ($seed) = @_;
@@ -83,7 +83,7 @@ my $run_pixel = sub {
         my ($pos) = @_;
         $pos = $rt->copy($pos, 'float');
         my ($cellSize);
-        $cellSize = $rt->binary('/', $rt->construct(2, $rt->f(1)), $rt->construct(1, $g->{GRID_SIZE}), 2, 'float');
+        $cellSize = $rt->construct(2, $rt->binary('/', $rt->construct_raw(2, $rt->f(1)), $rt->construct(1, $g->{GRID_SIZE}), 2, 'float'));
         return $rt->construct(2, $rt->component_wise('clamp', $rt->binary('/', $pos, $cellSize, 2, 'float'), $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->construct(1, $rt->binary('-', $g->{GRID_SIZE}, $rt->i(1), 1, 'int')))), 'int');
     };
     $radialForce__float_float_float_float = sub {
@@ -121,7 +121,7 @@ my $run_pixel = sub {
         my ($len);
         $len = $rt->length($v);
         if ((($rt->binary('>', $len, $maxLen)) && ($rt->binary('>', $len, $rt->f(0))) ? 1 : 0)) {
-            return $rt->binary('*', $v, $rt->binary('/', $maxLen, $len, 1, 'float'), 2, 'float');
+            return $rt->construct(2, $rt->binary('*', $v, $rt->binary('/', $maxLen, $len, 1, 'float'), 2, 'float'));
         }
         return $v;
     };
@@ -162,7 +162,7 @@ my $run_pixel = sub {
             if ($rt->binary('==', $rt->length($velocity), $rt->f(0))) {
                 $angle = $rt->binary('*', $hash__uint->($rt->binary('+', $initSeed, $rt->i(2), 1, 'uint')), $rt->f(6.2831853071800001), 1, 'float');
                 $speed = $rt->binary('*', $rt->binary('*', $hash__uint->($rt->binary('+', $initSeed, $rt->i(3), 1, 'uint')), $_u_maxSpeed, 1, 'float'), $rt->f(0.29999999999999999), 1, 'float');
-                @{$velocity} = map { $rt->f32($_) } @{($rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $speed, 2, 'float'))};
+                @{$velocity} = map { $rt->f32($_) } @{($rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $speed, 2, 'float'))};
             }
         }
         $mass = $rt->component_wise('max', $mass, $rt->f(0.10000000000000001));
@@ -205,7 +205,7 @@ my $run_pixel = sub {
                         last;
                     }
                     $sampleSeed = $rt->binary('+', $rt->binary('+', $rt->binary('*', $cellSeed, $rt->i(31), 1, 'uint'), $rt->construct(1, $s, 'uint'), 1, 'uint'), $rt->construct(1, $rt->binary('*', $_u_time, $rt->f(7), 1, 'float'), 'uint'), 1, 'uint');
-                    $sampleIdx = $rt->construct(1, $rt->binary('%', $rt->hash_uint($sampleSeed), $rt->construct(1, $totalParticles, 'uint'), 1, 'uint'), 'int');
+                    $sampleIdx = $rt->construct(1, $rt->binary('%', $rt->hash_uint_lcg($sampleSeed), $rt->construct(1, $totalParticles, 'uint'), 1, 'uint'), 'int');
                     $sx = $rt->binary('%', $sampleIdx, $rt->swizzle($stateSize, 'x'), 1, 'int');
                     $sy = $rt->binary('/', $sampleIdx, $rt->swizzle($stateSize, 'x'), 1, 'int');
                     if ((($rt->binary('==', $sx, $rt->swizzle($coord, 'x'))) && ($rt->binary('==', $sy, $rt->swizzle($coord, 'y'))) ? 1 : 0)) {
@@ -219,7 +219,7 @@ my $run_pixel = sub {
                     if ($rt->binary('<', $otherAlive, $rt->f(0.5))) {
                         next;
                     }
-                    $diff = $rt->binary('-', $otherPos, $pos, 2, 'float');
+                    $diff = $rt->construct(2, $rt->binary('-', $otherPos, $pos, 2, 'float'));
                     if ($rt->binary('>', $rt->swizzle($diff, 'x'), $rt->f(0.5))) {
                         $diff = $rt->assign_swizzle($diff, 'x', $rt->binary('-', $rt->swizzle($diff, 'x'), $rt->f(1), 1, 'float'));
                     }
@@ -241,7 +241,7 @@ my $run_pixel = sub {
                     $prefDist = $rt->swizzle($forceParams, 'y');
                     $curveShape = $rt->swizzle($forceParams, 'z');
                     $forceMag = $radialForce__float_float_float_float->($dist, $strength, $prefDist, $curveShape);
-                    $forceDir = $rt->binary('/', $diff, $dist, 2, 'float');
+                    $forceDir = $rt->construct(2, $rt->binary('/', $diff, $dist, 2, 'float'));
                     @{$totalForce} = map { $rt->f32($_) } @{($rt->binary('+', $totalForce, $rt->binary('*', $forceDir, $forceMag, 2, 'float'), 2, 'float'))};
                     $neighborCount = $rt->binary('+', $neighborCount, $rt->i(1), 1, 'int');
                 }

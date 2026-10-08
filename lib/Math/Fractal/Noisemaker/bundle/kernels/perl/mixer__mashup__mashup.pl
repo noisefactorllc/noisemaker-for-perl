@@ -95,11 +95,11 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_for0_first, $boundary, $controlColor, $k, $lum, $n, $result, $src, $uv, $w);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $controlColor = $rt->texture($_u_source, $uv);
         $lum = $getLuminosity__vec3->($rt->swizzle($controlColor, 'rgb'));
         $n = $rt->component_wise('clamp', $_u_layers, $rt->i(2), $rt->i(8));
-        $result = (($rt->binary('==', $layerActive__int->($rt->i(0)), $rt->i(1))) ? ($sampleLayer__int_vec2->($rt->i(0), $uv)) : ($controlColor));
+        $result = $rt->construct(4, (($rt->binary('==', $layerActive__int->($rt->i(0)), $rt->i(1))) ? ($sampleLayer__int_vec2->($rt->i(0), $uv)) : ($controlColor)));
         $k = $rt->i(1);
         $_for0_first = 1;
         for my $_for0 (0 .. 1048575) {
@@ -113,7 +113,7 @@ my $run_pixel = sub {
             if ($rt->binary('>=', $k, $n)) {
                 last;
             }
-            $src = (($rt->binary('==', $layerActive__int->($k), $rt->i(1))) ? ($sampleLayer__int_vec2->($k, $uv)) : ($controlColor));
+            $src = $rt->construct(4, (($rt->binary('==', $layerActive__int->($k), $rt->i(1))) ? ($sampleLayer__int_vec2->($k, $uv)) : ($controlColor)));
             $boundary = $rt->binary('/', $rt->construct(1, $k), $rt->construct(1, $n), 1, 'float');
             $w = $bandWeight__float_float->($lum, $boundary);
             @{$result} = map { $rt->f32($_) } @{($rt->component_wise('mix', $result, $src, $w))};

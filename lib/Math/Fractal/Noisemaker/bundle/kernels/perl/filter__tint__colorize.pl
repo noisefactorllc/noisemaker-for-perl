@@ -67,10 +67,10 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($base, $base_hsv, $base_rgb, $globalCoord, $m, $rgb, $st, $tintHue, $tinted);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $st = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->component_wise('max', $rt->texture_size($_u_inputTex), $rt->construct(2, $rt->i(1), 'int'))), 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $st = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->component_wise('max', $rt->texture_size($_u_inputTex), $rt->construct(2, $rt->i(1), 'int'))), 2, 'float'));
         $base = $rt->texture($_u_inputTex, $st);
-        $base_rgb = (($rt->binary('>', $rt->swizzle($base, 'a'), $rt->f(0))) ? ($rt->component_wise('clamp', $rt->binary('/', $rt->swizzle($base, 'rgb'), $rt->swizzle($base, 'a'), 3, 'float'), $rt->f(0), $rt->f(1))) : ($rt->construct(3, $rt->f(0))));
+        $base_rgb = $rt->construct(3, (($rt->binary('>', $rt->swizzle($base, 'a'), $rt->f(0))) ? ($rt->component_wise('clamp', $rt->binary('/', $rt->swizzle($base, 'rgb'), $rt->swizzle($base, 'a'), 3, 'float'), $rt->f(0), $rt->f(1))) : ($rt->construct(3, $rt->f(0)))));
         $m = $rt->construct(1, $_u_mode, 'int');
         $tinted = $rt->construct(3, 0.0);
         $base_hsv = $rt->construct(3, 0.0);

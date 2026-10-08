@@ -29,7 +29,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($band, $blur, $edgeGain, $edgeInk, $ink, $lumBlur, $lumSrc, $outColor, $src, $toneHi, $toneInk, $toneLo, $uv);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $src = $rt->texture($_u_inputTex, $uv);
         $blur = $rt->texture($_u_blurTex, $uv);
         $lumSrc = $lum__vec3->($rt->swizzle($src, 'rgb'));

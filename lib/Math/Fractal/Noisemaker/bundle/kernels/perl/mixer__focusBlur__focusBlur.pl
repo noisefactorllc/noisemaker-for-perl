@@ -35,7 +35,7 @@ my $run_pixel = sub {
         my ($sceneTex, $depthTex, $uv) = @_;
         $uv = $rt->copy($uv, 'float');
         my ($GOLDEN, $_for0_first, $blurRadius, $color, $depth, $depthSample, $i, $offset, $r, $theta);
-        $depthSample = $rt->texture($depthTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($depthTex)), 2, 'float'));
+        $depthSample = $rt->texture($depthTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($depthTex)), 2, 'float')));
         $depth = $getLuminosity__vec3->($rt->swizzle($depthSample, 'rgb'));
         $blurRadius = $rt->binary('*', $computeBlurFactor__float->($depth), $_u_sampleBias, 1, 'float');
         $color = $rt->construct(4, $rt->f(0));
@@ -52,22 +52,22 @@ my $run_pixel = sub {
             }
             $r = $rt->component_wise('sqrt', $rt->binary('/', $rt->construct(1, $i), $rt->f(64), 1, 'float'));
             $theta = $rt->binary('*', $rt->construct(1, $i), $GOLDEN, 1, 'float');
-            $offset = $rt->binary('/', $rt->binary('*', $rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $theta), $rt->component_wise('sin', $theta)), $r, 2, 'float'), $blurRadius, 2, 'float'), $_u_resolution, 2, 'float');
-            @{$color} = map { $rt->f32($_) } @{($rt->binary('+', $color, $rt->texture($sceneTex, $rt->binary('/', $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $offset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $rt->texture_size($sceneTex)), 2, 'float')), 4, 'float'))};
+            $offset = $rt->construct(2, $rt->binary('/', $rt->binary('*', $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $theta), $rt->component_wise('sin', $theta)), $r, 2, 'float'), $blurRadius, 2, 'float'), $_u_resolution, 2, 'float'));
+            @{$color} = map { $rt->f32($_) } @{($rt->binary('+', $color, $rt->texture($sceneTex, $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $offset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($sceneTex)), 2, 'float'))), 4, 'float'))};
         }
-        return $rt->binary('/', $color, $rt->f(64), 4, 'float');
+        return $rt->construct(4, $rt->binary('/', $color, $rt->f(64), 4, 'float'));
     };
     $main__void = sub {
         my ($color, $globalCoord, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
         $color = $rt->construct(4, 0.0);
         if ($rt->binary('==', $_u_depthSource, $rt->i(0))) {
             @{$color} = map { $rt->f32($_) } @{($applyFocusBlur__sampler2D_sampler2D_vec2->($_u_tex, $_u_inputTex, $uv))};
         } else {
             @{$color} = map { $rt->f32($_) } @{($applyFocusBlur__sampler2D_sampler2D_vec2->($_u_inputTex, $_u_tex, $uv))};
         }
-        $color = $rt->assign_swizzle($color, 'a', $rt->component_wise('max', $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')), 'a'), $rt->swizzle($rt->texture($_u_tex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float')), 'a')));
+        $color = $rt->assign_swizzle($color, 'a', $rt->component_wise('max', $rt->swizzle($rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'))), 'a'), $rt->swizzle($rt->texture($_u_tex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float'))), 'a')));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
     };
     $main__void->();

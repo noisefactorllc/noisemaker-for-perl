@@ -72,7 +72,7 @@ my $run_pixel = sub {
                 }
             }
         }
-        return $rt->binary('+', $rgb, $rt->construct(3, $m), 3, 'float');
+        return $rt->construct(3, $rt->binary('+', $rgb, $rt->construct_raw(3, $m), 3, 'float'));
     };
     $rgb2hsv__vec3 = sub {
         my ($c) = @_;
@@ -100,15 +100,15 @@ my $run_pixel = sub {
         my ($lin) = @_;
         $lin = $rt->copy($lin, 'float');
         my ($high, $low);
-        $low = $rt->binary('*', $lin, $rt->f(12.92), 3, 'float');
-        $high = $rt->binary('-', $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $rt->component_wise('max', $lin, $rt->construct(3, $rt->f(0))), $rt->construct(3, $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float'))), 3, 'float'), $rt->f(0.055), 3, 'float');
+        $low = $rt->construct(3, $rt->binary('*', $lin, $rt->f(12.92), 3, 'float'));
+        $high = $rt->construct(3, $rt->binary('-', $rt->construct(3, $rt->binary('*', $rt->f(1.0549999999999999), $rt->component_wise('pow', $rt->component_wise('max', $lin, $rt->construct(3, $rt->f(0))), $rt->construct(3, $rt->binary('/', $rt->f(1), $rt->f(2.3999999999999999), 1, 'float'))), 3, 'float')), $rt->f(0.055), 3, 'float'));
         return $rt->component_wise('mix', $high, $low, $rt->component_wise('step', $lin, $rt->construct(3, $rt->f(0.0031308))));
     };
     $srgb2linear__vec3 = sub {
         my ($c) = @_;
         $c = $rt->copy($c, 'float');
         my ($high, $low);
-        $low = $rt->binary('/', $c, $rt->f(12.92), 3, 'float');
+        $low = $rt->construct(3, $rt->binary('/', $c, $rt->f(12.92), 3, 'float'));
         $high = $rt->component_wise('pow', $rt->binary('/', $rt->binary('+', $c, $rt->f(0.055), 3, 'float'), $rt->f(1.0549999999999999), 3, 'float'), $rt->construct(3, $rt->f(2.3999999999999999)));
         return $rt->component_wise('mix', $high, $low, $rt->component_wise('step', $c, $rt->construct(3, $rt->f(0.04045))));
     };
@@ -340,9 +340,9 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($blendedColor, $globalCoord, $gradientColor, $inputColor, $lum, $t, $texSize, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->construct(2, $rt->texture_size($_u_inputTex));
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float'));
         $inputColor = $rt->texture($_u_inputTex, $uv);
         $lum = $rt->dot($rt->swizzle($inputColor, 'rgb'), $rt->construct(3, $rt->f(0.29899999999999999), $rt->f(0.58699999999999997), $rt->f(0.114)));
         $t = $rt->binary('+', $rt->binary('*', $rt->binary('*', $lum, $rt->binary('-', $rt->f(1), $rt->f(0.0001), 1, 'float'), 1, 'float'), $_u_repeat, 1, 'float'), $_u_offset, 1, 'float');

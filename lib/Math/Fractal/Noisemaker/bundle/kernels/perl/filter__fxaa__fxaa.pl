@@ -72,7 +72,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($blended_luma, $blended_rgb, $center_luma, $center_rgb, $center_texel, $channelCount, $east_luma, $east_rgb, $east_texel, $globalCoord, $global_id, $height_u, $image_size, $maxDiff, $north_luma, $north_rgb, $north_texel, $pixel_coord, $result_texel, $south_luma, $south_rgb, $south_texel, $weight_center, $weight_east, $weight_north, $weight_south, $weight_sum, $weight_west, $west_luma, $west_rgb, $west_texel, $width_u);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $global_id = $rt->construct(3, $rt->construct(1, $rt->swizzle($ctx->{frag_coord}, 'x'), 'uint'), $rt->construct(1, $rt->swizzle($ctx->{frag_coord}, 'y'), 'uint'), $rt->i(0), 'uint');
         $width_u = $rt->component_wise('max', $as_u32__float->($rt->swizzle($_u_resolution, 'x')), $rt->i(1));
         $height_u = $rt->component_wise('max', $as_u32__float->($rt->swizzle($_u_resolution, 'y')), $rt->i(1));
@@ -132,7 +132,7 @@ my $run_pixel = sub {
                 $result_texel = $rt->assign_swizzle($result_texel, 'z', $rt->swizzle($center_texel, 'z'));
             }
         } else {
-            $blended_rgb = $rt->binary('/', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $center_rgb, $weight_center, 3, 'float'), $rt->binary('*', $north_rgb, $weight_north, 3, 'float'), 3, 'float'), $rt->binary('*', $south_rgb, $weight_south, 3, 'float'), 3, 'float'), $rt->binary('*', $west_rgb, $weight_west, 3, 'float'), 3, 'float'), $rt->binary('*', $east_rgb, $weight_east, 3, 'float'), 3, 'float'), $weight_sum, 3, 'float');
+            $blended_rgb = $rt->construct(3, $rt->binary('/', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $center_rgb, $weight_center, 3, 'float'), $rt->binary('*', $north_rgb, $weight_north, 3, 'float'), 3, 'float'), $rt->binary('*', $south_rgb, $weight_south, 3, 'float'), 3, 'float'), $rt->binary('*', $west_rgb, $weight_west, 3, 'float'), 3, 'float'), $rt->binary('*', $east_rgb, $weight_east, 3, 'float'), 3, 'float'), $weight_sum, 3, 'float'));
             @{$result_texel} = map { $rt->f32($_) } @{($rt->construct(4, $blended_rgb, $rt->swizzle($result_texel, 'w')))};
         }
         $result_texel = $rt->assign_swizzle($result_texel, 'w', $rt->swizzle($center_texel, 'w'));

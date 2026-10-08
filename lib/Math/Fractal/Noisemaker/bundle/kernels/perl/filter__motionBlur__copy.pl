@@ -14,7 +14,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($texSize, $uv);
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $texSize), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $uv))};
     };
     $main__void->();

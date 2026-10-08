@@ -52,13 +52,13 @@ my $run_pixel = sub {
             return $rt->component_wise('abs', $rt->binary('-', $orig, $edge, 4, 'float'));
         }
         if ($rt->binary('==', $mode, $rt->i(3))) {
-            return $rt->component_wise('min', $rt->binary('/', $orig, $rt->component_wise('max', $rt->binary('-', $rt->f(1), $edge, 4, 'float'), $rt->construct(4, $rt->f(0.001))), 4, 'float'), $rt->construct(4, $rt->f(1)));
+            return $rt->component_wise('min', $rt->construct(4, $rt->binary('/', $orig, $rt->component_wise('max', $rt->binary('-', $rt->f(1), $edge, 4, 'float'), $rt->construct(4, $rt->f(0.001))), 4, 'float')), $rt->construct(4, $rt->f(1)));
         }
         if ($rt->binary('==', $mode, $rt->i(4))) {
             return $rt->component_wise('max', $orig, $edge);
         }
         if ($rt->binary('==', $mode, $rt->i(5))) {
-            return $rt->binary('*', $orig, $edge, 4, 'float');
+            return $rt->construct(4, $rt->binary('*', $orig, $edge, 4, 'float'));
         }
         $result = $rt->construct(4, 0.0);
         if ($rt->binary('==', $mode, $rt->i(7))) {
@@ -70,7 +70,7 @@ my $run_pixel = sub {
             return $result;
         }
         if ($rt->binary('==', $mode, $rt->i(8))) {
-            return $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('-', $rt->f(1), $orig, 4, 'float'), $rt->binary('-', $rt->f(1), $edge, 4, 'float'), 4, 'float'), 4, 'float');
+            return $rt->construct(4, $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('-', $rt->f(1), $orig, 4, 'float'), $rt->binary('-', $rt->f(1), $edge, 4, 'float'), 4, 'float'), 4, 'float'));
         }
         return $edge;
     };
@@ -80,10 +80,10 @@ my $run_pixel = sub {
         $texelSize = $rt->copy($texelSize, 'float');
         $centerRGB = $rt->copy($centerRGB, 'float');
         my ($centerL, $centerOnSide, $crossing, $eastRGB, $northRGB, $southRGB, $westRGB);
-        $northRGB = $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('*', $rt->binary('+', $fragCoord, $rt->construct(2, $rt->f(0), $rt->f(1)), 2, 'float'), $texelSize, 2, 'float')), 'rgb');
-        $southRGB = $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('*', $rt->binary('+', $fragCoord, $rt->construct(2, $rt->f(0), $rt->unary('-', $rt->f(1))), 2, 'float'), $texelSize, 2, 'float')), 'rgb');
-        $eastRGB = $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('*', $rt->binary('+', $fragCoord, $rt->construct(2, $rt->f(1), $rt->f(0)), 2, 'float'), $texelSize, 2, 'float')), 'rgb');
-        $westRGB = $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('*', $rt->binary('+', $fragCoord, $rt->construct(2, $rt->unary('-', $rt->f(1)), $rt->f(0)), 2, 'float'), $texelSize, 2, 'float')), 'rgb');
+        $northRGB = $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('*', $rt->binary('+', $fragCoord, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float'), $texelSize, 2, 'float')), 'rgb');
+        $southRGB = $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('*', $rt->binary('+', $fragCoord, $rt->construct_raw(2, $rt->f(0), $rt->unary('-', $rt->f(1))), 2, 'float'), $texelSize, 2, 'float')), 'rgb');
+        $eastRGB = $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('*', $rt->binary('+', $fragCoord, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float'), $texelSize, 2, 'float')), 'rgb');
+        $westRGB = $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('*', $rt->binary('+', $fragCoord, $rt->construct_raw(2, $rt->unary('-', $rt->f(1)), $rt->f(0)), 2, 'float'), $texelSize, 2, 'float')), 'rgb');
         $centerL = $rt->f(0.0);
         $centerOnSide = 0;
         $crossing = 0;
@@ -93,7 +93,7 @@ my $run_pixel = sub {
             $crossing = (($centerOnSide) && ((($upperSide) ? ((((((($rt->binary('<', $rt->dot($northRGB, $g->{LUMA}), $lvl)) || ($rt->binary('<', $rt->dot($southRGB, $g->{LUMA}), $lvl)) ? 1 : 0)) || ($rt->binary('<', $rt->dot($eastRGB, $g->{LUMA}), $lvl)) ? 1 : 0)) || ($rt->binary('<', $rt->dot($westRGB, $g->{LUMA}), $lvl)) ? 1 : 0)) : ((((((($rt->binary('>=', $rt->dot($northRGB, $g->{LUMA}), $lvl)) || ($rt->binary('>=', $rt->dot($southRGB, $g->{LUMA}), $lvl)) ? 1 : 0)) || ($rt->binary('>=', $rt->dot($eastRGB, $g->{LUMA}), $lvl)) ? 1 : 0)) || ($rt->binary('>=', $rt->dot($westRGB, $g->{LUMA}), $lvl)) ? 1 : 0)))) ? 1 : 0);
             return $rt->construct(3, (($crossing) ? ($rt->f(0)) : ($rt->f(1))));
         }
-        $centerOnSide = (($upperSide) ? ($rt->component_wise('greaterThanEqual', $centerRGB, $rt->construct(3, $lvl))) : ($rt->component_wise('lessThan', $centerRGB, $rt->construct(3, $lvl))));
+        $centerOnSide = $rt->construct(3, (($upperSide) ? ($rt->component_wise('greaterThanEqual', $centerRGB, $rt->construct(3, $lvl))) : ($rt->component_wise('lessThan', $centerRGB, $rt->construct(3, $lvl)))));
         $crossing = $rt->construct(3, (($rt->swizzle($centerOnSide, 'r')) && ((($upperSide) ? ((((((($rt->binary('<', $rt->swizzle($northRGB, 'r'), $lvl)) || ($rt->binary('<', $rt->swizzle($southRGB, 'r'), $lvl)) ? 1 : 0)) || ($rt->binary('<', $rt->swizzle($eastRGB, 'r'), $lvl)) ? 1 : 0)) || ($rt->binary('<', $rt->swizzle($westRGB, 'r'), $lvl)) ? 1 : 0)) : ((((((($rt->binary('>=', $rt->swizzle($northRGB, 'r'), $lvl)) || ($rt->binary('>=', $rt->swizzle($southRGB, 'r'), $lvl)) ? 1 : 0)) || ($rt->binary('>=', $rt->swizzle($eastRGB, 'r'), $lvl)) ? 1 : 0)) || ($rt->binary('>=', $rt->swizzle($westRGB, 'r'), $lvl)) ? 1 : 0)))) ? 1 : 0), (($rt->swizzle($centerOnSide, 'g')) && ((($upperSide) ? ((((((($rt->binary('<', $rt->swizzle($northRGB, 'g'), $lvl)) || ($rt->binary('<', $rt->swizzle($southRGB, 'g'), $lvl)) ? 1 : 0)) || ($rt->binary('<', $rt->swizzle($eastRGB, 'g'), $lvl)) ? 1 : 0)) || ($rt->binary('<', $rt->swizzle($westRGB, 'g'), $lvl)) ? 1 : 0)) : ((((((($rt->binary('>=', $rt->swizzle($northRGB, 'g'), $lvl)) || ($rt->binary('>=', $rt->swizzle($southRGB, 'g'), $lvl)) ? 1 : 0)) || ($rt->binary('>=', $rt->swizzle($eastRGB, 'g'), $lvl)) ? 1 : 0)) || ($rt->binary('>=', $rt->swizzle($westRGB, 'g'), $lvl)) ? 1 : 0)))) ? 1 : 0), (($rt->swizzle($centerOnSide, 'b')) && ((($upperSide) ? ((((((($rt->binary('<', $rt->swizzle($northRGB, 'b'), $lvl)) || ($rt->binary('<', $rt->swizzle($southRGB, 'b'), $lvl)) ? 1 : 0)) || ($rt->binary('<', $rt->swizzle($eastRGB, 'b'), $lvl)) ? 1 : 0)) || ($rt->binary('<', $rt->swizzle($westRGB, 'b'), $lvl)) ? 1 : 0)) : ((((((($rt->binary('>=', $rt->swizzle($northRGB, 'b'), $lvl)) || ($rt->binary('>=', $rt->swizzle($southRGB, 'b'), $lvl)) ? 1 : 0)) || ($rt->binary('>=', $rt->swizzle($eastRGB, 'b'), $lvl)) ? 1 : 0)) || ($rt->binary('>=', $rt->swizzle($westRGB, 'b'), $lvl)) ? 1 : 0)))) ? 1 : 0));
         return $rt->construct(3, (($rt->swizzle($crossing, 'r')) ? ($rt->f(0)) : ($rt->f(1))), (($rt->swizzle($crossing, 'g')) ? ($rt->f(0)) : ($rt->f(1))), (($rt->swizzle($crossing, 'b')) ? ($rt->f(0)) : ($rt->f(1))));
     };
@@ -101,7 +101,7 @@ my $run_pixel = sub {
         my ($_for0_first, $_for1_first, $blendMode, $blended, $centerSample, $centerWeight, $conv, $doInvert, $dx, $dy, $edge, $edgeColor, $kernelType, $localUV, $m, $mask, $origColor, $radius, $resolution, $s, $sampleCoord, $texSize, $texelSize, $thresh, $useLuma, $w);
         $texSize = $rt->texture_size($_u_inputTex);
         $resolution = $rt->construct(2, $texSize);
-        $texelSize = $rt->binary('/', $rt->f(1), $resolution, 2, 'float');
+        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $resolution, 2, 'float'));
         $origColor = $rt->texture($_u_inputTex, $rt->binary('*', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texelSize, 2, 'float'));
         $kernelType = $rt->construct(1, $_u__kernel, 'int');
         $radius = $rt->component_wise('min', $rt->construct(1, $rt->binary('*', $rt->binary('+', $_u_size, $rt->f(1), 1, 'float'), $_u_renderScale, 1, 'float'), 'int'), $rt->i(256));
@@ -144,11 +144,11 @@ my $run_pixel = sub {
                     if ($rt->binary('==', $w, $rt->f(0))) {
                         next;
                     }
-                    $sampleCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->construct(1, $dx), $rt->construct(1, $dy)), 2, 'float');
-                    $localUV = $rt->binary('*', $sampleCoord, $texelSize, 2, 'float');
+                    $sampleCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(1, $dx), $rt->construct(1, $dy)), 2, 'float'));
+                    $localUV = $rt->construct(2, $rt->binary('*', $sampleCoord, $texelSize, 2, 'float'));
                     $s = $rt->swizzle($rt->texture($_u_inputTex, $localUV), 'rgb');
                     if ($useLuma) {
-                        @{$conv} = map { $rt->f32($_) } @{($rt->binary('+', $conv, $rt->binary('*', $rt->construct(3, $rt->dot($s, $g->{LUMA})), $w, 3, 'float'), 3, 'float'))};
+                        @{$conv} = map { $rt->f32($_) } @{($rt->binary('+', $conv, $rt->binary('*', $rt->construct_raw(3, $rt->dot($s, $g->{LUMA})), $w, 3, 'float'), 3, 'float'))};
                     } else {
                         @{$conv} = map { $rt->f32($_) } @{($rt->binary('+', $conv, $rt->binary('*', $s, $w, 3, 'float'), 3, 'float'))};
                     }

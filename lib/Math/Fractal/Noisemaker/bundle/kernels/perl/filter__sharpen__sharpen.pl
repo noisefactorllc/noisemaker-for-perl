@@ -17,12 +17,12 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($_for0_first, $_kernel, $conv, $globalCoord, $i, $offsets, $origColor, $resolution, $texSample, $texSize, $texelSize, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
         $resolution = $rt->construct(2, $texSize);
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $texelSize = $rt->binary('/', $rt->f(1), $resolution, 2, 'float');
-        $origColor = $rt->texture($_u_inputTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $resolution, 2, 'float'));
+        $origColor = $rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
         $_kernel = $rt->new_array($rt->i(9), 1);
         $_kernel->[int($rt->i(0))] = $rt->unary('-', $rt->f(1));
         $_kernel->[int($rt->i(1))] = $rt->f(0);
@@ -34,15 +34,15 @@ my $run_pixel = sub {
         $_kernel->[int($rt->i(7))] = $rt->f(0);
         $_kernel->[int($rt->i(8))] = $rt->unary('-', $rt->f(1));
         $offsets = $rt->new_array($rt->i(9), 2);
-        $offsets->[int($rt->i(0))] = $rt->construct(2, $rt->unary('-', $rt->swizzle($texelSize, 'x')), $rt->unary('-', $rt->swizzle($texelSize, 'y')));
-        $offsets->[int($rt->i(1))] = $rt->construct(2, $rt->f(0), $rt->unary('-', $rt->swizzle($texelSize, 'y')));
-        $offsets->[int($rt->i(2))] = $rt->construct(2, $rt->swizzle($texelSize, 'x'), $rt->unary('-', $rt->swizzle($texelSize, 'y')));
-        $offsets->[int($rt->i(3))] = $rt->construct(2, $rt->unary('-', $rt->swizzle($texelSize, 'x')), $rt->f(0));
-        $offsets->[int($rt->i(4))] = $rt->construct(2, $rt->f(0), $rt->f(0));
-        $offsets->[int($rt->i(5))] = $rt->construct(2, $rt->swizzle($texelSize, 'x'), $rt->f(0));
-        $offsets->[int($rt->i(6))] = $rt->construct(2, $rt->unary('-', $rt->swizzle($texelSize, 'x')), $rt->swizzle($texelSize, 'y'));
-        $offsets->[int($rt->i(7))] = $rt->construct(2, $rt->f(0), $rt->swizzle($texelSize, 'y'));
-        $offsets->[int($rt->i(8))] = $rt->construct(2, $rt->swizzle($texelSize, 'x'), $rt->swizzle($texelSize, 'y'));
+        @{$offsets->[int($rt->i(0))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($texelSize, 'x')), $rt->unary('-', $rt->swizzle($texelSize, 'y'))))};
+        @{$offsets->[int($rt->i(1))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->unary('-', $rt->swizzle($texelSize, 'y'))))};
+        @{$offsets->[int($rt->i(2))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($texelSize, 'x'), $rt->unary('-', $rt->swizzle($texelSize, 'y'))))};
+        @{$offsets->[int($rt->i(3))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($texelSize, 'x')), $rt->f(0)))};
+        @{$offsets->[int($rt->i(4))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(0)))};
+        @{$offsets->[int($rt->i(5))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($texelSize, 'x'), $rt->f(0)))};
+        @{$offsets->[int($rt->i(6))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($texelSize, 'x')), $rt->swizzle($texelSize, 'y')))};
+        @{$offsets->[int($rt->i(7))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->swizzle($texelSize, 'y')))};
+        @{$offsets->[int($rt->i(8))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($texelSize, 'x'), $rt->swizzle($texelSize, 'y')))};
         $conv = $rt->construct(3, $rt->f(0));
         $i = $rt->i(0);
         $_for0_first = 1;
@@ -54,7 +54,7 @@ my $run_pixel = sub {
             if (!($rt->binary('<', $i, $rt->i(9)))) {
                 last;
             }
-            $texSample = $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('/', $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $rt->binary('*', $rt->binary('*', $offsets->[int($i)], $_u_amount, 2, 'float'), $_u_renderScale, 2, 'float'), 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')), 'rgb');
+            $texSample = $rt->swizzle($rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $rt->binary('*', $rt->binary('*', $offsets->[int($i)], $_u_amount, 2, 'float'), $_u_renderScale, 2, 'float'), 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'))), 'rgb');
             @{$conv} = map { $rt->f32($_) } @{($rt->binary('+', $conv, $rt->binary('*', $texSample, $_kernel->[int($i)], 3, 'float'), 3, 'float'))};
         }
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $conv, $rt->f(0), $rt->f(1)), $rt->swizzle($origColor, 'a')))};

@@ -18,10 +18,10 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($_for0_first, $_for1_first, $accum, $count, $globalCoord, $gx, $gy, $mean, $normalized, $s, $sampleUV, $sqrtVal, $src, $sum, $uv, $v);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $src = $rt->texture($_u_inputTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
-        $accum = $rt->texture($_u_accumTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_accumTex)), 2, 'float'));
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $src = $rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
+        $accum = $rt->texture($_u_accumTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_accumTex)), 2, 'float')));
         $sum = $rt->f(0);
         $count = $rt->f(0);
         $gy = $rt->i(0);
@@ -44,7 +44,7 @@ my $run_pixel = sub {
                 if (!($rt->binary('<', $gx, $rt->i(32)))) {
                     last;
                 }
-                $sampleUV = $rt->binary('/', $rt->binary('+', $rt->construct(2, $rt->construct(1, $gx), $rt->construct(1, $gy)), $rt->f(0.5), 2, 'float'), $rt->f(32), 2, 'float');
+                $sampleUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->construct_raw(2, $rt->construct(1, $gx), $rt->construct(1, $gy)), $rt->f(0.5), 2, 'float'), $rt->f(32), 2, 'float'));
                 $s = $rt->texture($_u_accumTex, $sampleUV);
                 $v = $rt->binary('/', $rt->binary('+', $rt->binary('+', $rt->swizzle($s, 'r'), $rt->swizzle($s, 'g'), 1, 'float'), $rt->swizzle($s, 'b'), 1, 'float'), $rt->f(3), 1, 'float');
                 $sum = $rt->binary('+', $sum, $v, 1, 'float');

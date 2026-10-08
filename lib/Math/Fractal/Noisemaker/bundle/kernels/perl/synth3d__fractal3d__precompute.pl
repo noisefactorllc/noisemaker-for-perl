@@ -53,7 +53,7 @@ my $run_pixel = sub {
             $zr = $rt->component_wise('pow', $r, $n);
             $newTheta = $rt->binary('*', $theta, $n, 1, 'float');
             $newPhi = $rt->binary('*', $phi, $n, 1, 'float');
-            @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $zr, $rt->construct(3, $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('cos', $newPhi), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('sin', $newPhi), 1, 'float'), $rt->component_wise('cos', $newTheta)), 3, 'float'))};
+            @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $zr, $rt->construct_raw(3, $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('cos', $newPhi), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('sin', $newPhi), 1, 'float'), $rt->component_wise('cos', $newTheta)), 3, 'float'))};
             @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $z, $pos, 3, 'float'))};
             $iter = $rt->binary('+', $iter, $rt->f(1), 1, 'float');
         }
@@ -91,7 +91,7 @@ my $run_pixel = sub {
             $zr = $rt->component_wise('pow', $r, $n);
             $newTheta = $rt->binary('*', $theta, $n, 1, 'float');
             $newPhi = $rt->binary('*', $phi, $n, 1, 'float');
-            @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $zr, $rt->construct(3, $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('cos', $newPhi), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('sin', $newPhi), 1, 'float'), $rt->component_wise('cos', $newTheta)), 3, 'float'))};
+            @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $zr, $rt->construct_raw(3, $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('cos', $newPhi), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('sin', $newPhi), 1, 'float'), $rt->component_wise('cos', $newTheta)), 3, 'float'))};
             @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $z, $c, 3, 'float'))};
             $iter = $rt->binary('+', $iter, $rt->f(1), 1, 'float');
         }
@@ -101,7 +101,7 @@ my $run_pixel = sub {
     $boxFold__vec3_float = sub {
         my ($z, $foldingLimit) = @_;
         $z = $rt->copy($z, 'float');
-        return $rt->binary('-', $rt->binary('*', $rt->component_wise('clamp', $z, $rt->unary('-', $foldingLimit), $foldingLimit), $rt->f(2), 3, 'float'), $z, 3, 'float');
+        return $rt->construct(3, $rt->binary('-', $rt->construct(3, $rt->binary('*', $rt->component_wise('clamp', $z, $rt->unary('-', $foldingLimit), $foldingLimit), $rt->f(2), 3, 'float')), $z, 3, 'float'));
     };
     $mandelcube__vec3_float_int_float = sub {
         my ($pos, $scale, $maxIter, $bail) = @_;
@@ -229,7 +229,7 @@ my $run_pixel = sub {
         $volSize = $_u_volumeSize;
         $scaledVolSize = $rt->construct(1, $rt->binary('*', $rt->construct(1, $volSize), $_u_renderScale, 1, 'float'), 'int');
         $scaledVolSizeF = $rt->construct(1, $scaledVolSize);
-        $globalPixelCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalPixelCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $pixelCoord = $rt->construct(2, $globalPixelCoord, 'int');
         $x = $rt->construct(1, $rt->component_wise('mod', $rt->construct(1, $rt->swizzle($pixelCoord, 'x')), $scaledVolSizeF), 'int');
         $y = $rt->binary('%', $rt->swizzle($pixelCoord, 'y'), $scaledVolSize, 1, 'int');
@@ -239,19 +239,19 @@ my $run_pixel = sub {
             @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(0.5), $rt->f(0.5), $rt->f(0)))};
             return;
         }
-        $p = $rt->binary('*', $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->construct(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $scaledVolSizeF, $rt->f(1), 1, 'float'), 3, 'float'), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'), $rt->f(1.5), 3, 'float');
-        $juliaC = $rt->binary('*', $rt->construct(3, $_u_juliaX, $_u_juliaY, $_u_juliaZ), $rt->f(0.01), 3, 'float');
+        $p = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->construct_raw(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $scaledVolSizeF, $rt->f(1), 1, 'float'), 3, 'float'), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'), $rt->f(1.5), 3, 'float'));
+        $juliaC = $rt->construct(3, $rt->binary('*', $rt->construct_raw(3, $_u_juliaX, $_u_juliaY, $_u_juliaZ), $rt->f(0.01), 3, 'float'));
         $result = $computeFractal__vec3_vec3->($p, $juliaC);
         $dist = $rt->swizzle($result, 'x');
         $normalizedDist = $rt->binary('-', $rt->f(1), $rt->component_wise('clamp', $rt->binary('+', $rt->binary('*', $dist, $rt->f(2), 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->f(0), $rt->f(1)), 1, 'float');
         $trap = $rt->component_wise('clamp', $rt->binary('*', $rt->swizzle($result, 'y'), $rt->f(0.5), 1, 'float'), $rt->f(0), $rt->f(1));
         $iterRatio = $rt->swizzle($result, 'z');
         $eps = $rt->f(0.01);
-        $dxp = $rt->swizzle($computeFractal__vec3_vec3->($rt->binary('+', $p, $rt->construct(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float'), $juliaC), 'x');
-        $dyp = $rt->swizzle($computeFractal__vec3_vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float'), $juliaC), 'x');
-        $dzp = $rt->swizzle($computeFractal__vec3_vec3->($rt->binary('+', $p, $rt->construct(3, $rt->f(0), $rt->f(0), $eps), 3, 'float'), $juliaC), 'x');
-        $gradient = $rt->binary('/', $rt->construct(3, $rt->binary('-', $dxp, $dist, 1, 'float'), $rt->binary('-', $dyp, $dist, 1, 'float'), $rt->binary('-', $dzp, $dist, 1, 'float')), $eps, 3, 'float');
-        $normal = $rt->normalize($rt->binary('+', $gradient, $rt->construct(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
+        $dxp = $rt->swizzle($computeFractal__vec3_vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float')), $juliaC), 'x');
+        $dyp = $rt->swizzle($computeFractal__vec3_vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float')), $juliaC), 'x');
+        $dzp = $rt->swizzle($computeFractal__vec3_vec3->($rt->construct(3, $rt->binary('+', $p, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $eps), 3, 'float')), $juliaC), 'x');
+        $gradient = $rt->construct(3, $rt->binary('/', $rt->construct_raw(3, $rt->binary('-', $dxp, $dist, 1, 'float'), $rt->binary('-', $dyp, $dist, 1, 'float'), $rt->binary('-', $dzp, $dist, 1, 'float')), $eps, 3, 'float'));
+        $normal = $rt->normalize($rt->binary('+', $gradient, $rt->construct_raw(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
         if ($rt->binary('==', $_u_colorMode, $rt->i(0))) {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalizedDist, $normalizedDist, $normalizedDist, $rt->f(1)))};
         } else {

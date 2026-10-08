@@ -18,11 +18,11 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($baseI, $blend, $f, $globalCoord, $inputColor, $inputUv, $intensity, $maxIdx, $minIdx, $outCol, $state, $texSize, $texelPos, $v0, $v00, $v01, $v1, $v10, $v11);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_fbTex);
         $minIdx = $rt->construct(2, $rt->i(0), 'int');
         $maxIdx = $rt->binary('-', $texSize, $rt->construct(2, $rt->i(1), 'int'), 2, 'int');
-        $texelPos = $rt->binary('-', $rt->binary('/', $rt->binary('*', $globalCoord, $rt->construct(2, $texSize), 2, 'float'), $_u_fullResolution, 2, 'float'), $rt->construct(2, $rt->f(0.5)), 2, 'float');
+        $texelPos = $rt->construct(2, $rt->binary('-', $rt->binary('/', $rt->binary('*', $globalCoord, $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'), $_u_fullResolution, 2, 'float'), $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'));
         $baseI = $rt->construct(2, $rt->component_wise('floor', $texelPos), 'int');
         $f = $rt->component_wise('fract', $texelPos);
         $v00 = $rt->swizzle($rt->texel_fetch($_u_fbTex, $rt->component_wise('clamp', $baseI, $minIdx, $maxIdx), $rt->i(0)), 'b');
@@ -38,7 +38,7 @@ my $run_pixel = sub {
         $inputColor = $rt->construct(3, 0.0);
         $inputUv = $rt->construct(2, 0.0);
         if ($rt->binary('>', $blend, $rt->f(0))) {
-            $inputUv = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
+            $inputUv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
             $inputColor = $rt->swizzle($rt->texture($_u_inputTex, $inputUv), 'rgb');
             @{$outCol} = map { $rt->f32($_) } @{($rt->component_wise('mix', $outCol, $inputColor, $blend))};
         }

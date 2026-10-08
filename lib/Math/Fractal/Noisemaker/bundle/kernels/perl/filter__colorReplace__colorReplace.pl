@@ -22,8 +22,8 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($dist, $edge0, $edge1, $globalCoord, $halfBand, $match, $outA, $outRgb, $src, $st);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $st = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->component_wise('max', $rt->texture_size($_u_inputTex), $rt->construct(2, $rt->i(1), 'int'))), 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $st = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->component_wise('max', $rt->texture_size($_u_inputTex), $rt->construct(2, $rt->i(1), 'int'))), 2, 'float'));
         $src = $rt->texture($_u_inputTex, $st);
         $dist = $rt->binary('/', $rt->length($rt->binary('-', $rt->swizzle($src, 'rgb'), $_u_targetColor, 3, 'float')), $rt->f(1.7320507999999999), 1, 'float');
         $halfBand = $rt->binary('*', $_u_smoothing, $rt->f(0.5), 1, 'float');

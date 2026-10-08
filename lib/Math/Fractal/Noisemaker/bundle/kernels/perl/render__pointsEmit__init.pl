@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint__uint, $hash__uint, $hash2__uint, $main__void);
+    my ($hash_uint_lcg__uint, $hash__uint, $hash2__uint, $main__void);
     my $_retc;
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
@@ -23,7 +23,7 @@ my $run_pixel = sub {
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
-    $hash_uint__uint = sub {
+    $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
         $state = $rt->binary('+', $rt->binary('*', $seed, $rt->i(747796405), 1, 'uint'), $rt->i(2891336453), 1, 'uint');
@@ -32,7 +32,7 @@ my $run_pixel = sub {
     };
     $hash__uint = sub {
         my ($seed) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($seed)), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($seed)), $rt->f(4294967295), 1, 'float');
     };
     $hash2__uint = sub {
         my ($seed) = @_;
@@ -41,7 +41,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($a, $agentSeed, $angle, $attritionRate, $center, $centerSeed, $check_seed, $clusterId, $clusterSeed, $needsRespawn, $newCol, $newPos, $pCol, $pPos, $pVel, $r, $radius, $respawnRand, $rnd, $rotRand, $sampledCol, $stateCoord, $strideRand, $t, $texCoord, $texDims, $timeBits, $uv);
         $stateCoord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(1, $_u_stateSize), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(1, $_u_stateSize), 2, 'float'));
         $agentSeed = $rt->binary('+', $rt->construct(1, $rt->binary('+', $rt->swizzle($stateCoord, 'x'), $rt->binary('*', $rt->swizzle($stateCoord, 'y'), $_u_stateSize, 1, 'int'), 1, 'int'), 'uint'), $rt->construct(1, $_u_seed, 'uint'), 1, 'uint');
         $pPos = $rt->texel_fetch($_u_xyzTex, $stateCoord, $rt->i(0));
         $pVel = $rt->texel_fetch($_u_velTex, $stateCoord, $rt->i(0));
@@ -54,7 +54,7 @@ my $run_pixel = sub {
         if ((((($needsRespawn) ? 0 : 1)) && ($rt->binary('>', $_u_attrition, $rt->f(0))) ? 1 : 0)) {
             $timeBits = $rt->float_bits_to_uint($_u_time);
             $check_seed = $rt->binary('+', $rt->binary('*', $agentSeed, $rt->i(1664525), 1, 'uint'), $timeBits, 1, 'uint');
-            $check_seed = $rt->hash_uint($check_seed);
+            $check_seed = $rt->hash_uint_lcg($check_seed);
             $respawnRand = $rt->binary('/', $rt->construct(1, $check_seed), $rt->f(4294967295), 1, 'float');
             $attritionRate = $rt->binary('*', $_u_attrition, $rt->f(0.01), 1, 'float');
             if ($rt->binary('<', $respawnRand, $attritionRate)) {
@@ -84,7 +84,7 @@ my $run_pixel = sub {
                     if ($rt->binary('==', $_u_layoutMode, $rt->i(3))) {
                         $angle = $rt->binary('*', $rt->swizzle($rnd, 'x'), $rt->f(6.2831799999999998), 1, 'float');
                         $radius = $rt->binary('+', $rt->f(0.29999999999999999), $rt->binary('*', $rt->swizzle($rnd, 'y'), $rt->f(0.10000000000000001), 1, 'float'), 1, 'float');
-                        @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $radius, 2, 'float'), 2, 'float'), $rt->f(0)))};
+                        @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $radius, 2, 'float'), 2, 'float'), $rt->f(0)))};
                     } else {
                         if ($rt->binary('==', $_u_layoutMode, $rt->i(4))) {
                             $clusterSeed = $rt->binary('*', $rt->construct(1, $_u_seed, 'uint'), $rt->i(12345), 1, 'uint');
@@ -93,14 +93,14 @@ my $run_pixel = sub {
                             $center = $rt->construct(2, $hash__uint->($centerSeed), $hash__uint->($rt->binary('+', $centerSeed, $rt->i(17), 1, 'uint')));
                             $r = $rt->binary('*', $hash__uint->($rt->binary('+', $agentSeed, $rt->i(2), 1, 'uint')), $rt->f(0.14999999999999999), 1, 'float');
                             $a = $rt->binary('*', $hash__uint->($rt->binary('+', $agentSeed, $rt->i(3), 1, 'uint')), $rt->f(6.2831799999999998), 1, 'float');
-                            @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $center, $rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $a), $rt->component_wise('sin', $a)), $r, 2, 'float'), 2, 'float'), $rt->f(0)))};
+                            @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $center, $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $a), $rt->component_wise('sin', $a)), $r, 2, 'float'), 2, 'float'), $rt->f(0)))};
                             $newPos = $rt->assign_swizzle($newPos, 'xy', $rt->component_wise('fract', $rt->swizzle($newPos, 'xy')));
                         } else {
                             if ($rt->binary('==', $_u_layoutMode, $rt->i(5))) {
                                 $t = $rt->binary('*', $rt->swizzle($rnd, 'x'), $rt->f(20), 1, 'float');
                                 $r = $rt->binary('*', $t, $rt->f(0.02), 1, 'float');
                                 $a = $rt->binary('*', $t, $rt->f(6.2831799999999998), 1, 'float');
-                                @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $a), $rt->component_wise('sin', $a)), $r, 2, 'float'), 2, 'float'), $rt->f(0)))};
+                                @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $a), $rt->component_wise('sin', $a)), $r, 2, 'float'), 2, 'float'), $rt->f(0)))};
                                 $newPos = $rt->assign_swizzle($newPos, 'xy', $rt->component_wise('clamp', $rt->swizzle($newPos, 'xy'), $rt->f(0), $rt->f(1)));
                             }
                         }
@@ -109,9 +109,9 @@ my $run_pixel = sub {
             }
         }
         $texDims = $rt->texture_size($_u_inputTex);
-        $texCoord = $rt->construct(2, $rt->binary('*', $rt->swizzle($newPos, 'xy'), $rt->construct(2, $texDims), 2, 'float'), 'int');
+        $texCoord = $rt->construct(2, $rt->binary('*', $rt->swizzle($newPos, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texDims)), 2, 'float'), 'int');
         $sampledCol = $rt->texel_fetch($_u_inputTex, $texCoord, $rt->i(0));
-        $newCol = (($rt->binary('>', $rt->swizzle($sampledCol, 'a'), $rt->f(0))) ? ($sampledCol) : ($rt->construct(4, $rt->f(1))));
+        $newCol = $rt->construct(4, (($rt->binary('>', $rt->swizzle($sampledCol, 'a'), $rt->f(0))) ? ($sampledCol) : ($rt->construct(4, $rt->f(1)))));
         $rotRand = $rt->f(0.0);
         $strideRand = $rt->f(0.0);
         if ($needsRespawn) {

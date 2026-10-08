@@ -27,8 +27,8 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_for0_first, $accumColor, $accumWeight, $activation, $alongRun, $amount, $baseLum, $blendAmount, $candidate, $contrast, $decayRate, $density, $densityRate, $distancePx, $edge, $endTaper, $globalCoord, $i, $integrated, $marchDir, $methodGain, $reach, $sampleDistance, $sampleUV, $src, $staggerPhase, $streak, $taperStart, $uv, $weight);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $src = $rt->texture($_u_inputTex, $uv);
         $amount = $rt->component_wise('clamp', $rt->binary('/', $_u_strength, $rt->f(100), 1, 'float'), $rt->f(0), $rt->f(1));
         if ($rt->binary('<=', $amount, $rt->f(0))) {
@@ -60,7 +60,7 @@ my $run_pixel = sub {
                 last;
             }
             $sampleDistance = $rt->binary('+', $distancePx, $staggerPhase, 1, 'float');
-            $sampleUV = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->binary('*', $marchDir, $sampleDistance, 1, 'float'), $rt->f(0)), 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
+            $sampleUV = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->binary('*', $marchDir, $sampleDistance, 1, 'float'), $rt->f(0)), 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
             $candidate = $rt->swizzle($rt->texture($_u_inputTex, $sampleUV), 'rgb');
             $contrast = $rt->binary('-', $rt->binary('-', $lum__vec3->($candidate), $baseLum, 1, 'float'), $edge, 1, 'float');
             $activation = $rt->component_wise('smoothstep', $rt->f(0), $rt->f(0.080000000000000002), $contrast);
@@ -86,7 +86,7 @@ my $run_pixel = sub {
             @{$accumColor} = map { $rt->f32($_) } @{($rt->binary('+', $accumColor, $rt->binary('*', $candidate, $weight, 3, 'float'), 3, 'float'))};
             $accumWeight = $rt->binary('+', $accumWeight, $weight, 1, 'float');
         }
-        $integrated = $rt->binary('/', $accumColor, $rt->component_wise('max', $accumWeight, $rt->f(1.0000000000000001e-05)), 3, 'float');
+        $integrated = $rt->construct(3, $rt->binary('/', $accumColor, $rt->component_wise('max', $accumWeight, $rt->f(1.0000000000000001e-05)), 3, 'float'));
         $densityRate = $rt->f(0.0);
         if ($rt->binary('==', $_u_METHOD, $rt->i(1))) {
             $densityRate = $rt->f(0.12);

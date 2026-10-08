@@ -17,17 +17,17 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($base, $dimensions, $edges, $globalCoord, $out_rgb, $outlineColor, $strength, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $dimensions = $rt->texture_size($_u_inputTex);
         if ((($rt->binary('==', $rt->swizzle($dimensions, 'x'), $rt->i(0))) || ($rt->binary('==', $rt->swizzle($dimensions, 'y'), $rt->i(0))) ? 1 : 0)) {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
             return;
         }
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $dimensions), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $dimensions)), 2, 'float'));
         $base = $rt->texture($_u_inputTex, $uv);
         $edges = $rt->texture($_u_edgesTexture, $uv);
         $strength = $rt->component_wise('clamp', $rt->swizzle($edges, 'r'), $rt->f(0), $rt->f(1));
-        $outlineColor = (($rt->binary('>', $_u_invert, $rt->f(0.5))) ? ($rt->construct(3, $rt->f(1))) : ($rt->construct(3, $rt->f(0))));
+        $outlineColor = $rt->construct(3, (($rt->binary('>', $_u_invert, $rt->f(0.5))) ? ($rt->construct(3, $rt->f(1))) : ($rt->construct(3, $rt->f(0)))));
         $out_rgb = $rt->component_wise('mix', $rt->swizzle($base, 'rgb'), $outlineColor, $strength);
         @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $out_rgb, $rt->swizzle($base, 'a')))};
     };

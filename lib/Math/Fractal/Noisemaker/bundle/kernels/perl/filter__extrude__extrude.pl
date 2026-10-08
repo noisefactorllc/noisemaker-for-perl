@@ -29,9 +29,9 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($p3);
-        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
+        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
         @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
-        return $rt->component_wise('fract', $rt->binary('*', $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float'), $rt->swizzle($p3, 'z'), 1, 'float'));
+        return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
     };
     $lum__vec3 = sub {
         my ($c) = @_;
@@ -69,11 +69,11 @@ my $run_pixel = sub {
                 if (!($rt->binary('<=', $i, $rt->i(1)))) {
                     last;
                 }
-                $p = $rt->binary('+', $centerPx, $rt->binary('*', $rt->construct(2, $rt->construct(1, $i), $rt->construct(1, $j)), $sp, 2, 'float'), 2, 'float');
+                $p = $rt->construct(2, $rt->binary('+', $centerPx, $rt->binary('*', $rt->construct_raw(2, $rt->construct(1, $i), $rt->construct(1, $j)), $sp, 2, 'float'), 2, 'float'));
                 @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->texture($_u_inputTex, $toSampleUV__vec2->($p)), 4, 'float'))};
             }
         }
-        return $rt->binary('*', $sum, $rt->binary('/', $rt->f(1), $rt->f(9), 1, 'float'), 4, 'float');
+        return $rt->construct(4, $rt->binary('*', $sum, $rt->binary('/', $rt->f(1), $rt->f(9), 1, 'float'), 4, 'float'));
     };
     $cellHeight__vec2_vec2 = sub {
         my ($cellC, $cellIdxF) = @_;
@@ -92,9 +92,9 @@ my $run_pixel = sub {
         $b = $rt->copy($b, 'float');
         $c = $rt->copy($c, 'float');
         my ($d00, $d01, $d11, $d20, $d21, $denom, $u, $v, $v0, $v1, $v2, $w);
-        $v0 = $rt->binary('-', $b, $a, 2, 'float');
-        $v1 = $rt->binary('-', $c, $a, 2, 'float');
-        $v2 = $rt->binary('-', $p, $a, 2, 'float');
+        $v0 = $rt->construct(2, $rt->binary('-', $b, $a, 2, 'float'));
+        $v1 = $rt->construct(2, $rt->binary('-', $c, $a, 2, 'float'));
+        $v2 = $rt->construct(2, $rt->binary('-', $p, $a, 2, 'float'));
         $d00 = $rt->dot($v0, $v0);
         $d01 = $rt->dot($v0, $v1);
         $d11 = $rt->dot($v1, $v1);
@@ -116,8 +116,8 @@ my $run_pixel = sub {
         $apex = $rt->copy($apex, 'float');
         $halfCell = $rt->copy($halfCell, 'float');
         my ($Cbl, $Cbr, $Ctl, $Ctr, $bc, $botC, $leftX, $rightX, $topC);
-        $topC = $rt->binary('+', $cellC, $rt->binary('*', $g->{TOP_SIGN}, $rt->construct(2, $rt->f(0), $rt->swizzle($halfCell, 'y')), 2, 'float'), 2, 'float');
-        $botC = $rt->binary('-', $cellC, $rt->binary('*', $g->{TOP_SIGN}, $rt->construct(2, $rt->f(0), $rt->swizzle($halfCell, 'y')), 2, 'float'), 2, 'float');
+        $topC = $rt->construct(2, $rt->binary('+', $cellC, $rt->binary('*', $g->{TOP_SIGN}, $rt->construct_raw(2, $rt->f(0), $rt->swizzle($halfCell, 'y')), 2, 'float'), 2, 'float'));
+        $botC = $rt->construct(2, $rt->binary('-', $cellC, $rt->binary('*', $g->{TOP_SIGN}, $rt->construct_raw(2, $rt->f(0), $rt->swizzle($halfCell, 'y')), 2, 'float'), 2, 'float'));
         $leftX = $rt->binary('-', $rt->swizzle($cellC, 'x'), $rt->swizzle($halfCell, 'x'), 1, 'float');
         $rightX = $rt->binary('+', $rt->swizzle($cellC, 'x'), $rt->swizzle($halfCell, 'x'), 1, 'float');
         $Cbl = $rt->construct(2, $leftX, $rt->swizzle($botC, 'y'));
@@ -147,7 +147,7 @@ my $run_pixel = sub {
         $P = $rt->copy($P, 'float');
         $cellC = $rt->copy($cellC, 'float');
         my ($d, $dyUp);
-        $d = $rt->binary('-', $P, $cellC, 2, 'float');
+        $d = $rt->construct(2, $rt->binary('-', $P, $cellC, 2, 'float'));
         $dyUp = $rt->binary('*', $rt->swizzle($d, 'y'), $g->{TOP_SIGN}, 1, 'float');
         if ($rt->binary('>', $rt->component_wise('abs', $rt->swizzle($d, 'x')), $rt->component_wise('abs', $dyUp))) {
             return (($rt->binary('>', $rt->swizzle($d, 'x'), $rt->f(0))) ? ($g->{SHADE_RIGHT}) : ($g->{SHADE_LEFT}));
@@ -156,12 +156,12 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($Cbl, $Cbr, $Ci, $Ci1, $Ctl, $Ctr, $P, $_for2_first, $apex, $apexW, $baseColor, $bc, $bestCenterPx, $bestIsTop, $bestPriority, $bestS, $bestTri, $botC, $cellC, $cellIdxF, $distToCenter, $faceCenter, $faceHalf, $found, $h, $halfCell, $i, $imgCenter, $leftX, $localPos, $meanColor, $outColor, $priority, $rightX, $s, $samplePos, $shade, $shadeConst, $sideHit, $stepDir, $t, $toCenter, $topC, $topHit, $tri);
-        $P = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $imgCenter = $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float');
+        $P = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $imgCenter = $rt->construct(2, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'));
         $halfCell = $rt->construct(2, $rt->binary('*', $_u_size, $rt->f(0.5), 1, 'float'));
-        $toCenter = $rt->binary('-', $imgCenter, $P, 2, 'float');
+        $toCenter = $rt->construct(2, $rt->binary('-', $imgCenter, $P, 2, 'float'));
         $distToCenter = $rt->length($toCenter);
-        $stepDir = (($rt->binary('>', $distToCenter, $rt->f(0))) ? ($rt->binary('/', $toCenter, $distToCenter, 2, 'float')) : ($rt->construct(2, $rt->f(0))));
+        $stepDir = $rt->construct(2, (($rt->binary('>', $distToCenter, $rt->f(0))) ? ($rt->binary('/', $toCenter, $distToCenter, 2, 'float')) : ($rt->construct(2, $rt->f(0)))));
         $bestPriority = $rt->unary('-', $rt->f(1000000000));
         $bestCenterPx = $rt->construct(2, $rt->f(0));
         $bestS = $rt->f(1);
@@ -179,9 +179,9 @@ my $run_pixel = sub {
                 last;
             }
             $t = $rt->component_wise('min', $rt->binary('*', $rt->construct(1, $i), $_u_size, 1, 'float'), $distToCenter);
-            $samplePos = $rt->binary('+', $P, $rt->binary('*', $stepDir, $t, 2, 'float'), 2, 'float');
+            $samplePos = $rt->construct(2, $rt->binary('+', $P, $rt->binary('*', $stepDir, $t, 2, 'float'), 2, 'float'));
             $cellIdxF = $rt->component_wise('floor', $rt->binary('/', $rt->binary('-', $samplePos, $imgCenter, 2, 'float'), $_u_size, 2, 'float'));
-            $cellC = $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('+', $cellIdxF, $rt->f(0.5), 2, 'float'), $_u_size, 2, 'float'), 2, 'float');
+            $cellC = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('+', $cellIdxF, $rt->f(0.5), 2, 'float'), $_u_size, 2, 'float'), 2, 'float'));
             $h = $cellHeight__vec2_vec2->($cellC, $cellIdxF);
             $s = $rt->binary('+', $rt->f(1), $rt->binary('*', $rt->binary('*', $h, $rt->binary('/', $_u_depth, $rt->f(100), 1, 'float'), 1, 'float'), $rt->f(0.40000000000000002), 1, 'float'), 1, 'float');
             $apex = $rt->construct(2, 0.0);
@@ -191,7 +191,7 @@ my $run_pixel = sub {
             $topHit = 0;
             $tri = 0;
             if ($rt->binary('==', $_u_EXTRUDE_TYPE, $rt->i(1))) {
-                $apex = $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('-', $cellC, $imgCenter, 2, 'float'), $s, 2, 'float'), 2, 'float');
+                $apex = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('-', $cellC, $imgCenter, 2, 'float'), $s, 2, 'float'), 2, 'float'));
                 $tri = $pyramidTriHit__vec2_vec2_vec2_vec2->($P, $cellC, $apex, $halfCell);
                 if ((($rt->binary('>=', $tri, $rt->i(0))) && ($rt->binary('>', $s, $bestPriority)) ? 1 : 0)) {
                     $bestPriority = $s;
@@ -201,8 +201,8 @@ my $run_pixel = sub {
                     $found = 1;
                 }
             } else {
-                $faceCenter = $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('-', $cellC, $imgCenter, 2, 'float'), $s, 2, 'float'), 2, 'float');
-                $faceHalf = $rt->binary('*', $halfCell, $s, 2, 'float');
+                $faceCenter = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('-', $cellC, $imgCenter, 2, 'float'), $s, 2, 'float'), 2, 'float'));
+                $faceHalf = $rt->construct(2, $rt->binary('*', $halfCell, $s, 2, 'float'));
                 $topHit = $rt->component_wise('all', $rt->component_wise('lessThanEqual', $rt->component_wise('abs', $rt->binary('-', $P, $faceCenter, 2, 'float')), $faceHalf));
                 $sideHit = (((($topHit) ? 0 : 1)) && ($rt->component_wise('all', $rt->component_wise('lessThanEqual', $rt->component_wise('abs', $rt->binary('-', $P, $cellC, 2, 'float')), $halfCell))) ? 1 : 0);
                 $priority = $rt->f(0.0);
@@ -224,7 +224,7 @@ my $run_pixel = sub {
         $outColor = $rt->construct(4, 0.0);
         $cellC = $rt->construct(2, 0.0);
         if ((($found) ? 0 : 1)) {
-            $cellC = $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('+', $rt->component_wise('floor', $rt->binary('/', $rt->binary('-', $P, $imgCenter, 2, 'float'), $_u_size, 2, 'float')), $rt->f(0.5), 2, 'float'), $_u_size, 2, 'float'), 2, 'float');
+            $cellC = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('+', $rt->component_wise('floor', $rt->binary('/', $rt->binary('-', $P, $imgCenter, 2, 'float'), $_u_size, 2, 'float')), $rt->f(0.5), 2, 'float')), $_u_size, 2, 'float')), 2, 'float'));
             @{$outColor} = map { $rt->f32($_) } @{($cellAvgColor3x3__vec2->($cellC))};
         } else {
             $Cbl = $rt->construct(2, 0.0);
@@ -244,9 +244,9 @@ my $run_pixel = sub {
             $shadeConst = $rt->f(0.0);
             $topC = $rt->construct(2, 0.0);
             if ($rt->binary('==', $_u_EXTRUDE_TYPE, $rt->i(1))) {
-                $apex = $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('-', $bestCenterPx, $imgCenter, 2, 'float'), $bestS, 2, 'float'), 2, 'float');
-                $topC = $rt->binary('+', $bestCenterPx, $rt->binary('*', $g->{TOP_SIGN}, $rt->construct(2, $rt->f(0), $rt->swizzle($halfCell, 'y')), 2, 'float'), 2, 'float');
-                $botC = $rt->binary('-', $bestCenterPx, $rt->binary('*', $g->{TOP_SIGN}, $rt->construct(2, $rt->f(0), $rt->swizzle($halfCell, 'y')), 2, 'float'), 2, 'float');
+                $apex = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('-', $bestCenterPx, $imgCenter, 2, 'float'), $bestS, 2, 'float'), 2, 'float'));
+                $topC = $rt->construct(2, $rt->binary('+', $bestCenterPx, $rt->binary('*', $g->{TOP_SIGN}, $rt->construct_raw(2, $rt->f(0), $rt->swizzle($halfCell, 'y')), 2, 'float'), 2, 'float'));
+                $botC = $rt->construct(2, $rt->binary('-', $bestCenterPx, $rt->binary('*', $g->{TOP_SIGN}, $rt->construct_raw(2, $rt->f(0), $rt->swizzle($halfCell, 'y')), 2, 'float'), 2, 'float'));
                 $leftX = $rt->binary('-', $rt->swizzle($bestCenterPx, 'x'), $rt->swizzle($halfCell, 'x'), 1, 'float');
                 $rightX = $rt->binary('+', $rt->swizzle($bestCenterPx, 'x'), $rt->swizzle($halfCell, 'x'), 1, 'float');
                 $Cbl = $rt->construct(2, $leftX, $rt->swizzle($botC, 'y'));
@@ -284,7 +284,7 @@ my $run_pixel = sub {
                 if ($_u_solidFront) {
                     @{$baseColor} = map { $rt->f32($_) } @{($cellAvgColor3x3__vec2->($bestCenterPx))};
                 } else {
-                    $localPos = $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->swizzle($bc, 'x'), $Ci, 2, 'float'), $rt->binary('*', $rt->swizzle($bc, 'y'), $Ci1, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->swizzle($bc, 'z'), $bestCenterPx, 2, 'float'), 2, 'float');
+                    $localPos = $rt->construct(2, $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->swizzle($bc, 'x'), $Ci, 2, 'float'), $rt->binary('*', $rt->swizzle($bc, 'y'), $Ci1, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->swizzle($bc, 'z'), $bestCenterPx, 2, 'float'), 2, 'float'));
                     @{$baseColor} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $toSampleUV__vec2->($localPos)))};
                 }
                 $shade = $rt->component_wise('mix', $rt->f(1), $shadeConst, $apexW);
@@ -296,7 +296,7 @@ my $run_pixel = sub {
                     if ($_u_solidFront) {
                         @{$outColor} = map { $rt->f32($_) } @{($cellAvgColor3x3__vec2->($bestCenterPx))};
                     } else {
-                        $localPos = $rt->binary('+', $imgCenter, $rt->binary('/', $rt->binary('-', $P, $imgCenter, 2, 'float'), $bestS, 2, 'float'), 2, 'float');
+                        $localPos = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->binary('/', $rt->binary('-', $P, $imgCenter, 2, 'float'), $bestS, 2, 'float'), 2, 'float'));
                         @{$outColor} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $toSampleUV__vec2->($localPos)))};
                     }
                 } else {

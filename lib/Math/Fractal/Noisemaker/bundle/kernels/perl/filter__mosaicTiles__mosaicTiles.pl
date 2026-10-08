@@ -25,7 +25,7 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($p3);
-        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
+        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
         @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
         return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
     };
@@ -33,7 +33,7 @@ my $run_pixel = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
         my ($p3);
-        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct(3, $rt->swizzle($p, 'xyx')), $rt->construct(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float'));
+        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->construct_raw(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float'));
         @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
         return $rt->component_wise('fract', $rt->construct(2, $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')), $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'z'), 1, 'float')), $rt->swizzle($p3, 'y'), 1, 'float'))));
     };
@@ -43,13 +43,13 @@ my $run_pixel = sub {
         my ($f, $i, $u);
         $i = $rt->component_wise('floor', $p);
         $f = $rt->component_wise('fract', $p);
-        $u = $rt->binary('*', $rt->binary('*', $f, $f, 2, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 2, 'float'), 2, 'float'), 2, 'float');
-        return $rt->component_wise('mix', $rt->component_wise('mix', $hash12__vec2->($i), $hash12__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(1), $rt->f(0)), 2, 'float')), $rt->swizzle($u, 'x')), $rt->component_wise('mix', $hash12__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(0), $rt->f(1)), 2, 'float')), $hash12__vec2->($rt->binary('+', $i, $rt->construct(2, $rt->f(1), $rt->f(1)), 2, 'float')), $rt->swizzle($u, 'x')), $rt->swizzle($u, 'y'));
+        $u = $rt->construct(2, $rt->binary('*', $rt->binary('*', $f, $f, 2, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 2, 'float'), 2, 'float'), 2, 'float'));
+        return $rt->component_wise('mix', $rt->component_wise('mix', $hash12__vec2->($i), $hash12__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float'))), $rt->swizzle($u, 'x')), $rt->component_wise('mix', $hash12__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float'))), $hash12__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(1), $rt->f(1)), 2, 'float'))), $rt->swizzle($u, 'x')), $rt->swizzle($u, 'y'));
     };
     $reliefShade__float_float_float_float_float = sub {
         my ($hC, $hR, $hT, $strength, $lightAngleDeg) = @_;
         my ($L, $a, $grad, $n);
-        $grad = $rt->binary('*', $rt->construct(2, $rt->binary('-', $hR, $hC, 1, 'float'), $rt->binary('-', $hT, $hC, 1, 'float')), $strength, 2, 'float');
+        $grad = $rt->construct(2, $rt->binary('*', $rt->construct_raw(2, $rt->binary('-', $hR, $hC, 1, 'float'), $rt->binary('-', $hT, $hC, 1, 'float')), $strength, 2, 'float'));
         $n = $rt->normalize($rt->construct(3, $rt->unary('-', $grad), $rt->f(1)));
         $a = $rt->component_wise('radians', $lightAngleDeg);
         $L = $rt->normalize($rt->construct(3, $rt->component_wise('cos', $a), $rt->component_wise('sin', $a), $rt->f(0.75)));
@@ -58,14 +58,14 @@ my $run_pixel = sub {
     $mosaicWarp__vec2_float_float = sub {
         my ($gc, $tileSizePx, $seedVal) = @_;
         $gc = $rt->copy($gc, 'float');
-        return $rt->binary('*', $rt->binary('*', $vnoise__vec2->($rt->binary('+', $rt->binary('/', $gc, $tileSizePx, 2, 'float'), $rt->binary('*', $seedVal, $rt->f(101.7), 1, 'float'), 2, 'float')), $rt->f(0.25), 1, 'float'), $tileSizePx, 1, 'float');
+        return $rt->binary('*', $rt->binary('*', $vnoise__vec2->($rt->construct(2, $rt->binary('+', $rt->binary('/', $gc, $tileSizePx, 2, 'float'), $rt->binary('*', $seedVal, $rt->f(101.7), 1, 'float'), 2, 'float'))), $rt->f(0.25), 1, 'float'), $tileSizePx, 1, 'float');
     };
     $mosaicGroutMask__vec2_float_float_float = sub {
         my ($gc, $tileSizePx, $groutWidthPct, $seedVal) = @_;
         $gc = $rt->copy($gc, 'float');
         my ($cellFrac, $edgeDistPx, $groutAA, $groutHalfWidthPx, $warp);
         $warp = $mosaicWarp__vec2_float_float->($gc, $tileSizePx, $seedVal);
-        $cellFrac = $rt->component_wise('fract', $rt->binary('/', $rt->binary('+', $gc, $rt->construct(2, $warp), 2, 'float'), $tileSizePx, 2, 'float'));
+        $cellFrac = $rt->component_wise('fract', $rt->binary('/', $rt->binary('+', $gc, $rt->construct_raw(2, $warp), 2, 'float'), $tileSizePx, 2, 'float'));
         $edgeDistPx = $rt->binary('*', $rt->component_wise('min', $rt->component_wise('min', $rt->swizzle($cellFrac, 'x'), $rt->binary('-', $rt->f(1), $rt->swizzle($cellFrac, 'x'), 1, 'float')), $rt->component_wise('min', $rt->swizzle($cellFrac, 'y'), $rt->binary('-', $rt->f(1), $rt->swizzle($cellFrac, 'y'), 1, 'float'))), $tileSizePx, 1, 'float');
         $groutHalfWidthPx = $rt->binary('*', $rt->binary('/', $groutWidthPct, $rt->f(100), 1, 'float'), $rt->binary('*', $tileSizePx, $rt->f(0.5), 1, 'float'), 1, 'float');
         $groutAA = $rt->f(1.25);
@@ -73,8 +73,8 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($cellCenterGc, $cellFrac, $cellId, $cellSpace, $centerWarp, $darkened, $edgeDistPx, $flatShade, $gapAA, $gapColor, $gapMask, $gapWidthPx, $globalCoord, $gradK, $hC, $hR, $hT, $kB, $kC, $kL, $kR, $kT, $offsetPx, $result, $sampleGc, $sampleUV, $seedF, $shade, $shadeMul, $shadeStrength, $shiftedGc, $shiftedUV, $srcHome, $tileColor, $uv, $warp, $warpedCenter, $warpedCoord);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
         $srcHome = $rt->texture($_u_inputTex, $uv);
         $seedF = $rt->construct(1, $_u_seed);
         $result = $rt->construct(3, 0.0);
@@ -113,19 +113,19 @@ my $run_pixel = sub {
         $warpedCoord = $rt->construct(2, 0.0);
         if ($rt->binary('==', $_u_MODE, $rt->i(0))) {
             $warp = $mosaicWarp__vec2_float_float->($globalCoord, $_u_tileSize, $seedF);
-            $warpedCoord = $rt->binary('+', $globalCoord, $rt->construct(2, $warp), 2, 'float');
-            $cellSpace = $rt->binary('/', $warpedCoord, $_u_tileSize, 2, 'float');
+            $warpedCoord = $rt->construct(2, $rt->binary('+', $globalCoord, $rt->construct_raw(2, $warp), 2, 'float'));
+            $cellSpace = $rt->construct(2, $rt->binary('/', $warpedCoord, $_u_tileSize, 2, 'float'));
             $cellId = $rt->component_wise('floor', $cellSpace);
-            $warpedCenter = $rt->binary('*', $rt->binary('+', $cellId, $rt->construct(2, $rt->f(0.5)), 2, 'float'), $_u_tileSize, 2, 'float');
+            $warpedCenter = $rt->construct(2, $rt->binary('*', $rt->binary('+', $cellId, $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'), $_u_tileSize, 2, 'float'));
             $centerWarp = $mosaicWarp__vec2_float_float->($warpedCenter, $_u_tileSize, $seedF);
-            $sampleGc = $rt->binary('-', $warpedCenter, $rt->construct(2, $centerWarp), 2, 'float');
+            $sampleGc = $rt->construct(2, $rt->binary('-', $warpedCenter, $rt->construct_raw(2, $centerWarp), 2, 'float'));
             $sampleUV = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('-', $sampleGc, $_u_tileOffset, 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
             $tileColor = $rt->swizzle($rt->texture($_u_inputTex, $sampleUV), 'rgb');
             $kC = $mosaicGroutMask__vec2_float_float_float->($globalCoord, $_u_tileSize, $_u_groutWidth, $seedF);
-            $kR = $mosaicGroutMask__vec2_float_float_float->($rt->binary('+', $globalCoord, $rt->construct(2, $rt->f(1), $rt->f(0)), 2, 'float'), $_u_tileSize, $_u_groutWidth, $seedF);
-            $kL = $mosaicGroutMask__vec2_float_float_float->($rt->binary('-', $globalCoord, $rt->construct(2, $rt->f(1), $rt->f(0)), 2, 'float'), $_u_tileSize, $_u_groutWidth, $seedF);
-            $kT = $mosaicGroutMask__vec2_float_float_float->($rt->binary('+', $globalCoord, $rt->construct(2, $rt->f(0), $rt->f(1)), 2, 'float'), $_u_tileSize, $_u_groutWidth, $seedF);
-            $kB = $mosaicGroutMask__vec2_float_float_float->($rt->binary('-', $globalCoord, $rt->construct(2, $rt->f(0), $rt->f(1)), 2, 'float'), $_u_tileSize, $_u_groutWidth, $seedF);
+            $kR = $mosaicGroutMask__vec2_float_float_float->($rt->construct(2, $rt->binary('+', $globalCoord, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float')), $_u_tileSize, $_u_groutWidth, $seedF);
+            $kL = $mosaicGroutMask__vec2_float_float_float->($rt->construct(2, $rt->binary('-', $globalCoord, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float')), $_u_tileSize, $_u_groutWidth, $seedF);
+            $kT = $mosaicGroutMask__vec2_float_float_float->($rt->construct(2, $rt->binary('+', $globalCoord, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float')), $_u_tileSize, $_u_groutWidth, $seedF);
+            $kB = $mosaicGroutMask__vec2_float_float_float->($rt->construct(2, $rt->binary('-', $globalCoord, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float')), $_u_tileSize, $_u_groutWidth, $seedF);
             $gradK = $rt->construct(2, $rt->binary('*', $rt->binary('-', $kR, $kL, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('*', $rt->binary('-', $kT, $kB, 1, 'float'), $rt->f(0.5), 1, 'float'));
             $hC = $rt->unary('-', $kC);
             $hR = $rt->binary('-', $hC, $rt->swizzle($gradK, 'x'), 1, 'float');
@@ -133,21 +133,21 @@ my $run_pixel = sub {
             $shadeStrength = $rt->f(6);
             $shade = $reliefShade__float_float_float_float_float->($hC, $hR, $hT, $shadeStrength, $rt->f(135));
             $flatShade = $rt->f(0.59999999999999998);
-            $darkened = $rt->binary('*', $tileColor, $rt->component_wise('mix', $rt->f(1), $rt->f(0.34999999999999998), $kC), 3, 'float');
+            $darkened = $rt->construct(3, $rt->binary('*', $tileColor, $rt->component_wise('mix', $rt->f(1), $rt->f(0.34999999999999998), $kC), 3, 'float'));
             $shadeMul = $rt->binary('+', $rt->f(1), $rt->binary('*', $rt->binary('*', $rt->binary('-', $shade, $flatShade, 1, 'float'), $rt->f(2), 1, 'float'), $rt->binary('/', $_u_relief, $rt->f(100), 1, 'float'), 1, 'float'), 1, 'float');
             @{$result} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('*', $darkened, $shadeMul, 3, 'float'), $rt->f(0), $rt->f(1)))};
         } else {
             if ($rt->binary('==', $_u_MODE, $rt->i(1))) {
-                $cellSpace = $rt->binary('/', $globalCoord, $_u_tileSize, 2, 'float');
+                $cellSpace = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_tileSize, 2, 'float'));
                 $cellId = $rt->component_wise('floor', $cellSpace);
                 $cellFrac = $rt->component_wise('fract', $cellSpace);
                 $edgeDistPx = $rt->binary('*', $rt->component_wise('min', $rt->component_wise('min', $rt->swizzle($cellFrac, 'x'), $rt->binary('-', $rt->f(1), $rt->swizzle($cellFrac, 'x'), 1, 'float')), $rt->component_wise('min', $rt->swizzle($cellFrac, 'y'), $rt->binary('-', $rt->f(1), $rt->swizzle($cellFrac, 'y'), 1, 'float'))), $_u_tileSize, 1, 'float');
                 $gapWidthPx = $rt->binary('*', $rt->binary('/', $_u_groutWidth, $rt->f(100), 1, 'float'), $_u_tileSize, 1, 'float');
                 $gapAA = $rt->f(1.25);
                 $gapMask = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $rt->binary('-', $rt->binary('*', $gapWidthPx, $rt->f(0.5), 1, 'float'), $gapAA, 1, 'float'), $rt->binary('+', $rt->binary('*', $gapWidthPx, $rt->f(0.5), 1, 'float'), $gapAA, 1, 'float'), $edgeDistPx), 1, 'float');
-                $offsetPx = $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->binary('-', $hash22__vec2->($rt->binary('+', $cellId, $rt->binary('*', $seedF, $rt->f(101.7), 1, 'float'), 2, 'float')), $rt->f(0.5), 2, 'float'), $rt->f(2), 2, 'float'), $rt->binary('/', $_u_maxOffset, $rt->f(100), 1, 'float'), 2, 'float'), $_u_tileSize, 2, 'float');
-                $cellCenterGc = $rt->binary('*', $rt->binary('+', $cellId, $rt->construct(2, $rt->f(0.5)), 2, 'float'), $_u_tileSize, 2, 'float');
-                $shiftedGc = $rt->binary('+', $cellCenterGc, $offsetPx, 2, 'float');
+                $offsetPx = $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('-', $hash22__vec2->($rt->construct(2, $rt->binary('+', $cellId, $rt->binary('*', $seedF, $rt->f(101.7), 1, 'float'), 2, 'float'))), $rt->f(0.5), 2, 'float')), $rt->f(2), 2, 'float')), $rt->binary('/', $_u_maxOffset, $rt->f(100), 1, 'float'), 2, 'float')), $_u_tileSize, 2, 'float'));
+                $cellCenterGc = $rt->construct(2, $rt->binary('*', $rt->binary('+', $cellId, $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'), $_u_tileSize, 2, 'float'));
+                $shiftedGc = $rt->construct(2, $rt->binary('+', $cellCenterGc, $offsetPx, 2, 'float'));
                 $shiftedUV = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('-', $shiftedGc, $_u_tileOffset, 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
                 $tileColor = $rt->swizzle($rt->texture($_u_inputTex, $shiftedUV), 'rgb');
                 $gapColor = $rt->construct(3, 0.0);

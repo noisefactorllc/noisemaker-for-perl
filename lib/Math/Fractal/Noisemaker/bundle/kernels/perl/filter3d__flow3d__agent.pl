@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint__uint, $hash__uint, $hash3__uint, $wrap_float__float_float, $wrap_int__int_int, $atlasTexel__ivec3_int, $sampleVoxel__ivec3_int, $srgb_to_linear__float, $cube_root__float, $oklab_l__vec3, $normalized_sine__float, $computeRotationBias__float_float_float_int_int, $main__void);
+    my ($hash_uint_lcg__uint, $hash__uint, $hash3__uint, $wrap_float__float_float, $wrap_int__int_int, $atlasTexel__ivec3_int, $sampleVoxel__ivec3_int, $srgb_to_linear__float, $cube_root__float, $oklab_l__vec3, $normalized_sine__float, $computeRotationBias__float_float_float_int_int, $main__void);
     my $_retc;
     my $_u_BEHAVIOR = exists $U->{'BEHAVIOR'} ? $U->{'BEHAVIOR'} : 0;
     my $_u_stateTex1 = $ctx->texture_binding('stateTex1');
@@ -27,7 +27,7 @@ my $run_pixel = sub {
     $g->{TAU} = $rt->f(6.2831853071795862);
     $g->{PI} = $rt->f(3.1415926535897931);
     $g->{RIGHT_ANGLE} = $rt->f(1.5707963267948966);
-    $hash_uint__uint = sub {
+    $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
         $state = $rt->binary('+', $rt->binary('*', $seed, $rt->i(747796405), 1, 'uint'), $rt->i(2891336453), 1, 'uint');
@@ -36,7 +36,7 @@ my $run_pixel = sub {
     };
     $hash__uint = sub {
         my ($seed) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($seed)), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($seed)), $rt->f(4294967295), 1, 'float');
     };
     $hash3__uint = sub {
         my ($seed) = @_;

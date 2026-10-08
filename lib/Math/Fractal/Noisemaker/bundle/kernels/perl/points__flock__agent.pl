@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint__uint, $hash__uint, $hash2__uint, $hashFloat__float, $noise2D__vec2, $wrapPosition__vec2_vec2, $limitVec__vec2_float, $setMag__vec2_float, $getGridCell__vec2_vec2, $main__void);
+    my ($hash_uint_lcg__uint, $hash__uint, $hash2__uint, $hashFloat__float, $noise2D__vec2, $wrapPosition__vec2_vec2, $limitVec__vec2_float, $setMag__vec2_float, $getGridCell__vec2_vec2, $main__void);
     my $_retc;
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
@@ -28,7 +28,7 @@ my $run_pixel = sub {
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
     $g->{GRID_SIZE} = $rt->i(16);
-    $hash_uint__uint = sub {
+    $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
         $state = $rt->binary('+', $rt->binary('*', $seed, $rt->i(747796405), 1, 'uint'), $rt->i(2891336453), 1, 'uint');
@@ -37,7 +37,7 @@ my $run_pixel = sub {
     };
     $hash__uint = sub {
         my ($seed) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($seed)), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($seed)), $rt->f(4294967295), 1, 'float');
     };
     $hash2__uint = sub {
         my ($seed) = @_;
@@ -45,7 +45,7 @@ my $run_pixel = sub {
     };
     $hashFloat__float = sub {
         my ($n) = @_;
-        return $rt->binary('/', $rt->construct(1, $rt->hash_uint($rt->float_bits_to_uint($n))), $rt->f(4294967295), 1, 'float');
+        return $rt->binary('/', $rt->construct(1, $rt->hash_uint_lcg($rt->float_bits_to_uint($n))), $rt->f(4294967295), 1, 'float');
     };
     $noise2D__vec2 = sub {
         my ($p) = @_;
@@ -69,7 +69,7 @@ my $run_pixel = sub {
         my ($len);
         $len = $rt->length($v);
         if ((($rt->binary('>', $len, $maxLen)) && ($rt->binary('>', $len, $rt->f(0))) ? 1 : 0)) {
-            return $rt->binary('*', $v, $rt->binary('/', $maxLen, $len, 1, 'float'), 2, 'float');
+            return $rt->construct(2, $rt->binary('*', $v, $rt->binary('/', $maxLen, $len, 1, 'float'), 2, 'float'));
         }
         return $v;
     };
@@ -79,7 +79,7 @@ my $run_pixel = sub {
         my ($len);
         $len = $rt->length($v);
         if ($rt->binary('>', $len, $rt->f(0))) {
-            return $rt->binary('*', $v, $rt->binary('/', $mag, $len, 1, 'float'), 2, 'float');
+            return $rt->construct(2, $rt->binary('*', $v, $rt->binary('/', $mag, $len, 1, 'float'), 2, 'float'));
         }
         return $v;
     };
@@ -88,7 +88,7 @@ my $run_pixel = sub {
         $pos = $rt->copy($pos, 'float');
         $res = $rt->copy($res, 'float');
         my ($cellSize);
-        $cellSize = $rt->binary('/', $res, $rt->construct(1, $g->{GRID_SIZE}), 2, 'float');
+        $cellSize = $rt->construct(2, $rt->binary('/', $res, $rt->construct(1, $g->{GRID_SIZE}), 2, 'float'));
         return $rt->construct(2, $rt->component_wise('clamp', $rt->binary('/', $pos, $cellSize, 2, 'float'), $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->construct(1, $rt->binary('-', $g->{GRID_SIZE}, $rt->i(1), 1, 'int')))), 'int');
     };
     $main__void = sub {
@@ -106,7 +106,7 @@ my $run_pixel = sub {
         $age = $rt->swizzle($vel, 'z');
         $seed = $rt->swizzle($vel, 'w');
         $boidId = $rt->construct(1, $rt->binary('+', $rt->swizzle($coord, 'x'), $rt->binary('*', $rt->swizzle($coord, 'y'), $rt->swizzle($stateSize, 'x'), 1, 'int'), 1, 'int'), 'uint');
-        $pos = $rt->binary('*', $rt->construct(2, $px, $py), $_u_resolution, 2, 'float');
+        $pos = $rt->construct(2, $rt->binary('*', $rt->construct_raw(2, $px, $py), $_u_resolution, 2, 'float'));
         $velocity = $rt->construct(2, $vx, $vy);
         if ($rt->binary('<', $alive, $rt->f(0.5))) {
             @{$g->{outXYZ}} = map { $rt->f32($_) } @{($xyz)};
@@ -120,7 +120,7 @@ my $run_pixel = sub {
             $seed = $hash__uint->($rt->binary('+', $boidId, $rt->i(99999), 1, 'uint'));
             $angle = $rt->binary('*', $hash__uint->($rt->binary('+', $boidId, $rt->i(12345), 1, 'uint')), $rt->f(6.2831853071800001), 1, 'float');
             $speed = $rt->binary('+', $rt->binary('*', $rt->binary('*', $hash__uint->($rt->binary('+', $boidId, $rt->i(23456), 1, 'uint')), $_u_maxSpeed, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('*', $_u_maxSpeed, $rt->f(0.25), 1, 'float'), 1, 'float');
-            @{$velocity} = map { $rt->f32($_) } @{($rt->binary('*', $rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $speed, 2, 'float'))};
+            @{$velocity} = map { $rt->f32($_) } @{($rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $speed, 2, 'float'))};
         }
         $separationForce = $rt->construct(2, $rt->f(0));
         $alignmentSum = $rt->construct(2, $rt->f(0));
@@ -170,7 +170,7 @@ my $run_pixel = sub {
                         last;
                     }
                     $sampleSeed = $rt->binary('+', $rt->binary('+', $rt->binary('*', $cellSeed, $rt->i(31), 1, 'uint'), $rt->construct(1, $s, 'uint'), 1, 'uint'), $rt->construct(1, $rt->binary('*', $_u_time, $rt->f(10), 1, 'float'), 'uint'), 1, 'uint');
-                    $sampleIdx = $rt->construct(1, $rt->binary('%', $rt->hash_uint($sampleSeed), $rt->construct(1, $totalBoids, 'uint'), 1, 'uint'), 'int');
+                    $sampleIdx = $rt->construct(1, $rt->binary('%', $rt->hash_uint_lcg($sampleSeed), $rt->construct(1, $totalBoids, 'uint'), 1, 'uint'), 'int');
                     $sx = $rt->binary('%', $sampleIdx, $rt->swizzle($stateSize, 'x'), 1, 'int');
                     $sy = $rt->binary('/', $sampleIdx, $rt->swizzle($stateSize, 'x'), 1, 'int');
                     if ((($rt->binary('==', $sx, $rt->swizzle($coord, 'x'))) && ($rt->binary('==', $sy, $rt->swizzle($coord, 'y'))) ? 1 : 0)) {
@@ -181,9 +181,9 @@ my $run_pixel = sub {
                     if ($rt->binary('<', $rt->swizzle($otherXyz, 'w'), $rt->f(0.5))) {
                         next;
                     }
-                    $otherPos = $rt->binary('*', $rt->swizzle($otherXyz, 'xy'), $_u_resolution, 2, 'float');
+                    $otherPos = $rt->construct(2, $rt->binary('*', $rt->swizzle($otherXyz, 'xy'), $_u_resolution, 2, 'float'));
                     $otherVelocity = $rt->swizzle($otherVel, 'xy');
-                    $diff = $rt->binary('-', $otherPos, $pos, 2, 'float');
+                    $diff = $rt->construct(2, $rt->binary('-', $otherPos, $pos, 2, 'float'));
                     if ($rt->binary('==', $_u_boundaryMode, $rt->i(0))) {
                         if ($rt->binary('>', $rt->swizzle($diff, 'x'), $rt->binary('*', $rt->swizzle($_u_resolution, 'x'), $rt->f(0.5), 1, 'float'))) {
                             $diff = $rt->assign_swizzle($diff, 'x', $rt->binary('-', $rt->swizzle($diff, 'x'), $rt->swizzle($_u_resolution, 'x'), 1, 'float'));
@@ -202,7 +202,7 @@ my $run_pixel = sub {
                     $away = $rt->construct(2, 0.0);
                     $dist = $rt->f(0.0);
                     if ((($rt->binary('<', $distSq, $separationSq)) && ($rt->binary('>', $distSq, $rt->f(0))) ? 1 : 0)) {
-                        $away = $rt->unary('-', $diff);
+                        $away = $rt->construct(2, $rt->unary('-', $diff));
                         $dist = $rt->component_wise('sqrt', $distSq);
                         @{$separationForce} = map { $rt->f32($_) } @{($rt->binary('+', $separationForce, $rt->binary('/', $away, $dist, 2, 'float'), 2, 'float'))};
                         $separationCount = $rt->binary('+', $separationCount, $rt->i(1), 1, 'int');
@@ -228,11 +228,11 @@ my $run_pixel = sub {
         }
         $avgVel = $rt->construct(2, 0.0);
         if ($rt->binary('>', $alignmentCount, $rt->i(0))) {
-            $avgVel = $rt->binary('/', $alignmentSum, $rt->construct(1, $alignmentCount), 2, 'float');
+            $avgVel = $rt->construct(2, $rt->binary('/', $alignmentSum, $rt->construct(1, $alignmentCount), 2, 'float'));
             $alignSteer = $rt->construct(2, 0.0);
             if ($rt->binary('>', $rt->length($avgVel), $rt->f(0))) {
                 @{$avgVel} = map { $rt->f32($_) } @{($setMag__vec2_float->($avgVel, $_u_maxSpeed))};
-                $alignSteer = $rt->binary('-', $avgVel, $velocity, 2, 'float');
+                $alignSteer = $rt->construct(2, $rt->binary('-', $avgVel, $velocity, 2, 'float'));
                 @{$alignSteer} = map { $rt->f32($_) } @{($limitVec__vec2_float->($alignSteer, $_u_maxForce))};
                 @{$steer} = map { $rt->f32($_) } @{($rt->binary('+', $steer, $rt->binary('*', $alignSteer, $_u_alignment, 2, 'float'), 2, 'float'))};
             }
@@ -240,12 +240,12 @@ my $run_pixel = sub {
         $avgPos = $rt->construct(2, 0.0);
         $desired = $rt->construct(2, 0.0);
         if ($rt->binary('>', $cohesionCount, $rt->i(0))) {
-            $avgPos = $rt->binary('/', $cohesionSum, $rt->construct(1, $cohesionCount), 2, 'float');
-            $desired = $rt->binary('-', $avgPos, $pos, 2, 'float');
+            $avgPos = $rt->construct(2, $rt->binary('/', $cohesionSum, $rt->construct(1, $cohesionCount), 2, 'float'));
+            $desired = $rt->construct(2, $rt->binary('-', $avgPos, $pos, 2, 'float'));
             $cohesionSteer = $rt->construct(2, 0.0);
             if ($rt->binary('>', $rt->length($desired), $rt->f(0))) {
                 @{$desired} = map { $rt->f32($_) } @{($setMag__vec2_float->($desired, $_u_maxSpeed))};
-                $cohesionSteer = $rt->binary('-', $desired, $velocity, 2, 'float');
+                $cohesionSteer = $rt->construct(2, $rt->binary('-', $desired, $velocity, 2, 'float'));
                 @{$cohesionSteer} = map { $rt->f32($_) } @{($limitVec__vec2_float->($cohesionSteer, $_u_maxForce))};
                 @{$steer} = map { $rt->f32($_) } @{($rt->binary('+', $steer, $rt->binary('*', $cohesionSteer, $_u_cohesion, 2, 'float'), 2, 'float'))};
             }
@@ -256,9 +256,9 @@ my $run_pixel = sub {
         $ny = $rt->f(0.0);
         if ($rt->binary('>', $_u_noiseWeight, $rt->f(0))) {
             $noiseScale = $rt->f(0.01);
-            $nx = $noise2D__vec2->($rt->binary('+', $rt->binary('*', $pos, $noiseScale, 2, 'float'), $rt->binary('*', $_u_time, $rt->f(0.5), 1, 'float'), 2, 'float'));
-            $ny = $noise2D__vec2->($rt->binary('+', $rt->binary('+', $rt->binary('*', $pos, $noiseScale, 2, 'float'), $rt->construct(2, $rt->f(100), $rt->f(100)), 2, 'float'), $rt->binary('*', $_u_time, $rt->f(0.5), 1, 'float'), 2, 'float'));
-            $noiseForce = $rt->binary('*', $rt->binary('*', $rt->construct(2, $nx, $ny), $_u_maxForce, 2, 'float'), $_u_noiseWeight, 2, 'float');
+            $nx = $noise2D__vec2->($rt->construct(2, $rt->binary('+', $rt->binary('*', $pos, $noiseScale, 2, 'float'), $rt->binary('*', $_u_time, $rt->f(0.5), 1, 'float'), 2, 'float')));
+            $ny = $noise2D__vec2->($rt->construct(2, $rt->binary('+', $rt->binary('+', $rt->binary('*', $pos, $noiseScale, 2, 'float'), $rt->construct_raw(2, $rt->f(100), $rt->f(100)), 2, 'float'), $rt->binary('*', $_u_time, $rt->f(0.5), 1, 'float'), 2, 'float')));
+            $noiseForce = $rt->construct(2, $rt->binary('*', $rt->binary('*', $rt->construct_raw(2, $nx, $ny), $_u_maxForce, 2, 'float'), $_u_noiseWeight, 2, 'float'));
             @{$steer} = map { $rt->f32($_) } @{($rt->binary('+', $steer, $noiseForce, 2, 'float'))};
         }
         $turnStrength = $rt->f(0.0);
@@ -288,7 +288,7 @@ my $run_pixel = sub {
         if ($rt->binary('==', $_u_boundaryMode, $rt->i(0))) {
             @{$pos} = map { $rt->f32($_) } @{($wrapPosition__vec2_vec2->($pos, $_u_resolution))};
         } else {
-            @{$pos} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $pos, $rt->construct(2, $rt->f(1)), $rt->binary('-', $_u_resolution, $rt->construct(2, $rt->f(1)), 2, 'float')))};
+            @{$pos} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $pos, $rt->construct(2, $rt->f(1)), $rt->binary('-', $_u_resolution, $rt->construct_raw(2, $rt->f(1)), 2, 'float')))};
         }
         $age = $rt->binary('+', $age, $rt->f(0.016), 1, 'float');
         $newPx = $rt->binary('/', $rt->swizzle($pos, 'x'), $rt->swizzle($_u_resolution, 'x'), 1, 'float');

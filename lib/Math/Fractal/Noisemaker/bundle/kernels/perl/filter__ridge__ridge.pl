@@ -19,14 +19,14 @@ my $run_pixel = sub {
         $value = $rt->copy($value, 'float');
         my ($denom, $result);
         $denom = $rt->component_wise('max', $lvl, $rt->binary('-', $rt->f(1), $lvl, 1, 'float'));
-        $result = $rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->binary('/', $rt->component_wise('abs', $rt->binary('-', $value, $rt->construct(4, $lvl), 4, 'float')), $denom, 4, 'float'), 4, 'float');
+        $result = $rt->construct(4, $rt->binary('-', $rt->construct(4, $rt->f(1)), $rt->construct(4, $rt->binary('/', $rt->component_wise('abs', $rt->binary('-', $value, $rt->construct_raw(4, $lvl), 4, 'float')), $denom, 4, 'float')), 4, 'float'));
         return $rt->component_wise('clamp', $result, $rt->construct(4, $rt->f(0)), $rt->construct(4, $rt->f(1)));
     };
     $main__void = sub {
         my ($dims, $globalCoord, $out_color, $ridged, $texel, $uv);
-        $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
+        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $dims = $rt->texture_size($_u_inputTex);
-        $uv = $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $dims), 2, 'float');
+        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $dims)), 2, 'float'));
         $texel = $rt->texture($_u_inputTex, $uv);
         $ridged = $ridge_transform__vec4_float->($texel, $_u_level);
         $out_color = $rt->construct(4, $rt->swizzle($ridged, 'xyz'), $rt->f(1));
