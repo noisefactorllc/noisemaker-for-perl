@@ -30,8 +30,19 @@ our @EXPORT_OK = qw(fetch_effect fetch_manifest eligible_ids cache_root CDN_BASE
 
 our $CDN_BASE = ($ENV{NM_SHADER_CDN} || 'https://shaders.noisedeck.app');
 $CDN_BASE =~ s{/+$}{};
-# The "1.0" minor channel is the current release (rolling tag).
-our $CDN_VERSION = $ENV{NM_SHADER_VERSION} || '1.0';
+# Default to the exact build recorded in the committed bundle lock: every dot
+# release is immutable, so a rebuild reproduces the committed bundle. To move to
+# a newer engine, run with NM_SHADER_VERSION=<exact version> and --update-lock.
+our $BUNDLE_LOCK = File::Spec->catfile(
+    File::Basename::dirname(File::Spec->rel2abs(__FILE__)), '..', 'bundle', 'bundle-lock.json');
+our $CDN_VERSION = $ENV{NM_SHADER_VERSION} || _locked_version($BUNDLE_LOCK);
+
+sub _locked_version {
+    my ($path) = @_;
+    open my $fh, '<:raw', $path or die "Cannot read the bundle lock $path: $!\n";
+    my $lock = JSON::PP->new->decode(do { local $/; <$fh> });
+    return $lock->{version} || die "The bundle lock $path records no version\n";
+}
 
 my $_JSON = JSON::PP->new->utf8->canonical;
 

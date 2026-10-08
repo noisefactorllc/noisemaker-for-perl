@@ -24,7 +24,7 @@ my $run_pixel = sub {
         my ($c, $globalCoord, $localUV, $st);
         $globalCoord = $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float');
         $st = $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float');
-        $c = $rt->construct(2, $rt->unary('-', $_u_centerX), $_u_centerY);
+        $c = $rt->construct(2, $_u_centerX, $_u_centerY);
         @{$st} = map { $rt->f32($_) } @{($rt->binary('-', $st, $c, 2, 'float'))};
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('*', $rt->swizzle($st, 'x'), $_u_aspect, 1, 'float'));
         @{$st} = map { $rt->f32($_) } @{($rt->binary('/', $st, $rt->construct(2, $_u_scaleX, $_u_scaleY), 2, 'float'))};

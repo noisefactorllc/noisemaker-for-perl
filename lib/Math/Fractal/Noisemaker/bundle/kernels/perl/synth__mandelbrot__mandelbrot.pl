@@ -32,7 +32,7 @@ my $run_pixel = sub {
     $g->{TAU} = $rt->f(6.2831853071800001);
     $g->{BAILOUT} = $rt->f(256);
     $g->{LOG2} = $rt->f(0.69314718055994529);
-    $g->{MAX_ITER} = $rt->i(500);
+    $g->{MAX_ITER} = $rt->i(2048);
     $df64_quick_two_sum__float_float = sub {
         my ($a, $b) = @_;
         my ($e, $s);

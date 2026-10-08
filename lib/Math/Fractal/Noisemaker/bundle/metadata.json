@@ -1059,6 +1059,18 @@
           "ui": {
             "category": "refract",
             "control": "slider",
+            "enabledBy": {
+              "and": [
+                {
+                  "gt": 0,
+                  "param": "refractAAmt"
+                },
+                {
+                  "neq": 100,
+                  "param": "blendMode"
+                }
+              ]
+            },
             "label": "refract dir a"
           },
           "uniform": "refractADir"
@@ -1083,6 +1095,18 @@
           "ui": {
             "category": "refract",
             "control": "slider",
+            "enabledBy": {
+              "and": [
+                {
+                  "gt": 0,
+                  "param": "refractBAmt"
+                },
+                {
+                  "neq": 100,
+                  "param": "blendMode"
+                }
+              ]
+            },
             "label": "refract dir b"
           },
           "uniform": "refractBDir"
@@ -1560,6 +1584,10 @@
           "type": "int",
           "ui": {
             "control": "slider",
+            "enabledBy": {
+              "neq": 0,
+              "param": "effect"
+            },
             "label": "effect amt"
           },
           "uniform": "effectAmt"
@@ -2189,6 +2217,10 @@
           "type": "int",
           "ui": {
             "control": "slider",
+            "enabledBy": {
+              "gt": 0,
+              "param": "glitchiness"
+            },
             "label": "width"
           },
           "uniform": "xChonk"
@@ -2200,6 +2232,10 @@
           "type": "int",
           "ui": {
             "control": "slider",
+            "enabledBy": {
+              "gt": 0,
+              "param": "glitchiness"
+            },
             "label": "height"
           },
           "uniform": "yChonk"
@@ -18367,6 +18403,13 @@
           "type": "float",
           "ui": {
             "control": "slider",
+            "enabledBy": {
+              "notIn": [
+                0,
+                6
+              ],
+              "param": "shape"
+            },
             "label": "rotation"
           },
           "uniform": "rotation"
@@ -23483,6 +23526,10 @@
           "ui": {
             "category": "animation",
             "control": "slider",
+            "enabledBy": {
+              "gt": 0,
+              "param": "zoomDepth"
+            },
             "label": "zoom speed"
           },
           "uniform": "zoomSpeed",
@@ -23959,6 +24006,10 @@
           "ui": {
             "category": "animation",
             "control": "slider",
+            "enabledBy": {
+              "gt": 0,
+              "param": "zoomDepth"
+            },
             "label": "zoom speed"
           },
           "uniform": "zoomSpeed",
@@ -24902,6 +24953,10 @@
           "ui": {
             "category": "fractal",
             "control": "slider",
+            "enabledBy": {
+              "eq": 0,
+              "param": "poi"
+            },
             "label": "degree"
           },
           "uniform": "degree"
@@ -24916,6 +24971,10 @@
           "ui": {
             "category": "animation",
             "control": "slider",
+            "enabledBy": {
+              "eq": 0,
+              "param": "poi"
+            },
             "label": "degree range"
           },
           "uniform": "degreeRange"
@@ -24930,6 +24989,10 @@
           "ui": {
             "category": "animation",
             "control": "slider",
+            "enabledBy": {
+              "eq": 0,
+              "param": "poi"
+            },
             "label": "degree speed"
           },
           "uniform": "degreeSpeed"
@@ -25083,6 +25146,10 @@
           "ui": {
             "category": "animation",
             "control": "slider",
+            "enabledBy": {
+              "gt": 0,
+              "param": "zoomDepth"
+            },
             "label": "zoom speed"
           },
           "uniform": "zoomSpeed",
@@ -27103,7 +27170,8 @@
           "type": "float",
           "ui": {
             "control": "slider",
-            "label": "density"
+            "label": "density",
+            "resetOnChange": true
           },
           "uniform": "density"
         },
@@ -28241,10 +28309,9 @@
           "default": 0,
           "type": "int",
           "ui": {
-            "control": "dropdown",
+            "control": false,
             "label": "color mode"
-          },
-          "uniform": "colorMode"
+          }
         },
         "loopAOffset": {
           "choices": {
@@ -28416,6 +28483,6 @@
     "base": "https://shaders.noisedeck.app",
     "source": "shaders.noisedeck.app CDN",
     "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-    "version": "1.0"
+    "version": "1.0.271"
   }
 }

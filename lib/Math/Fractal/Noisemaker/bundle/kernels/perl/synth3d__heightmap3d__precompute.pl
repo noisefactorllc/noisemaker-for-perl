@@ -20,7 +20,9 @@ my $run_pixel = sub {
         my ($column, $size) = @_;
         $column = $rt->copy($column, 'int');
         $size = $rt->copy($size, 'int');
-        return $rt->component_wise('clamp', $rt->binary('/', $rt->binary('*', $rt->binary('+', $rt->binary('*', $column, $rt->i(2), 2, 'int'), $rt->i(1), 2, 'int'), $size, 2, 'int'), $rt->binary('*', $_u_volumeSize, $rt->i(2), 1, 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int'));
+        my ($image);
+        $image = $rt->construct(2, $rt->swizzle($column, 'x'), $rt->binary('-', $rt->binary('-', $_u_volumeSize, $rt->i(1), 1, 'int'), $rt->swizzle($column, 'y'), 1, 'int'), 'int');
+        return $rt->component_wise('clamp', $rt->binary('/', $rt->binary('*', $rt->binary('+', $rt->binary('*', $image, $rt->i(2), 2, 'int'), $rt->i(1), 2, 'int'), $size, 2, 'int'), $rt->binary('*', $_u_volumeSize, $rt->i(2), 1, 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int'));
     };
     $columnHeight__ivec2 = sub {
         my ($column) = @_;

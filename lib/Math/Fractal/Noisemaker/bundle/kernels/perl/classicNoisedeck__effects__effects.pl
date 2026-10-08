@@ -250,7 +250,7 @@ my $run_pixel = sub {
         $uv = $rt->copy($uv, 'float');
         my ($coord, $dx, $dy);
         if ($rt->binary('<', $size, $rt->f(1))) {
-            return $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')), 'rgb');
+            return $rt->swizzle($rt->texture($_u_inputTex, $rt->binary('/', $rt->binary('-', $rt->binary('*', $uv, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')), 'rgb');
         }
         $size = $rt->binary('*', $size, $rt->f(4), 1, 'float');
         $dx = $rt->binary('*', $size, $rt->binary('/', $rt->f(1), $rt->swizzle($_u_resolution, 'x'), 1, 'float'), 1, 'float');
@@ -803,7 +803,7 @@ my $run_pixel = sub {
         $loadKernels__void->();
         $blendy = $periodicFunction__float->($rt->binary('-', $_u_time, $offsets__vec2->($uv), 1, 'float'));
         $origUV = $uv;
-        $origcolor = $rt->texture($_u_inputTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+        $origcolor = $rt->texture($_u_inputTex, $rt->binary('/', $rt->binary('-', $rt->binary('*', $uv, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
         @{$color} = map { $rt->f32($_) } @{($origcolor)};
         if ($rt->binary('!=', $_u_EFFECT, $rt->i(0))) {
             if ($rt->binary('!=', $_u_effectAmt, $rt->f(0))) {
