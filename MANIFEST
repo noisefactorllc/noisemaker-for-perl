@@ -13,9 +13,11 @@ lib/Math/Fractal/Noisemaker/Adapters.pm
 lib/Math/Fractal/Noisemaker/CpuFrameExportAdapter.pm
 lib/Math/Fractal/Noisemaker/DSL.pm
 lib/Math/Fractal/Noisemaker/DrawOps.pm
+lib/Math/Fractal/Noisemaker/ExternalInput.pm
 lib/Math/Fractal/Noisemaker/FrameExportQueue.pm
 lib/Math/Fractal/Noisemaker/Iteration.pm
 lib/Math/Fractal/Noisemaker/KernelCache.pm
+lib/Math/Fractal/Noisemaker/MeshRender.pm
 lib/Math/Fractal/Noisemaker/OverlayGen.pm
 lib/Math/Fractal/Noisemaker/PNG.pm
 lib/Math/Fractal/Noisemaker/PaletteData.pm
@@ -269,6 +271,8 @@ lib/Math/Fractal/Noisemaker/bundle/kernels/perl/points__physical__agent.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/points__physical__passthrough.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__loopBegin__loopBegin.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__loopEnd__copy.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__meshLoader__preview.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__meshRender__clear.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__pointsBillboardRender__blend.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__pointsBillboardRender__copy.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/render__pointsBillboardRender__diffuse.pl
@@ -320,12 +324,17 @@ lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__polygon__shape.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__reactionDiffusion__rd.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__reactionDiffusion__rdFb.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__remap__remap.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__roll__copy.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__roll__roll.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__sacredGeometry__sacredGeometry.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__scope__scope.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__shape__shape.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__solid__solid.pl
+lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__spectrum__spectrum.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__subdivide__subdivide.pl
 lib/Math/Fractal/Noisemaker/bundle/kernels/perl/synth__testPattern__testPattern.pl
 lib/Math/Fractal/Noisemaker/bundle/metadata.json
+scripts/ReactiveFixtures.pm
 scripts/build-bundle.pl
 scripts/ParityOracle.pm
 scripts/oracle-lock.json
@@ -359,3 +368,4 @@ lib/Math/Fractal/Noisemaker/Automation.pm
 lib/Math/Fractal/Noisemaker/JsTrig.pm
 t/23-osc-automation.t
 t/data/osc-automation-golden.json
+t/24-external-input.t

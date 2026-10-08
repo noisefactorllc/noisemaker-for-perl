@@ -35,6 +35,10 @@ use Math::Fractal::Noisemaker::PNG      qw(encode_png decode_png);
 Configure(qw(no_ignore_case));
 
 use constant MAX_SEED_VALUE => 2**32 - 1;
+# Effects that read MIDI, audio or mesh state the CLI cannot supply; like the
+# reference CLI, `random` never picks them.
+my %EXTERNAL_INPUT_EFFECT_IDS = map { $_ => 1 }
+    qw(synth/roll synth/scope synth/spectrum render/meshLoader render/meshRender);
 sub VERSION_STRING { "make-noise (Math::Fractal::Noisemaker) $Math::Fractal::Noisemaker::VERSION" }
 
 my %COMMANDS = (
@@ -418,6 +422,7 @@ sub _resolve_effect {
                 && (($effects->{$_}{domain} || 'image') eq 'image')
                 && !$effects->{$_}{iterated}
                 && !$effects->{$_}{externalTexture}
+                && !$EXTERNAL_INPUT_EFFECT_IDS{$_}
         } keys %$effects;
         die "usage: No $kind effects available.\n" unless @pool;
         return $pool[ int(rand(scalar @pool)) ];

@@ -97,14 +97,16 @@ my $eligible;
     $eligible = Math::Fractal::Noisemaker::Transpiler::CDN::eligible_ids();
 }
 my %eligible = map { $_ => 1 } @$eligible;
-is(scalar(@$eligible), 184, 'CDN build selects 165 image effects and 19 volume effects');
+is(scalar(@$eligible), 189, 'CDN build selects 170 image effects and 19 volume effects');
 is_deeply(
     [grep { $eligible{$_} } @volume_effects],
     \@volume_effects,
     'all 19 volume and loop effects are eligible for generation',
 );
 ok(!$eligible{'synth/reactionDiffusion'}, 'previously authored stateful effects remain excluded');
-ok(!$eligible{'render/meshRender'}, 'unsupported mesh effects remain excluded');
+is_deeply([grep { $eligible{$_} } qw(render/meshLoader render/meshRender synth/roll synth/scope synth/spectrum)],
+    [qw(render/meshLoader render/meshRender synth/roll synth/scope synth/spectrum)],
+    'the mesh and reactive effects are generated from the CDN');
 
 my $volume_noise = Math::Fractal::Noisemaker::Transpiler::CDN::_project_effect({
     namespace  => 'synth3d',

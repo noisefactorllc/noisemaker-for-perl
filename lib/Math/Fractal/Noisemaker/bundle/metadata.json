@@ -20492,6 +20492,424 @@
       ],
       "textures": {}
     },
+    "render/meshLoader": {
+      "domain": "image",
+      "func": "meshLoader",
+      "kind": "filter",
+      "namespace": "render",
+      "paramOrder": [],
+      "params": {},
+      "passes": [
+        {
+          "inputs": {
+            "normalsTex": "global_mesh0_normals",
+            "positionsTex": "global_mesh0_positions"
+          },
+          "key": "render/meshLoader:preview",
+          "name": "preview",
+          "outputs": {
+            "fragColor": "outputTex"
+          },
+          "program": "preview",
+          "uniforms": {}
+        }
+      ],
+      "textures": {}
+    },
+    "render/meshRender": {
+      "domain": "image",
+      "func": "meshRender",
+      "kind": "filter",
+      "namespace": "render",
+      "paramOrder": [
+        "scale",
+        "offsetX",
+        "offsetY",
+        "offsetZ",
+        "rotateX",
+        "rotateY",
+        "rotateZ",
+        "viewScale",
+        "posX",
+        "posY",
+        "lightDirection",
+        "diffuseColor",
+        "diffuseIntensity",
+        "specularColor",
+        "specularIntensity",
+        "shininess",
+        "ambientColor",
+        "rimIntensity",
+        "rimPower",
+        "meshColor",
+        "bgColor",
+        "bgAlpha",
+        "wireframe"
+      ],
+      "params": {
+        "ambientColor": {
+          "default": [
+            0.1,
+            0.1,
+            0.1
+          ],
+          "type": "color",
+          "ui": {
+            "category": "ambient",
+            "control": "color",
+            "label": "ambient color"
+          },
+          "uniform": "ambientColor"
+        },
+        "bgAlpha": {
+          "default": 1,
+          "max": 1,
+          "min": 0,
+          "step": 0.01,
+          "type": "float",
+          "ui": {
+            "category": "material",
+            "control": "slider",
+            "label": "bg opacity"
+          },
+          "uniform": "bgAlpha"
+        },
+        "bgColor": {
+          "default": [
+            0.1,
+            0.1,
+            0.15
+          ],
+          "type": "color",
+          "ui": {
+            "category": "material",
+            "control": "color",
+            "label": "bg color"
+          },
+          "uniform": "bgColor"
+        },
+        "diffuseColor": {
+          "default": [
+            1,
+            1,
+            1
+          ],
+          "type": "color",
+          "ui": {
+            "category": "diffuse",
+            "control": "color",
+            "label": "color"
+          },
+          "uniform": "diffuseColor"
+        },
+        "diffuseIntensity": {
+          "default": 0.7,
+          "max": 2,
+          "min": 0,
+          "step": 0.01,
+          "type": "float",
+          "ui": {
+            "category": "diffuse",
+            "control": "slider",
+            "label": "intensity"
+          },
+          "uniform": "diffuseIntensity"
+        },
+        "lightDirection": {
+          "default": [
+            0.5,
+            0.7,
+            0.5
+          ],
+          "type": "vec3",
+          "ui": {
+            "category": "lighting",
+            "control": "vector3",
+            "label": "direction"
+          },
+          "uniform": "lightDirection"
+        },
+        "meshColor": {
+          "default": [
+            0.8,
+            0.8,
+            0.8
+          ],
+          "type": "color",
+          "ui": {
+            "category": "material",
+            "control": "color",
+            "label": "base color"
+          },
+          "uniform": "meshColor"
+        },
+        "offsetX": {
+          "default": 0,
+          "max": 5,
+          "min": -5,
+          "randChance": 0,
+          "type": "float",
+          "ui": {
+            "category": "mesh",
+            "control": "slider",
+            "label": "mesh offset x"
+          },
+          "uniform": "offsetX"
+        },
+        "offsetY": {
+          "default": 0,
+          "max": 5,
+          "min": -5,
+          "randChance": 0,
+          "type": "float",
+          "ui": {
+            "category": "mesh",
+            "control": "slider",
+            "label": "mesh offset y"
+          },
+          "uniform": "offsetY"
+        },
+        "offsetZ": {
+          "default": 0,
+          "max": 5,
+          "min": -5,
+          "randChance": 0,
+          "type": "float",
+          "ui": {
+            "category": "mesh",
+            "control": "slider",
+            "label": "mesh offset z"
+          },
+          "uniform": "offsetZ"
+        },
+        "posX": {
+          "default": 0,
+          "max": 10,
+          "min": -10,
+          "randChance": 0,
+          "type": "float",
+          "ui": {
+            "category": "view",
+            "control": "slider",
+            "label": "position x"
+          },
+          "uniform": "posX"
+        },
+        "posY": {
+          "default": 0,
+          "max": 10,
+          "min": -10,
+          "randChance": 0,
+          "type": "float",
+          "ui": {
+            "category": "view",
+            "control": "slider",
+            "label": "position y"
+          },
+          "uniform": "posY"
+        },
+        "rimIntensity": {
+          "default": 0.15,
+          "max": 1,
+          "min": 0,
+          "step": 0.01,
+          "type": "float",
+          "ui": {
+            "category": "rim",
+            "control": "slider",
+            "label": "rim intensity"
+          },
+          "uniform": "rimIntensity"
+        },
+        "rimPower": {
+          "default": 3,
+          "max": 8,
+          "min": 0.5,
+          "step": 0.1,
+          "type": "float",
+          "ui": {
+            "category": "rim",
+            "control": "slider",
+            "label": "rim power"
+          },
+          "uniform": "rimPower"
+        },
+        "rotateX": {
+          "default": 0,
+          "max": 180,
+          "min": -180,
+          "step": 1,
+          "type": "float",
+          "ui": {
+            "category": "view",
+            "control": "slider",
+            "label": "rotate x"
+          },
+          "uniform": "rotateX"
+        },
+        "rotateY": {
+          "default": 0,
+          "max": 180,
+          "min": -180,
+          "step": 1,
+          "type": "float",
+          "ui": {
+            "category": "view",
+            "control": "slider",
+            "label": "rotate y"
+          },
+          "uniform": "rotateY"
+        },
+        "rotateZ": {
+          "default": 0,
+          "max": 180,
+          "min": -180,
+          "step": 1,
+          "type": "float",
+          "ui": {
+            "category": "view",
+            "control": "slider",
+            "label": "rotate z"
+          },
+          "uniform": "rotateZ"
+        },
+        "scale": {
+          "default": 1,
+          "max": 10,
+          "min": 0.01,
+          "randMax": 1,
+          "randMin": 0.1,
+          "type": "float",
+          "ui": {
+            "category": "mesh",
+            "control": "slider",
+            "label": "mesh scale"
+          },
+          "uniform": "meshScale"
+        },
+        "shininess": {
+          "default": 32,
+          "max": 256,
+          "min": 1,
+          "step": 1,
+          "type": "float",
+          "ui": {
+            "category": "specular",
+            "control": "slider",
+            "label": "shininess"
+          },
+          "uniform": "shininess"
+        },
+        "specularColor": {
+          "default": [
+            1,
+            1,
+            1
+          ],
+          "type": "color",
+          "ui": {
+            "category": "specular",
+            "control": "color",
+            "label": "color"
+          },
+          "uniform": "specularColor"
+        },
+        "specularIntensity": {
+          "default": 0.3,
+          "max": 2,
+          "min": 0,
+          "step": 0.01,
+          "type": "float",
+          "ui": {
+            "category": "specular",
+            "control": "slider",
+            "label": "intensity"
+          },
+          "uniform": "specularIntensity"
+        },
+        "viewScale": {
+          "default": 1,
+          "max": 10,
+          "min": 0.1,
+          "type": "float",
+          "ui": {
+            "category": "view",
+            "control": "slider",
+            "label": "zoom"
+          },
+          "uniform": "viewScale"
+        },
+        "wireframe": {
+          "choices": {
+            "solid": 0,
+            "wireframe": 1
+          },
+          "default": 0,
+          "type": "int",
+          "ui": {
+            "category": "material",
+            "control": "dropdown",
+            "label": "render mode"
+          },
+          "uniform": "wireframe"
+        }
+      },
+      "passes": [
+        {
+          "inputs": {},
+          "key": "render/meshRender:clear",
+          "name": "clear",
+          "outputs": {
+            "fragColor": "outputTex"
+          },
+          "program": "clear",
+          "uniforms": {
+            "bgAlpha": "bgAlpha",
+            "bgColor": "bgColor"
+          }
+        },
+        {
+          "blend": false,
+          "count": "input",
+          "drawMode": "triangles",
+          "inputs": {
+            "inputTex": "inputTex",
+            "meshNormals": "global_mesh0_normals",
+            "meshPositions": "global_mesh0_positions"
+          },
+          "key": null,
+          "name": "render",
+          "outputs": {
+            "fragColor": "outputTex"
+          },
+          "program": "render",
+          "uniforms": {
+            "ambientColor": "ambientColor",
+            "diffuseColor": "diffuseColor",
+            "diffuseIntensity": "diffuseIntensity",
+            "lightDirection": "lightDirection",
+            "meshColor": "meshColor",
+            "meshOffsetX": "offsetX",
+            "meshOffsetY": "offsetY",
+            "meshOffsetZ": "offsetZ",
+            "meshScale": "meshScale",
+            "posX": "posX",
+            "posY": "posY",
+            "rimIntensity": "rimIntensity",
+            "rimPower": "rimPower",
+            "rotateX": "rotateX",
+            "rotateY": "rotateY",
+            "rotateZ": "rotateZ",
+            "shininess": "shininess",
+            "specularColor": "specularColor",
+            "specularIntensity": "specularIntensity",
+            "viewScale": "viewScale",
+            "wireframe": "wireframe"
+          }
+        }
+      ],
+      "textures": {}
+    },
     "render/pointsBillboardRender": {
       "domain": "image",
       "func": "pointsBillboardRender",
@@ -26278,6 +26696,90 @@
       ],
       "textures": {}
     },
+    "synth/roll": {
+      "domain": "image",
+      "func": "roll",
+      "kind": "generator",
+      "namespace": "synth",
+      "paramOrder": [
+        "color",
+        "gain",
+        "speed"
+      ],
+      "params": {
+        "color": {
+          "default": [
+            0,
+            1,
+            0
+          ],
+          "type": "color",
+          "ui": {
+            "control": "color",
+            "label": "color"
+          },
+          "uniform": "lineColor"
+        },
+        "gain": {
+          "default": 1,
+          "max": 5,
+          "min": 0.1,
+          "step": 0.1,
+          "type": "float",
+          "ui": {
+            "control": "slider",
+            "label": "gain"
+          },
+          "uniform": "gain"
+        },
+        "speed": {
+          "default": 1,
+          "max": 5,
+          "min": 0.5,
+          "step": 0.1,
+          "type": "float",
+          "ui": {
+            "control": "slider",
+            "label": "speed"
+          },
+          "uniform": "speed"
+        }
+      },
+      "passes": [
+        {
+          "inputs": {
+            "feedbackTex": "_rollFb",
+            "noteGridTex": "midiNoteGrid"
+          },
+          "key": "synth/roll:roll",
+          "name": "scroll",
+          "outputs": {
+            "fragColor": "outputTex"
+          },
+          "program": "roll",
+          "uniforms": {}
+        },
+        {
+          "inputs": {
+            "inputTex": "outputTex"
+          },
+          "key": "synth/roll:copy",
+          "name": "feedback",
+          "outputs": {
+            "fragColor": "_rollFb"
+          },
+          "program": "copy",
+          "uniforms": {}
+        }
+      ],
+      "textures": {
+        "_rollFb": {
+          "format": "rgba16f",
+          "height": "100%",
+          "width": "100%"
+        }
+      }
+    },
     "synth/sacredGeometry": {
       "domain": "image",
       "func": "sacredGeometry",
@@ -26482,6 +26984,69 @@
             "color": "outputTex"
           },
           "program": "sacredGeometry",
+          "uniforms": {}
+        }
+      ],
+      "textures": {}
+    },
+    "synth/scope": {
+      "domain": "image",
+      "func": "scope",
+      "kind": "generator",
+      "namespace": "synth",
+      "paramOrder": [
+        "color",
+        "thickness",
+        "gain"
+      ],
+      "params": {
+        "color": {
+          "default": [
+            0,
+            1,
+            0
+          ],
+          "type": "color",
+          "ui": {
+            "control": "color",
+            "label": "color"
+          },
+          "uniform": "lineColor"
+        },
+        "gain": {
+          "default": 1,
+          "max": 5,
+          "min": 0.1,
+          "step": 0.1,
+          "type": "float",
+          "ui": {
+            "control": "slider",
+            "label": "gain"
+          },
+          "uniform": "gain"
+        },
+        "thickness": {
+          "default": 2,
+          "max": 10,
+          "min": 0.5,
+          "step": 0.5,
+          "type": "float",
+          "ui": {
+            "control": "slider",
+            "label": "thickness"
+          },
+          "uniform": "lineThickness"
+        }
+      },
+      "passes": [
+        {
+          "inputs": {},
+          "key": "synth/scope:scope",
+          "name": "main",
+          "outputs": {
+            "fragColor": "outputTex"
+          },
+          "program": "scope",
           "uniforms": {}
         }
       ],
@@ -26739,6 +27304,69 @@
             "color": "outputTex"
           },
           "program": "solid",
+          "uniforms": {}
+        }
+      ],
+      "textures": {}
+    },
+    "synth/spectrum": {
+      "domain": "image",
+      "func": "spectrum",
+      "kind": "generator",
+      "namespace": "synth",
+      "paramOrder": [
+        "color",
+        "thickness",
+        "gain"
+      ],
+      "params": {
+        "color": {
+          "default": [
+            0,
+            1,
+            0
+          ],
+          "type": "color",
+          "ui": {
+            "control": "color",
+            "label": "color"
+          },
+          "uniform": "lineColor"
+        },
+        "gain": {
+          "default": 1,
+          "max": 5,
+          "min": 0.1,
+          "step": 0.1,
+          "type": "float",
+          "ui": {
+            "control": "slider",
+            "label": "gain"
+          },
+          "uniform": "gain"
+        },
+        "thickness": {
+          "default": 2,
+          "max": 10,
+          "min": 0.5,
+          "step": 0.5,
+          "type": "float",
+          "ui": {
+            "control": "slider",
+            "label": "thickness"
+          },
+          "uniform": "lineThickness"
+        }
+      },
+      "passes": [
+        {
+          "inputs": {},
+          "key": "synth/spectrum:spectrum",
+          "name": "main",
+          "outputs": {
+            "fragColor": "outputTex"
+          },
+          "program": "spectrum",
           "uniforms": {}
         }
       ],

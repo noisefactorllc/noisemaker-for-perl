@@ -25,8 +25,10 @@ use Math::Fractal::Noisemaker::Automation qw(
     resolve_automation_uniform
 );
 use Math::Fractal::Noisemaker::DSL qw(compile_dsl);
+use Math::Fractal::Noisemaker::ExternalInput qw(external_data_surface);
 use Math::Fractal::Noisemaker::FrameExportQueue;
 use Math::Fractal::Noisemaker::KernelCache;
+use Math::Fractal::Noisemaker::MeshRender;
 use Math::Fractal::Noisemaker::Iteration qw(
     compute_iteration_groups
     is_particle_state_name
@@ -720,6 +722,66 @@ sub _seed_typed_inputs {
     }
 }
 
+# Reactive (MIDI/audio) effects read the external-input uniforms; mesh effects
+# read the global_mesh0_* data textures (renderer.js REACTIVE_EFFECT_IDS and
+# MESH_TEX_WIDTH/HEIGHT).
+my %REACTIVE_EFFECT_IDS = map { $_ => 1 } qw(synth/roll synth/scope synth/spectrum);
+my ($MESH_TEX_WIDTH, $MESH_TEX_HEIGHT) = (256, 256);
+
+# Port of renderer.js bindExternalInputs. The 128-float audio arrays and the
+# MIDI clock counter bind only for the reactive effects, zeros when no state is
+# supplied (GLSL uniform arrays start zeroed), and the packed note grid uploads
+# as a 128x16 RGBA data texture. Mesh textures bind from external_inputs
+# meshData, the packed RGBA arrays the upstream uploadMeshData path feeds.
+sub _bind_external_inputs {
+    my ($state, $uniforms, $textures, $external_inputs) = @_;
+    $external_inputs ||= {};
+    my %pass_inputs = map { $_ => 1 } grep { defined }
+        map { values %{ $_->{inputs} || {} } } @{ $state->{eff}{passes} || [] };
+    if ($REACTIVE_EFFECT_IDS{ $state->{effect_id} }) {
+        my ($midi, $audio) = @$external_inputs{qw(midiState audioState)};
+        $uniforms->{midiClockCount} = $midi ? $midi->clock_count : 0;
+        $uniforms->{audioWaveform}  = $audio ? $audio->waveform : [(0.0) x 128];
+        $uniforms->{audioSpectrum}  = $audio ? $audio->spectrum : [(0.0) x 128];
+        if ($pass_inputs{midiNoteGrid}) {
+            my $grid = $midi ? $midi->note_grid : [(0.0) x (128 * 16 * 4)];
+            $textures->{midiNoteGrid} = external_data_surface($grid, 128, 16);
+        }
+    }
+    my @mesh = grep { /\Aglobal_mesh0_/ } sort keys %pass_inputs;
+    return unless @mesh;
+    my $mesh = $external_inputs->{meshData}
+        or die "$state->{effect_id} requires external mesh data (external_inputs meshData)\n";
+    my $tex_width  = $mesh->{texWidth}  // $MESH_TEX_WIDTH;
+    my $tex_height = $mesh->{texHeight} // $MESH_TEX_HEIGHT;
+    my %source = (
+        global_mesh0_positions => 'positionData',
+        global_mesh0_normals   => 'normalData',
+        global_mesh0_uvs       => 'uvData',
+    );
+    for my $name (grep { $source{$_} } @mesh) {
+        $textures->{$name} = external_data_surface($mesh->{ $source{$name} }, $tex_width, $tex_height);
+    }
+}
+
+# A declared texture that one pass consumes before a later pass produces it, and
+# whose name starts with an underscore (synth/roll's _rollFb), starts cleared
+# (renderer.js initializeCanonicalResources).
+sub _ensure_consumed_scratch {
+    my ($state, $inputs, $width, $height) = @_;
+    my (%produced, %consumed);
+    for my $pass (@{ $state->{eff}{passes} || [] }) {
+        $produced{$_} = 1 for grep { defined } values %{ $pass->{outputs} || {} };
+        $consumed{$_} = 1 for grep { defined } values %{ $pass->{inputs} || {} };
+    }
+    for my $name (sort keys %{ $state->{eff}{textures} || {} }) {
+        next unless $name =~ /\A_/ && $produced{$name} && $consumed{$name};
+        next if defined $state->{attachments}{$name} || defined $inputs->{$name};
+        $state->{attachments}{$name} = _destination($state->{eff}, $name, $state->{params}, $width, $height);
+        $state->{attachments}{$name}->clear;
+    }
+}
+
 sub _run_state_once {
     my ($state, $inputs, $states, $group_resources, %opt) = @_;
     my ($width, $height, $seed, $time) = @opt{qw(width height seed time)};
@@ -742,12 +804,16 @@ sub _run_state_once {
     _seed_typed_inputs($state, $input_bundle, \%effective_inputs, $width, $height);
     _initialize_overlay($state, \%effective_inputs, $width, $height);
     _ensure_iteration_scratch($state, \%effective_inputs, $width, $height) if $opt{iterated};
+    _ensure_consumed_scratch($state, \%effective_inputs, $width, $height);
     my $uniforms = _canonical_uniforms(
         $width, $height, $time, $seed, $effect_uniforms,
         $opt{frame}, $opt{delta_time}, $width, $height,
     );
     $uniforms->{data} = _remap_uniform_data($uniforms, $width, $height)
         if $state->{effect_id} eq 'synth/remap';
+    my %external_textures;
+    _bind_external_inputs($state, $uniforms, \%external_textures, $opt{external_inputs});
+    $effective_inputs{$_} //= $external_textures{$_} for keys %external_textures;
     my $runtime = Math::Fractal::Noisemaker::Runtime->new;
     my $result;
     my $last_output;
@@ -813,7 +879,25 @@ sub _run_state_once {
             $pass_uniforms->{aspectRatio} = f32($dest_width / $dest_height);
             $pass_uniforms->{aspect} = $pass_uniforms->{aspectRatio};
 
-            if ($pass->{drawMode}) {
+            if (($pass->{drawMode} || '') eq 'triangles') {
+                # CPU triangle-mesh rasterizer (render/meshRender): the fresh
+                # destination seeds from the prior same-name attachment (the
+                # clear pass output) or stays cleared, then the adapter
+                # rasterizes the external mesh data.
+                my $adapter = Math::Fractal::Noisemaker::MeshRender::get_adapter(
+                    $state->{effect_id}, $pass->{program});
+                die "Missing CPU mesh adapter \"$state->{effect_id}:$pass->{program}\"\n"
+                    unless ref $adapter eq 'CODE';
+                my $previous = $state->{attachments}{ $output_names[0] };
+                @{ $destinations[0]->data } = @{ $previous->data }
+                    if defined $previous && @{ $previous->data } == @{ $destinations[0]->data };
+                $adapter->({
+                    uniforms        => $pass_uniforms,
+                    destination     => $destinations[0],
+                    external_inputs => $opt{external_inputs},
+                });
+            }
+            elsif ($pass->{drawMode}) {
                 my $draw_op = Math::Fractal::Noisemaker::DrawOps::get_draw_op(
                     $state->{effect_id}, $pass->{program});
                 die "Missing CPU scatter adapter '$state->{effect_id}:$pass->{program}'\n"
@@ -962,6 +1046,7 @@ sub render_effect {
             delta_time => (defined $opt{delta_time} ? $opt{delta_time} : 0),
             iterated => 0, input_bundle => $input_bundle,
             input_was_bundle => $input_was_bundle,
+            external_inputs => $opt{external_inputs},
         );
     }
     my $count = _group_iteration_count($state);
@@ -974,6 +1059,7 @@ sub render_effect {
             time => wrap01($time - ($count - 1 - $index) * iteration_delta_time()),
             frame => $index, delta_time => iteration_delta_time(), iterated => 1,
             input_bundle => $input_bundle, input_was_bundle => $input_was_bundle,
+            external_inputs => $opt{external_inputs},
         );
     }
     return $result;
@@ -1013,11 +1099,13 @@ sub _inputs_for_step {
 }
 
 sub _run_effect_step {
-    my ($step, $current, $surfaces, $external_textures, $width, $height, $seed, $time) = @_;
+    my ($step, $current, $surfaces, $external_textures, $width, $height, $seed, $time,
+        $external_inputs) = @_;
     my $inputs = _inputs_for_step($step, $current, $surfaces, $external_textures);
     return render_effect(
         $step->{effect_id}, $step->{params}, $inputs,
         width => $width, height => $height, seed => $seed, time => $time,
+        external_inputs => $external_inputs,
     );
 }
 
@@ -1043,7 +1131,8 @@ sub _group_iteration_count {
 }
 
 sub _run_iteration_group {
-    my ($group, $group_input, $surfaces, $external_textures, $width, $height, $seed, $time) = @_;
+    my ($group, $group_input, $surfaces, $external_textures, $width, $height, $seed, $time,
+        $external_inputs) = @_;
     my $group_input_bundle = _chain_bundle($group_input);
     my @states;
     my $owner_state_size;
@@ -1084,6 +1173,7 @@ sub _run_iteration_group {
                 frame => $iteration, delta_time => iteration_delta_time(), iterated => 1,
                 input_bundle => $step_input_bundle,
                 input_was_bundle => _is_chain_bundle($step_input),
+                external_inputs => $external_inputs,
             );
         }
         $last = $step_input;
@@ -1102,6 +1192,7 @@ sub render_dsl {
     my $seed   = defined $opt{seed}   ? $opt{seed}   : 1;
     my $time   = defined $opt{time}   ? $opt{time}   : 0.0;
     my $external_textures = $opt{external_textures};
+    my $external_inputs = $opt{external_inputs};
     my %surfaces = %{ $opt{seed_surfaces} || {} };
     my $plan = compile_dsl($source, meta()->{effects});
     for my $chain (@{ $plan->{chains} }) {
@@ -1120,12 +1211,12 @@ sub render_dsl {
             elsif ($group->{iterated}) {
                 $current = _run_iteration_group(
                     $group, $current, \%surfaces, $external_textures,
-                    $width, $height, $seed, $time,
+                    $width, $height, $seed, $time, $external_inputs,
                 );
             }
             else {
                 $current = _run_effect_step($step, $current, \%surfaces, $external_textures,
-                    $width, $height, $seed, $time);
+                    $width, $height, $seed, $time, $external_inputs);
             }
         }
     }
@@ -1208,6 +1299,8 @@ sub render {
         if exists $options{external_textures};
     $render_options{seed_surfaces} = $options{seed_surfaces}
         if exists $options{seed_surfaces};
+    $render_options{external_inputs} = $options{external_inputs}
+        if exists $options{external_inputs};
     my $result = render_dsl($source, %render_options);
     my $timestamp = defined $options{presentation_timestamp}
         ? $options{presentation_timestamp}
@@ -1269,8 +1362,9 @@ Missing texture bindings sample a blank surface. Do not mutate an input during
 rendering; returned surfaces may alias inputs in zero-iteration/pass-through cases.
 
 Options are C<width> and C<height> (positive integers, default 256 each),
-C<seed> (default 1), C<time> (default 0), and, for non-iterated effects,
-C<frame> and C<delta_time> (default 0). The render seed fills an effect's
+C<seed> (default 1), C<time> (default 0), C<external_inputs> (see
+C<render_dsl> below), and, for non-iterated effects, C<frame> and C<delta_time>
+(default 0). The render seed fills an effect's
 C<seed> parameter unless explicitly supplied there. Iterated effects use their
 C<iterationCount> and internal time stepping.
 
@@ -1286,7 +1380,14 @@ default markers or C<undef> are accepted in the parameter hash.
 
 Compiles and renders a Polymorphic DSL string. Options are C<width>, C<height>
 (default 512 each), C<seed> (1), C<time> (0), C<external_textures> (a hash of
-named texture surfaces), and C<seed_surfaces> (a hash such as C<< {o0 => $image} >>).
+named texture surfaces), C<seed_surfaces> (a hash such as C<< {o0 => $image} >>),
+and C<external_inputs>: the MIDI, audio and mesh state of the reactive and mesh
+effects, a hash with C<midiState> and C<audioState> (objects from
+L<Math::Fractal::Noisemaker::ExternalInput>) and C<meshData> (the hash
+C<pack_mesh_data_for_textures> returns, plus C<texWidth> and C<texHeight>).
+C<synth/roll> reads C<midiState>, C<synth/scope> and C<synth/spectrum> read
+C<audioState>, and render/meshLoader and render/meshRender require C<meshData>;
+without state the reactive effects read zeros.
 The program selects its output using C<render(oN)>; absent that directive,
 the compiler selects the last written surface. Surfaces must be written before reading them,
 unless supplied in C<seed_surfaces>. DSL errors include source locations where

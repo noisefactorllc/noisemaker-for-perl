@@ -39,7 +39,7 @@ my @stateful = qw(
 );
 
 my $effects = meta()->{effects};
-is(scalar(keys %$effects), 205, 'bundle exposes the 205-effect canonical catalog');
+is(scalar(keys %$effects), 210, 'bundle exposes the 210-effect canonical catalog');
 is_deeply(
     [sort grep { !defined $effects->{$_}{domain} } keys %$effects],
     [],

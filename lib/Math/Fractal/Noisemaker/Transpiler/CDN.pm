@@ -55,9 +55,8 @@ my %NAMESPACE_EXCEPTIONS = map { $_ => 1 } qw(points/heightGrid);
 my %ID_EXCLUSIONS        = map { $_ => 1 } qw(
     filter/convolutionFeedback filter/feedback filter/motionBlur
     filter/temporalAberration synth/cellularAutomata synth/mnca
-    synth/navierStokes synth/reactionDiffusion synth/roll synth/scope
-    synth/spectrum render/pointsBillboardRender render/pointsEmit
-    render/pointsRender
+    synth/navierStokes synth/reactionDiffusion render/pointsBillboardRender
+    render/pointsEmit render/pointsRender
 );
 my %ITERATED_VOLUME = map { $_ => 1 } qw(
     filter3d/flow3d render/loopBegin synth3d/cellularAutomata3d
@@ -530,7 +529,6 @@ sub eligible_ids {
     for my $effect_id (sort keys %$manifest) {
         my ($namespace) = split m{/}, $effect_id, 2;
         next if $NAMESPACE_EXCLUSIONS{$namespace} && !$NAMESPACE_EXCEPTIONS{$effect_id};
-        next if index($effect_id, 'mesh') >= 0;
         next if $ID_EXCLUSIONS{$effect_id};
         push @result, $effect_id;
     }
