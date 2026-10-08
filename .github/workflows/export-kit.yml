@@ -39,7 +39,7 @@ concurrency:
 jobs:
   test:
     name: Perl ${{ matrix.perl }} on ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

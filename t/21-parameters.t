@@ -4,6 +4,7 @@ use Test::More;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Math::Fractal::Noisemaker::Renderer qw(render_effect render_dsl);
+use Math::Fractal::Noisemaker::Surface;
 
 for my $value (0, '', [], 'not a hash') {
     eval { render_effect('synth/solid', $value, undef, width => 2, height => 2) };
@@ -118,13 +119,32 @@ for my $case ([1, [51, 102, 153, 255]], [undef, [51, 102, 153, 255]], [0.8, [41,
         $case->[1], 'RGBA color with alpha ' . ($case->[0] // 'omitted') . ' keeps the alpha parameter');
 }
 
-# renderLandscape3d accepts its filtering parameter by value and by name.
-my %landscape;
-for my $filtering (0, 1, 'voxel') {
-    $landscape{$filtering} = render_dsl("search synth3d, render\nnoise3d(volumeSize: x16)"
-        . ".renderLandscape3d(filtering: $filtering).write(o0)\nrender(o0)", width => 4, height => 4)->to_rgba8;
+# renderLandscape3d accepts its filtering parameter by value and by name. A
+# synthetic nonuniform 16^3 volume and geometry keep this fast (t/05 compares
+# both choices with the reference over a noise3d volume).
+{
+    my $n = 16;
+    my (@volume, @geometry);
+    for my $row (0 .. $n * $n - 1) {
+        for my $x (0 .. $n - 1) {
+            my ($y, $z) = ($row % $n, int($row / $n));
+            my $v = (($x * 3 + $y * 5 + $z * 7) % 16) / 15;
+            push @volume, $v, 1 - $v, ($x + $z) / 30, $v;
+            push @geometry, 0.5, 1, 0.5, $v;
+        }
+    }
+    my %inputs = (
+        inputTex3d => Math::Fractal::Noisemaker::Surface->new($n, $n * $n, \@volume),
+        inputGeo   => Math::Fractal::Noisemaker::Surface->new($n, $n * $n, \@geometry),
+    );
+    my %landscape;
+    for my $filtering (0, 1, 'voxel') {
+        my $out = render_effect('render/renderLandscape3d', {filtering => $filtering, volumeSize => $n},
+            \%inputs, width => 4, height => 4);
+        $landscape{$filtering} = (ref $out eq 'HASH' ? $out->{image} : $out)->to_rgba8;
+    }
+    isnt($landscape{0}, $landscape{1}, 'the isosurface and voxel filtering choices render differently');
+    is($landscape{voxel}, $landscape{1}, 'a named filtering choice selects its value');
 }
-isnt($landscape{0}, $landscape{1}, 'the isosurface and voxel filtering choices render differently');
-is($landscape{voxel}, $landscape{1}, 'a named filtering choice selects its value');
 
 done_testing();
