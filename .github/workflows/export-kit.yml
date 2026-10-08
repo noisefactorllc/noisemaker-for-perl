@@ -133,11 +133,15 @@ jobs:
           ref: ${{ steps.oracle.outputs.revision }}
           path: oracle
           persist-credentials: false
+      # PowerShell, not Git Bash: under Bash, Strawberry's `prove` script runs
+      # with MSYS's perl and its library.
       - name: Prove suite
         working-directory: port
-        run: prove -lr t
+        shell: pwsh
+        run: perl -S prove -lr t
       - name: Whole-port PARITY-SUMMARY, exact RGBA8 comparison
         working-directory: port
+        shell: pwsh
         env:
           NOISEMAKER_CPU_DIR: ${{ github.workspace }}/oracle
         run: perl scripts/parity-summary

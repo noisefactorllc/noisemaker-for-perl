@@ -145,10 +145,7 @@ push @picked, main::_resolve_effect('random', 'generator') for 2 .. $n;
 print join("\n", $n, @picked), "\n";
 PERL
     my $lib = File::Spec->catdir($FindBin::Bin, '..', 'lib');
-    open my $fh, '-|', $^X, "-I$lib", '-MFile::Spec', '-e', $probe, $script
-        or die "cannot run make-noise: $!";
-    my ($n, @picked) = map { chomp; $_ } <$fh>;
-    close $fh;
+    my ($n, @picked) = split /\n/, run_perl_probe("use lib '$lib';\nuse File::Spec;\n$probe", $script);
     my %picked = map { $_ => 1 } @picked;
     ok($n && keys %picked == $n, "rand walked the whole $n-effect pool");
     ok($picked{'synth/solid'}, 'the pool holds ordinary generators');
@@ -161,5 +158,24 @@ PERL
             && !$effects->{$_}{iterated} && !$effects->{$_}{externalTexture}
     } @external], [qw(synth/roll synth/scope synth/spectrum)], 'only the exclusion keeps them out');
 };
+
+# Run perl on a probe script with arguments; returns its standard output. The
+# probe goes through a file, and the output too: Windows has neither list-form
+# piped opens nor reliable quoting of a multi-line -e program.
+sub run_perl_probe {
+    my ($code, @args) = @_;
+    require File::Temp;
+    my $dir = File::Temp::tempdir(CLEANUP => 1);
+    my ($probe, $out) = map { File::Spec->catfile($dir, $_) } qw(probe.pl probe.out);
+    open my $pfh, '>', $probe or die "cannot write $probe: $!";
+    print {$pfh} $code;
+    close $pfh;
+    open my $saved, '>&', \*STDOUT or die "cannot save STDOUT: $!";
+    open STDOUT, '>', $out or die "cannot redirect STDOUT: $!";
+    system($^X, $probe, @args);
+    open STDOUT, '>&', $saved or die "cannot restore STDOUT: $!";
+    open my $ofh, '<', $out or die "cannot read $out: $!";
+    return do { local $/; <$ofh> };
+}
 
 done_testing();

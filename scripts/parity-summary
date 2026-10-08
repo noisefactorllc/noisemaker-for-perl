@@ -59,7 +59,8 @@ my $TMP = File::Temp::tempdir(CLEANUP => 1);
 my $probe = File::Spec->catfile($TMP, 'authority-manifest.mjs');
 open my $pfh, '>', $probe or die "cannot write $probe: $!\n";
 print {$pfh} <<'JS';
-const snapshot = await import(process.argv[2])
+const { pathToFileURL } = await import('node:url')
+const snapshot = await import(pathToFileURL(process.argv[2]).href)
 process.stdout.write(JSON.stringify({ ids: snapshot.sourceEffectIds, revision: snapshot.UPSTREAM_REVISION }))
 JS
 close $pfh;
@@ -83,9 +84,15 @@ my @missing = grep { !$bundle->{$_} } @ids;
 
 my ($exact, $fail) = (0, 0);
 if (@executable) {
-    my @cmd = ($^X, File::Spec->catfile($FindBin::Bin, 'parity.pl'),
+    # Capture parity.pl's report through a file: list-form piped opens are
+    # not available on Windows.
+    my $report = File::Spec->catfile($TMP, 'parity-report.txt');
+    open my $saved_out, '>&', \*STDOUT or die "cannot save STDOUT: $!\n";
+    open STDOUT, '>', $report or die "cannot write $report: $!\n";
+    system($^X, File::Spec->catfile($FindBin::Bin, 'parity.pl'),
         '--only', join(',', @executable), @pass_through);
-    open my $fh, '-|', @cmd or die "cannot run scripts/parity.pl: $!\n";
+    open STDOUT, '>&', $saved_out or die "cannot restore STDOUT: $!\n";
+    open my $fh, '<', $report or die "cannot read $report: $!\n";
     my $output = do { local $/; <$fh> };
     close $fh;
     print $output;

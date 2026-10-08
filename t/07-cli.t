@@ -22,7 +22,27 @@ my $PERL       = $Config{perlpath};
 
 $| = 1;
 
-ok(-f $MAKE_NOISE && -x _, 'bin/make-noise exists and is executable');
+# Windows has no executable bit; a script there runs through perl.
+ok(-f $MAKE_NOISE && ($^O eq 'MSWin32' || -x _), 'bin/make-noise exists and is executable');
+
+# Run perl on a probe script with arguments; returns its standard output. The
+# probe goes through a file, and the output too: Windows has neither list-form
+# piped opens nor reliable quoting of a multi-line -e program.
+sub run_perl_probe {
+    my ($code, @args) = @_;
+    require File::Temp;
+    my $dir = File::Temp::tempdir(CLEANUP => 1);
+    my ($probe, $out) = map { File::Spec->catfile($dir, $_) } qw(probe.pl probe.out);
+    open my $pfh, '>', $probe or die "cannot write $probe: $!";
+    print {$pfh} $code;
+    close $pfh;
+    open my $saved, '>&', \*STDOUT or die "cannot save STDOUT: $!";
+    open STDOUT, '>', $out or die "cannot redirect STDOUT: $!";
+    system($^X, $probe, @args);
+    open STDOUT, '>&', $saved or die "cannot restore STDOUT: $!";
+    open my $ofh, '<', $out or die "cannot read $out: $!";
+    return do { local $/; <$ofh> };
+}
 
 # Run bin/make-noise as a subprocess. Returns (exit_code, stdout, stderr).
 # %opts: stdin => STRING, env => { VAR => VALUE_OR_UNDEF (undef deletes) }.
@@ -383,10 +403,8 @@ for my $effect (@ARGV) {
 }
 PERL
     my $lib = File::Spec->catdir($DIST_ROOT, 'lib');
-    open my $fh, '-|', $PERL, "-I$lib", '-MFile::Spec', '-e', $probe, $MAKE_NOISE, 'synth/curl', 'synth/noise'
-        or die "cannot run make-noise: $!";
-    my %drawn = map { /^(\S+ \S+) (\d+)$/ ? ($1 => $2) : () } <$fh>;
-    close $fh;
+    my %drawn = map { /^(\S+ \S+) (\d+)$/ ? ($1 => $2) : () }
+        split /\n/, run_perl_probe("use lib '$lib';\nuse File::Spec;\n$probe", $MAKE_NOISE, 'synth/curl', 'synth/noise');
     is_deeply(\%drawn, {
         'synth/curl low' => 0, 'synth/curl high' => 1000,
         'synth/noise low' => 1, 'synth/noise high' => 100,

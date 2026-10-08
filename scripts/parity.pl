@@ -19,6 +19,7 @@ use lib "$FindBin::Bin/../lib";
 use lib $FindBin::Bin;
 use ParityOracle qw(verify_oracle particle_program);
 use ReactiveFixtures qw(%EXTERNAL_INPUT_SOURCES external_inputs_for);
+use Cwd ();
 use File::Spec;
 use File::Temp ();
 
@@ -75,24 +76,30 @@ sub _param_args {
     return join ', ', map { "$_: $params->{$_}" } sort keys %$params;
 }
 
-# Run the oracle CLI with `$stdin` (a DSL program, or undef) on its standard
-# input, discarding its output streams.
+# Run the oracle CLI in the oracle checkout with `$stdin` (a DSL program, or
+# undef) on its standard input, discarding its output streams. The standard
+# handles are redirected around system() rather than in a forked child, so
+# this also runs on Windows.
 sub _run_oracle {
     my ($stdin, @cmd) = @_;
     my $in_file = File::Spec->catfile($TMP, 'ph_stdin.dsl');
     open my $ifh, '>', $in_file or die "cannot write $in_file: $!\n";
     print {$ifh} defined $stdin ? $stdin : '';
     close $ifh;
-    my $pid = fork();
-    if (!$pid) {
-        chdir $CPU_DIR;
-        open STDIN,  '<', $in_file;
-        open STDOUT, '>', File::Spec->devnull;
-        open STDERR, '>', File::Spec->devnull;
-        exec @cmd or exit 127;
-    }
-    waitpid $pid, 0;
-    return $? == 0;
+    my $cwd = Cwd::getcwd();
+    open my $saved_in,  '<&', \*STDIN  or die "cannot save STDIN: $!\n";
+    open my $saved_out, '>&', \*STDOUT or die "cannot save STDOUT: $!\n";
+    open my $saved_err, '>&', \*STDERR or die "cannot save STDERR: $!\n";
+    open STDIN,  '<', $in_file              or die "cannot redirect STDIN: $!\n";
+    open STDOUT, '>', File::Spec->devnull   or die "cannot redirect STDOUT: $!\n";
+    open STDERR, '>', File::Spec->devnull   or die "cannot redirect STDERR: $!\n";
+    chdir $CPU_DIR or die "cannot enter $CPU_DIR: $!\n";
+    my $status = system(@cmd);
+    chdir $cwd;
+    open STDIN,  '<&', $saved_in  or die "cannot restore STDIN: $!\n";
+    open STDOUT, '>&', $saved_out or die "cannot restore STDOUT: $!\n";
+    open STDERR, '>&', $saved_err or die "cannot restore STDERR: $!\n";
+    return $status == 0;
 }
 
 sub js_effect {
