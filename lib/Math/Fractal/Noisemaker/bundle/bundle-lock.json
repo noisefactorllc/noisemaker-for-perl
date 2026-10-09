@@ -215,7 +215,7 @@
     "points/flock:passthrough": "789e9923cbdde796cc1ffcfa0e5b78a981fa6ed45815c03d2d0faeeb8ec89394",
     "points/flow:agent": "9fd8ab0ad155fcbc79ccabba5120586d9ed11170fb3cd034f714f192f15f772d",
     "points/flow:passthrough": "789e9923cbdde796cc1ffcfa0e5b78a981fa6ed45815c03d2d0faeeb8ec89394",
-    "points/heightGrid:agent": "96b2154114e1e2899b5adcceeacd8d7be682aa112242fe7f80ba9f8dda683c7c",
+    "points/heightGrid:agent": "78f4791c91eb874c3c024be5d79534e45c478dc61e47a0bc4ba392ed2bd480d2",
     "points/heightGrid:passthrough": "789e9923cbdde796cc1ffcfa0e5b78a981fa6ed45815c03d2d0faeeb8ec89394",
     "points/hydraulic:agent": "2a47b01bd904ac0b22c331082438e193439882dde2aea40c2c3e776f83d7cc23",
     "points/hydraulic:passthrough": "789e9923cbdde796cc1ffcfa0e5b78a981fa6ed45815c03d2d0faeeb8ec89394",
@@ -298,5 +298,5 @@
   },
   "source": "https://shaders.noisedeck.app",
   "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-  "version": "1.0.271"
+  "version": "1.0.277"
 }
