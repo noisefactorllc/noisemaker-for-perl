@@ -41,12 +41,12 @@ my $run_pixel = sub {
                             }
                         } else {
                             if ($rt->binary('==', $_u_flipMode, $rt->i(13))) {
-                                if ($rt->binary('>', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
+                                if ($rt->binary('<', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
                                     $warpedUV = $rt->assign_swizzle($warpedUV, 'y', $rt->binary('-', $rt->f(1), $rt->swizzle($warpedUV, 'y'), 1, 'float'));
                                 }
                             } else {
                                 if ($rt->binary('==', $_u_flipMode, $rt->i(14))) {
-                                    if ($rt->binary('<', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
+                                    if ($rt->binary('>', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
                                         $warpedUV = $rt->assign_swizzle($warpedUV, 'y', $rt->binary('-', $rt->f(1), $rt->swizzle($warpedUV, 'y'), 1, 'float'));
                                     }
                                 } else {
@@ -54,7 +54,7 @@ my $run_pixel = sub {
                                         if ($rt->binary('>', $rt->swizzle($warpedUV, 'x'), $rt->f(0.5))) {
                                             $warpedUV = $rt->assign_swizzle($warpedUV, 'x', $rt->binary('-', $rt->f(1), $rt->swizzle($warpedUV, 'x'), 1, 'float'));
                                         }
-                                        if ($rt->binary('>', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
+                                        if ($rt->binary('<', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
                                             $warpedUV = $rt->assign_swizzle($warpedUV, 'y', $rt->binary('-', $rt->f(1), $rt->swizzle($warpedUV, 'y'), 1, 'float'));
                                         }
                                     } else {
@@ -62,7 +62,7 @@ my $run_pixel = sub {
                                             if ($rt->binary('>', $rt->swizzle($warpedUV, 'x'), $rt->f(0.5))) {
                                                 $warpedUV = $rt->assign_swizzle($warpedUV, 'x', $rt->binary('-', $rt->f(1), $rt->swizzle($warpedUV, 'x'), 1, 'float'));
                                             }
-                                            if ($rt->binary('<', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
+                                            if ($rt->binary('>', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
                                                 $warpedUV = $rt->assign_swizzle($warpedUV, 'y', $rt->binary('-', $rt->f(1), $rt->swizzle($warpedUV, 'y'), 1, 'float'));
                                             }
                                         } else {
@@ -70,7 +70,7 @@ my $run_pixel = sub {
                                                 if ($rt->binary('<', $rt->swizzle($warpedUV, 'x'), $rt->f(0.5))) {
                                                     $warpedUV = $rt->assign_swizzle($warpedUV, 'x', $rt->binary('-', $rt->f(1), $rt->swizzle($warpedUV, 'x'), 1, 'float'));
                                                 }
-                                                if ($rt->binary('>', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
+                                                if ($rt->binary('<', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
                                                     $warpedUV = $rt->assign_swizzle($warpedUV, 'y', $rt->binary('-', $rt->f(1), $rt->swizzle($warpedUV, 'y'), 1, 'float'));
                                                 }
                                             } else {
@@ -78,7 +78,7 @@ my $run_pixel = sub {
                                                     if ($rt->binary('<', $rt->swizzle($warpedUV, 'x'), $rt->f(0.5))) {
                                                         $warpedUV = $rt->assign_swizzle($warpedUV, 'x', $rt->binary('-', $rt->f(1), $rt->swizzle($warpedUV, 'x'), 1, 'float'));
                                                     }
-                                                    if ($rt->binary('<', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
+                                                    if ($rt->binary('>', $rt->swizzle($warpedUV, 'y'), $rt->f(0.5))) {
                                                         $warpedUV = $rt->assign_swizzle($warpedUV, 'y', $rt->binary('-', $rt->f(1), $rt->swizzle($warpedUV, 'y'), 1, 'float'));
                                                     }
                                                 }

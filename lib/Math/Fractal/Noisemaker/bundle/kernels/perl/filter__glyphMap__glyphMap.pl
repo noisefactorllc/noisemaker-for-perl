@@ -280,9 +280,8 @@ my $run_pixel = sub {
         $cellIndex = $rt->component_wise('floor', $rt->binary('/', $pixelCoord, $csf, 2, 'float'));
         $localPos = $rt->component_wise('fract', $rt->binary('/', $pixelCoord, $csf, 2, 'float'));
         $gx = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $rt->swizzle($localPos, 'x'), $rt->f(5), 1, 'float')), 'int');
-        $gy = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $rt->swizzle($localPos, 'y'), $rt->f(7), 1, 'float')), 'int');
+        $gy = $rt->binary('-', $rt->i(6), $rt->component_wise('clamp', $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $rt->swizzle($localPos, 'y'), $rt->f(7), 1, 'float')), 'int'), $rt->i(0), $rt->i(6)), 1, 'int');
         $gx = $rt->component_wise('clamp', $gx, $rt->i(0), $rt->i(4));
-        $gy = $rt->component_wise('clamp', $gy, $rt->i(0), $rt->i(6));
         $cellCenter = $rt->construct(2, $rt->binary('*', $rt->binary('+', $cellIndex, $rt->f(0.5), 2, 'float'), $csf, 2, 'float'));
         $sampleUV = $rt->construct(2, $rt->binary('/', $rt->binary('-', $cellCenter, $_u_tileOffset, 2, 'float'), $resolution, 2, 'float'));
         if ($isTileRendering) {
