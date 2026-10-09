@@ -1,5 +1,5 @@
 {
- "oracleRevision": "5b686a45b5c56329adf0c63cbcf572eb6f23fad1",
+ "oracleRevision": "2df5168abbe197eb66e64e0404efff61342b7a2d",
  "capturedFrom": "glsl-transpiler 3.0.3 with the oracle compile options of scripts/upstream/compile-glsl.js (transpile, lowerFloatLiterals, the poolLocalVectors parameter copy) run on the GlslCpuRuntime stdlib of src/csl/glsl-runtime.js",
  "expected": "float32 bit patterns of fragColor.rgb, one triple per input",
  "inputs": [
@@ -645,7 +645,7 @@
      3219391360
     ],
     [
-     3204225922,
+     3204225921,
      1030793024,
      3205895824
     ],
@@ -792,7 +792,7 @@
      1071219521
     ],
     [
-     1077478949,
+     1077478948,
      1071099411,
      1072448280
     ],

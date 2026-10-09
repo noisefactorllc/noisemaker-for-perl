@@ -643,30 +643,37 @@ sub to_uint {
         'Math::Fractal::Noisemaker::Runtime::IVec';
 }
 
-# ---- vector geometry (snap args to f32, accumulate float64, round once) ----
+# ---- vector geometry (snap args to f32, dot accumulates per-term f32) ----
 #
 # NB: this package defines subs named `length`, `f`, and `i` (kernel-facing
 # methods). Inside this file, always call the builtins as CORE::length etc.
 # if ever needed — a bareword call would resolve to the method.
 
+# The CPU oracle (glsl-runtime.js dot) evaluates a dot product as a fused
+# multiply-add chain: GPU backends (ANGLE/Metal) fold a GLSL dot into an FMA
+# chain with one f32 rounding per accumulated term, so the oracle rounds each
+# term to f32 as it accumulates (f64 products of f32 values are exact, so the
+# f64 add keeps the single final rounding of an fma). Mirror that exactly —
+# accumulating raw f64 and rounding once at the end diverges on the last ULP
+# and flips chaotic hash seed sites (synth3d reaction-diffusion).
 sub _dot_raw {
     my ($a, $b) = @_;
     my $s = 0;
-    $s += $a->[$_] * $b->[$_] for 0 .. $#$a;
+    $s = f32($a->[$_] * $b->[$_] + $s) for 0 .. $#$a;
     return $s;
 }
 
 sub dot {
     my ($self, $a, $b) = @_;
-    return f32(_dot_raw(_snap32($a), _snap32($b)));
+    return _dot_raw(_snap32($a), _snap32($b));
 }
 
 sub length {
     my ($self, $a) = @_;
-    # JS length is F32(sqrt(dot)), and its dot is itself F32-rounded — so the
-    # squared magnitude is rounded to f32 before the sqrt.
+    # JS length is F32(sqrt(dot)); the dot itself is already f32-rounded
+    # per-term above, and the final F32(sqrt) is the single boundary round.
     my $v = _snap32($a);
-    return f32(sqrt(f32(_dot_raw($v, $v))));
+    return f32(sqrt(_dot_raw($v, $v)));
 }
 
 sub distance {
@@ -674,18 +681,17 @@ sub distance {
     my $av = _snap32($a);
     my $bv = _snap32($b);
     # JS distance is length(subtract(a, b)): the vector subtract rounds each
-    # difference to f32, and length rounds the dot before the sqrt.
+    # difference to f32, and length is F32(sqrt(f32 dot)).
     my @d = map { f32($av->[$_] - $bv->[$_]) } 0 .. $#$av;
-    return f32(sqrt(f32(_dot_raw(\@d, \@d))));
+    return f32(sqrt(_dot_raw(\@d, \@d)));
 }
 
 sub normalize {
     my ($self, $a) = @_;
     my $v = _snap32($a);
-    # JS normalize divides by length(), F32(sqrt(dot)), and that dot is
-    # itself F32-rounded: the squared magnitude rounds to f32 before the
-    # sqrt, exactly as in length().
-    my $mag = f32(sqrt(f32(_dot_raw($v, $v))));
+    # JS normalize divides by length(), F32(sqrt(dot)), with the dot itself
+    # f32-rounded per-term, exactly as in length().
+    my $mag = f32(sqrt(_dot_raw($v, $v)));
     return [(0.0) x scalar @$v] if $mag == 0.0;
     return [map { f32($_ / $mag) } @$v];
 }
