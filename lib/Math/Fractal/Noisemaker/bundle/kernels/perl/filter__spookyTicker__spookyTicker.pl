@@ -7,6 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
+    local $rt->{js_native_ints} = 1;
     my ($hash_mix__uint, $sample_glyph__int_int_int_int, $ticker_row_mask__int_int_int_float_int_int, $main__void);
     my $_retc;
     my $_u_inputTex = $ctx->texture_binding('inputTex');
@@ -34,13 +35,13 @@ my $run_pixel = sub {
     $sample_glyph__int_int_int_int = sub {
         my ($digit, $localX, $localY, $iScale) = @_;
         my ($gx, $gy, $row);
-        $gx = $rt->binary('/', $localX, $iScale, 1, 'int');
-        $gy = $rt->binary('/', $localY, $iScale, 1, 'int');
+        $gx = $rt->binary('/', $localX, $iScale, 1, 'float');
+        $gy = $rt->binary('/', $localY, $iScale, 1, 'float');
         if ((((((($rt->binary('<', $gx, $rt->i(0))) || ($rt->binary('>=', $gx, $g->{GLYPH_W})) ? 1 : 0)) || ($rt->binary('<', $gy, $rt->i(0))) ? 1 : 0)) || ($rt->binary('>=', $gy, $g->{GLYPH_H})) ? 1 : 0)) {
             return $rt->f(0);
         }
-        $row = $g->{GLYPHS}->[int($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'int'))];
-        return $rt->construct(1, $rt->binary('&', $rt->binary('>>', $row, $rt->binary('-', $rt->i(6), $gx, 1, 'int'), 1, 'int'), $rt->i(1), 1, 'int'));
+        $row = (($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'float')) >= 0 && ($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'float')) == int($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'float')) && ($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'float')) < scalar(@{$g->{GLYPHS}}) ? $g->{GLYPHS}->[int($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'float'))] : 0);
+        return $rt->construct(1, $rt->binary('&', $rt->binary('>>', $row, $rt->binary('-', $rt->i(6), $gx, 1, 'float'), 1, 'int'), $rt->i(1), 1, 'int'));
     };
     $ticker_row_mask__int_int_int_float_int_int = sub {
         my ($pixelX, $pixelY, $rowSeed, $t, $CELL_W, $iScale) = @_;
@@ -48,8 +49,8 @@ my $run_pixel = sub {
         $scrollSpeed = $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->construct(1, $rt->binary('&', $hash_mix__uint->($rt->binary('^', $rt->construct(1, $rowSeed, 'uint'), $rt->i(17), 1, 'uint')), $rt->i(65535), 1, 'uint')), $rt->f(65535), 1, 'float'), $rt->f(1.5), 1, 'float'), 1, 'float');
         $offset = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $rt->binary('*', $t, $scrollSpeed, 1, 'float'), $rt->f(120), 1, 'float')), 'int');
         $sx = $rt->binary('+', $pixelX, $offset, 1, 'int');
-        $cellX = (($rt->binary('>=', $sx, $rt->i(0))) ? ($rt->binary('/', $sx, $CELL_W, 1, 'int')) : ($rt->binary('/', $rt->binary('+', $rt->binary('-', $sx, $CELL_W, 1, 'int'), $rt->i(1), 1, 'int'), $CELL_W, 1, 'int')));
-        $localX = $rt->binary('-', $sx, $rt->binary('*', $cellX, $CELL_W, 1, 'int'), 1, 'int');
+        $cellX = (($rt->binary('>=', $sx, $rt->i(0))) ? ($rt->binary('/', $sx, $CELL_W, 1, 'float')) : ($rt->binary('/', $rt->binary('+', $rt->binary('-', $sx, $CELL_W, 1, 'int'), $rt->i(1), 1, 'int'), $CELL_W, 1, 'float')));
+        $localX = $rt->binary('-', $sx, $rt->binary('*', $cellX, $CELL_W, 1, 'float'), 1, 'float');
         $h = $hash_mix__uint->($rt->binary('^', $rt->construct(1, $cellX, 'uint'), $rt->binary('*', $rt->construct(1, $rowSeed, 'uint'), $rt->i(997), 1, 'uint'), 1, 'uint'));
         $digit = $rt->construct(1, $rt->binary('%', $h, $rt->i(10), 1, 'uint'), 'int');
         return $sample_glyph__int_int_int_int->($digit, $localX, $pixelY, $iScale);
@@ -72,8 +73,8 @@ my $run_pixel = sub {
             return;
         }
         $rowStride = $rt->binary('+', $CELL_H, $ROW_GAP, 1, 'int');
-        $rowIdx = $rt->binary('/', $pyFromBottom, $rowStride, 1, 'int');
-        $localY = $rt->binary('-', $pyFromBottom, $rt->binary('*', $rowIdx, $rowStride, 1, 'int'), 1, 'int');
+        $rowIdx = $rt->binary('/', $pyFromBottom, $rowStride, 1, 'float');
+        $localY = $rt->binary('-', $pyFromBottom, $rt->binary('*', $rowIdx, $rowStride, 1, 'float'), 1, 'float');
         if ((($rt->binary('>=', $rowIdx, $_u_rows)) || ($rt->binary('>=', $localY, $CELL_H)) ? 1 : 0)) {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($src)};
             return;
@@ -82,7 +83,7 @@ my $run_pixel = sub {
         $mask = $ticker_row_mask__int_int_int_float_int_int->($px, $localY, $rowSeed, $t, $CELL_W, $iScale);
         $shadow = $rt->f(0);
         $shadowOff = $rt->component_wise('max', $rt->construct(1, $rt->binary('*', $rt->f(2), $_u_renderScale, 1, 'float'), 'int'), $rt->i(1));
-        $shadowLocalY = $rt->binary('+', $localY, $shadowOff, 1, 'int');
+        $shadowLocalY = $rt->binary('+', $localY, $shadowOff, 1, 'float');
         if ($rt->binary('<', $shadowLocalY, $CELL_H)) {
             $shadow = $ticker_row_mask__int_int_int_float_int_int->($rt->binary('+', $px, $shadowOff, 1, 'int'), $shadowLocalY, $rowSeed, $t, $CELL_W, $iScale);
         }

@@ -349,7 +349,14 @@ sub binary {
     }
     if ($base eq 'int' || $base eq 'uint'
         || $op eq '&' || $op eq '|' || $op eq '^' || $op eq '<<' || $op eq '>>') {
-        return _int_binary($op, $a, $b, $base eq 'uint' ? 'uint' : 'int');
+        my $ib = $base eq 'uint' ? 'uint' : 'int';
+        # JS-native uint lowering for the Transpiler::Codegen
+        # %UNTRUNCATED_INT_DIVISION effects: their kernels run the oracle's
+        # transpiled JS, whose scalar uint bitwise ops coerce through ToInt32
+        # (arithmetic >>, signed ^, signed %) instead of GLSL's logical u32
+        # semantics. Set per kernel via `local $rt->{js_native_ints} = 1`.
+        return _js_uint_binary($op, $a, $b) if $ib eq 'uint' && $self->{js_native_ints};
+        return _int_binary($op, $a, $b, $ib);
     }
     # Float path: compute raw f64 and DEFER the f32 rounding to the
     # consumption boundaries (see module header). The op closures live in a
@@ -365,6 +372,25 @@ sub _int_binary {
     }
     my $r = _bc2(sub { _int_scalar($op, int($_[0]), int($_[1]), $base) }, $a, $b);
     return bless $r, 'Math::Fractal::Noisemaker::Runtime::IVec';
+}
+
+# JS-native scalar uint lowering (see binary()). Only the ops whose JS form
+# actually diverges from the GLSL u32 semantics are special-cased; +, -, * and
+# & keep the u32 wrapping because every consumer in these kernels re-coerces
+# through ToInt32, where the wrapped bits are identical to the raw float64
+# product's. Vector operands fall back to the plain uint path (no such site
+# exists in the affected kernels).
+sub _js_uint_binary {
+    my ($op, $a, $b) = @_;
+    if (_is_vec($a) || _is_vec($b)) {
+        return _int_binary($op, $a, $b, 'uint');
+    }
+    my $sa = _s32(Math::Fractal::Noisemaker::UintMath::u32($a));
+    my $sb = _s32(Math::Fractal::Noisemaker::UintMath::u32($b));
+    return _s32($sa ^ $sb)                if $op eq '^';
+    return _s32($sa >> ($sb & 31))        if $op eq '>>';
+    return $sb ? ($sa - $sb * int($sa / $sb)) : 0 if $op eq '%';
+    return _int_scalar($op, $sa, $sb, 'uint');
 }
 
 sub _int_scalar {

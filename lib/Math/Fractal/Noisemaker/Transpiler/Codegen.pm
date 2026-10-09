@@ -56,8 +56,44 @@ my $FLOAT = $TYPE{float};
 my $BOOL  = $TYPE{bool};
 my $VEC4  = $TYPE{vec4};
 
+# Effects whose pinned authority capture follows the oracle's JS lowering for
+# scalar integer division. The noisemaker-for-cpu oracle compiles GLSL to JS,
+# where int typing is lost: every scalar int/int division stays a raw float64
+# division, and scripts/upstream/compile-glsl.js restoreIntegerDivision
+# re-truncates only two statement forms (VEC[<literal>] / intName for every
+# effect, and IDENT / IDENT when both operands are provably int-typed
+# declarations). filter/spookyTicker is exempt from that second rewrite — its
+# M4/Metal authority capture matches the untruncated lowering (measured) — so
+# its kernel runs the JS model end to end: a division result stays float64
+# through the arithmetic that consumes it, uint()/int() casts and bitwise ops
+# truncate toward zero at the coercion boundary, and an array read with a
+# fractional index yields undefined (bitwise consumers coerce it to 0).
+my %UNTRUNCATED_INT_DIVISION = map { $_ => 1 } qw(filter/spookyTicker);
+
 sub base_of  { my ($t) = @_; ($t && $t->{base}) ? $t->{base} : 'float' }
 sub width_of { my ($t) = @_; ($t && $t->{width}) ? $t->{width} : 1 }
+
+# True for effects whose scalar integer divisions stay float64 (see the
+# %UNTRUNCATED_INT_DIVISION rationale above).
+sub _int_division_stays_float {
+    my ($self) = @_;
+    return $UNTRUNCATED_INT_DIVISION{ $self->{effect_id} || q{} } ? 1 : 0;
+}
+
+# The one division form the oracle's restoreIntegerDivision rewrite still
+# truncates for every effect, including the exempted ones:
+# `VEC[<decimal literal>] / intName;` where the divisor is a provably
+# int-typed scalar in scope.
+sub _vec_index_int_division {
+    my ($self, $node, $scope) = @_;
+    my ($l, $r) = ($node->{l}, $node->{r});
+    return 0 unless ($l->{k} || q{}) eq 'index' && ($r->{k} || q{}) eq 'id';
+    return 0 unless ($l->{obj}{k} || q{}) eq 'id';
+    return 0 unless ($l->{idx}{k} || q{}) eq 'num' && $l->{idx}{value} =~ /^\d+$/;
+    my $entry = $scope->resolve($r->{name});
+    return 0 unless $entry && base_of($entry->{type}) eq 'int' && width_of($entry->{type}) == 1;
+    return 1;
+}
 
 sub pq {    # single-quoted Perl string literal
     my ($s) = @_;
@@ -118,9 +154,10 @@ sub resolve {
 package Math::Fractal::Noisemaker::Transpiler::Codegen;
 
 sub new {
-    my ($class, $program, $outputs, $varyings) = @_;
+    my ($class, $program, $outputs, $varyings, $effect_id) = @_;
     my $self = bless {
         program   => $program,
+        effect_id => $effect_id,
         outputs   => ($outputs && @$outputs) ? $outputs : ['fragColor'],
         varyings  => { map { $_ => 1 } @{ $varyings || [] } },
         root      => Math::Fractal::Noisemaker::Transpiler::Codegen::Scope->new(undef),
@@ -230,6 +267,11 @@ sub emit {
         '    my $U = $ctx->uniforms;',
         '    my $g = {};',
     );
+    # The %UNTRUNCATED_INT_DIVISION effects run the oracle's transpiled-JS op
+    # semantics (see the hash table comment): scalar uint bitwise ops coerce
+    # through ToInt32 in the runtime. local() scopes the flag to this kernel's
+    # dynamic extent, so sibling kernels in the same render are unaffected.
+    push @L, '    local $rt->{js_native_ints} = 1;' if $self->_int_division_stays_float;
     my @fn_lexicals = map { '$' . $_->{mangled} } @{ $self->{funcs} };
     push @L, '    my (' . join(', ', @fn_lexicals) . ');' if @fn_lexicals;
     push @L, '    my $_retc;';
@@ -368,7 +410,22 @@ sub stmt {
             # A float vector initializer is stored the way the oracle stores
             # it: an inline value as a Float32Array (see _materialized_operand).
             my $init_code;
-            $init_code = $self->_materialized_operand($dc->{init}, $scope) if defined $dc->{init};
+            my $init_t;
+            if (defined $dc->{init}) {
+                (undef, $init_t) = $self->expr($dc->{init}, $scope);
+                $init_code = $self->_materialized_operand($dc->{init}, $scope);
+            }
+            # JS model for the %UNTRUNCATED_INT_DIVISION effects: a scalar
+            # int/uint declaration whose initializer computes a float64 value
+            # (an untruncated division flowed into it) keeps the value's type,
+            # so the arithmetic that consumes the variable stays float64 too.
+            $t = { %$t, base => 'float' }
+                if $self->_int_division_stays_float
+                && defined $init_t
+                && width_of($t) == 1
+                && width_of($init_t) == 1
+                && (base_of($t) eq 'int' || base_of($t) eq 'uint')
+                && base_of($init_t) eq 'float';
             # A vector declared from another variable gets its own array, as
             # the canonical kernels' `var z = pos instanceof Float32Array ?
             # copy(pos) : pos` does: later in-place stores to one must not
@@ -607,10 +664,21 @@ sub _e_member {
 sub _e_index {
     my ($self, $node, $scope) = @_;
     my ($obj_code, $obj_t) = $self->expr($node->{obj}, $scope);
-    my ($idx_code) = $self->expr($node->{idx}, $scope);
+    my ($idx_code, $idx_t) = $self->expr($node->{idx}, $scope);
     if ($obj_t->{mat}) {
         my $n = $obj_t->{mat};
         return ("\$rt->mat_col($obj_code, $idx_code, $n)", { base => 'float', width => $n });
+    }
+    # JS model for the %UNTRUNCATED_INT_DIVISION effects: an array read with a
+    # fractional, negative or out-of-range index yields undefined, and the
+    # bitwise consumers of such a read coerce it to 0 (ToInt32(undefined) is
+    # 0). The plain int() wrap would silently read a truncated row instead.
+    if ($self->_int_division_stays_float
+        && base_of($idx_t) eq 'float'
+        && width_of($idx_t) == 1) {
+        my $t = { base => base_of($obj_t), width => $obj_t->{array} ? $obj_t->{width} : 1 };
+        return ("(($idx_code) >= 0 && ($idx_code) == int($idx_code) && ($idx_code) < scalar(\@{${obj_code}})"
+            . " ? ${obj_code}->[int($idx_code)] : 0)", $t);
     }
     if ($obj_t->{array}) {
         return ("${obj_code}->[int($idx_code)]", { base => base_of($obj_t), width => $obj_t->{width} });
@@ -685,6 +753,16 @@ sub _e_binary {
     if ($lb eq 'uint' || $rb eq 'uint') { $base = 'uint' }
     elsif (($lb eq 'int' && $rb eq 'int') || $op =~ /^(?:&|\||\^|<<|>>|%)$/) { $base = 'int' }
     else { $base = 'float' }
+    # The oracle's JS lowering for the exempted effects (see
+    # %UNTRUNCATED_INT_DIVISION): a scalar integer division keeps its raw
+    # float64 quotient except for the restoreIntegerDivision vec-index form,
+    # which truncates for every effect.
+    if ($op eq '/'
+        && $self->_int_division_stays_float
+        && $width == 1
+        && !$self->_vec_index_int_division($node, $scope)) {
+        $base = 'float';
+    }
     my $code = '$rt->binary(' . pq($op) . ", $l_code, $r_code, $width, " . pq($base) . ')';
     # Round where the oracle's compiled JS rounds (see _vec_kind); otherwise
     # the result stays raw until its next consumption boundary.
@@ -1031,10 +1109,10 @@ my %SKIP_FUNCS = map { $_ => 1 }
     qw(cpu_umul cpu_ivec2 cpu_ivec3 cpu_ivec4 cpu_uvec2 cpu_uvec3 cpu_uvec4 cpu_float);
 
 sub emit_perl {
-    my ($program, $outputs, $varyings) = @_;
+    my ($program, $outputs, $varyings, $effect_id) = @_;
     $program->{decls} =
         [grep { !(($_->{k} || '') eq 'func' && $SKIP_FUNCS{ $_->{name} || '' }) } @{ $program->{decls} }];
-    my $gen = __PACKAGE__->new($program, $outputs, $varyings);
+    my $gen = __PACKAGE__->new($program, $outputs, $varyings, $effect_id);
     return $gen->emit;
 }
 

@@ -262,7 +262,7 @@ sub build {
             my $perl = eval {
                 my $norm = normalize($glsl, $defines, $key);
                 my $ast  = parse($norm->{source});
-                _oracle_compatibility($key, emit_perl($ast, $norm->{outputs}, $norm->{varyings}));
+                _oracle_compatibility($key, emit_perl($ast, $norm->{outputs}, $norm->{varyings}, $eid));
             };
             if (!defined $perl) {
                 die "cannot compile $key: $@";
