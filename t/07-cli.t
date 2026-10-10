@@ -239,6 +239,39 @@ my $solid_png = File::Spec->catfile($TMPDIR, 'solid.png');
     ok(!-f $filename, '--param without = did not write an output file');
 }
 
+# Extra positional arguments are a click UsageError: the usage-class exit
+# code is 2, matching 'Missing argument' and parameter-range errors.
+{
+    my $filename = File::Spec->catfile($TMPDIR, 'extra-arg.png');
+    my ($rc, $out, $err) = run_cli([
+        'generate', 'synth/solid', 'extra',
+        '--width', 4, '--height', 4,
+        '--filename', $filename,
+    ]);
+    is($rc, 2, 'extra positional argument exits with a usage error');
+    like($err, qr/Got unexpected extra argument/, 'extra-argument diagnostic surfaces');
+    ok(!-f $filename, 'an extra argument writes no output file');
+}
+
+# click raises BadParameter (also a UsageError, exit 2) for path options whose
+# file is missing; stderr text is unchanged, only the exit code class moves.
+{
+    my ($rc, $out, $err) = run_cli([
+        'apply', 'filter/invert', File::Spec->catfile($TMPDIR, 'missing-input.png'),
+    ]);
+    is($rc, 2, 'apply with a missing INPUT_FILENAME exits with a usage error');
+    like($err, qr/Invalid value for 'INPUT_FILENAME'/, 'missing-input diagnostic surfaces');
+}
+
+{
+    my ($rc, $out, $err) = run_cli(
+        ['run', '--width', 4, '--height', 4, '--input', File::Spec->catfile($TMPDIR, 'missing.png')],
+        stdin => "search synth\nsolid().write(o0)\nrender(o0)\n",
+    );
+    is($rc, 2, 'run with a missing --input file exits with a usage error');
+    like($err, qr/Invalid value for '--input'/, 'missing --input diagnostic surfaces');
+}
+
 # --- random is partitioned by kind -----------------------------------------
 
 {

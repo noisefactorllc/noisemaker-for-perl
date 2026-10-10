@@ -217,7 +217,7 @@ sub cmd_apply {
     my $input_filename = shift @argv;
     die "usage: Missing argument 'INPUT_FILENAME'.\n" unless defined $input_filename;
     _no_extra_args(@argv);
-    die "Invalid value for 'INPUT_FILENAME': Path '$input_filename' does not exist.\n"
+    die "usage: Invalid value for 'INPUT_FILENAME': Path '$input_filename' does not exist.\n"
         unless -e $input_filename && !-d _;
 
     ($effect, $seed) = _prologue($effect, $seed, 'filter');
@@ -364,7 +364,7 @@ sub cmd_run {
     _require_positive_int($height, 'height');
     _no_extra_args(@argv);
 
-    die "Invalid value for '--input': Path '$input_filename' does not exist.\n"
+    die "usage: Invalid value for '--input': Path '$input_filename' does not exist.\n"
         if defined $input_filename && !(-e $input_filename && !-d _);
 
     my $source_program = do { local $/; <STDIN> };
@@ -575,7 +575,7 @@ sub _require_positive_int {
 sub _no_extra_args {
     my (@argv) = @_;
     return unless @argv;
-    die 'Got unexpected extra argument' . (@argv > 1 ? 's' : '') . ' (' . join(' ', @argv) . ")\n";
+    die 'usage: Got unexpected extra argument' . (@argv > 1 ? 's' : '') . ' (' . join(' ', @argv) . ")\n";
 }
 
 # `which`-style PATH scan (core File::Spec; no shelling out to `which`).
