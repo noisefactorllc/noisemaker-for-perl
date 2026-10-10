@@ -25,8 +25,12 @@
 #
 # Usage: perl scripts/parity-summary [--size N] [case-id ...]
 #
-# Requires NOISEMAKER_CPU_DIR (or a sibling noisemaker-for-cpu checkout) at the
-# exact revision recorded in scripts/oracle-lock.json.
+# Uses NOISEMAKER_CPU_DIR (or a sibling noisemaker-for-cpu checkout) at the
+# exact revision recorded in scripts/oracle-lock.json. When neither is usable,
+# the script clones that revision into a writable cache root
+# (NOISEMAKER_ORACLE_CACHE, /state/cache, or ~/.cache) and verifies the clone
+# against the recorded runtime digest, so a bare audit container can run the
+# whole-port summary without manual setup.
 
 use strict;
 use warnings;
@@ -35,6 +39,7 @@ use lib "$FindBin::Bin/../lib";
 use lib $FindBin::Bin;
 use ParityOracle qw(verify_oracle);
 use JSON::PP qw(decode_json);
+use File::Path qw(make_path remove_tree);
 use File::Spec;
 use File::Temp ();
 
@@ -48,8 +53,7 @@ for (my $i = 0; $i <= $#ARGV; $i++) {
     else { (my $id = $ARGV[$i]) =~ s{__}{/}; push @requested, $id }
 }
 
-my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
-    || File::Spec->rel2abs(File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-for-cpu'));
+my $CPU_DIR = resolve_oracle();
 my $pin = verify_oracle($CPU_DIR);
 print "Reference: $pin->{revision} (runtime SHA-256 verified)\n";
 
@@ -89,6 +93,9 @@ if (@executable) {
     my $report = File::Spec->catfile($TMP, 'parity-report.txt');
     open my $saved_out, '>&', \*STDOUT or die "cannot save STDOUT: $!\n";
     open STDOUT, '>', $report or die "cannot write $report: $!\n";
+    # parity.pl resolves the oracle the same way; hand the resolved checkout
+    # down so a self-provisioned clone is used by the child process too.
+    local $ENV{NOISEMAKER_CPU_DIR} = $CPU_DIR;
     system($^X, File::Spec->catfile($FindBin::Bin, 'parity.pl'),
         '--only', join(',', @executable), @pass_through);
     open STDOUT, '>&', $saved_out or die "cannot restore STDOUT: $!\n";
@@ -123,3 +130,74 @@ print 'PARITY-SUMMARY {'
         0 .. $#summary / 2)
     . "}\n";
 exit(@ids && $exact == @ids ? 0 : 1);
+
+# Where the pinned noisemaker-for-cpu oracle lives. NOISEMAKER_CPU_DIR wins and
+# must verify as-is; a sibling checkout comes next; otherwise a bare container
+# gets a clean clone of the exact pin revision, verified against the recorded
+# runtime digest.
+sub resolve_oracle {
+    if (my $dir = $ENV{NOISEMAKER_CPU_DIR}) {
+        verify_oracle($dir);
+        return $dir;
+    }
+    my $sibling = File::Spec->rel2abs(
+        File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-for-cpu'));
+    if (-e File::Spec->catfile($sibling, 'package.json')) {
+        return $sibling if eval { verify_oracle($sibling); 1 };
+        print "noisemaker-for-cpu sibling $sibling does not match oracle-lock.json; provisioning a clean clone\n";
+    }
+    return provision_oracle();
+}
+
+# Clone the exact revision recorded in scripts/oracle-lock.json into a cache
+# directory and verify it against the recorded runtime digest. The clone lives
+# outside this repository; a pin bump provisions a fresh revision instead of
+# reusing the stale one.
+sub provision_oracle {
+    my $lock = File::Spec->catfile($FindBin::Bin, 'oracle-lock.json');
+    open my $fh, '<', $lock or die "cannot read $lock: $!\n";
+    local $/;
+    my $pin = decode_json(scalar <$fh>);
+    close $fh;
+    my $rev = $pin->{revision}
+        or die "oracle-lock.json records no revision to provision\n";
+    my $url = 'https://github.com/'
+        . ($pin->{repository} || 'noisefactorllc/noisemaker-for-cpu') . '.git';
+
+    my ($cache_root) = grep {
+        defined && -d && -w
+    } ($ENV{NOISEMAKER_ORACLE_CACHE}, '/state/cache',
+       File::Spec->rel2abs(File::Spec->catdir($ENV{HOME} || File::Spec->curdir, '.cache')));
+    $cache_root
+        or die "no writable cache root for the oracle clone; set NOISEMAKER_CPU_DIR to a pinned noisemaker-for-cpu checkout\n";
+    my $base = File::Spec->catdir($cache_root, 'noisemaker-for-cpu-pin');
+    my $target = File::Spec->catdir($base, $rev);
+    return $target if eval { verify_oracle($target); 1 };
+
+    File::Path::remove_tree($target) if -d $target;
+    File::Path::make_path($base);
+    my $staging = File::Spec->catdir($base, "staging-$$");
+    my $cloned = eval {
+        system('git', 'init', $staging) == 0
+            or die "cannot init the oracle clone in $staging\n";
+        system('git', '-C', $staging, 'remote', 'add', 'origin', $url) == 0
+            or die "cannot add origin $url\n";
+        system('git', '-C', $staging, 'fetch', '--depth', '1', 'origin', $rev) == 0
+            or die "cannot fetch $rev from $url\n";
+        system('git', '-C', $staging, 'checkout', '--detach', 'FETCH_HEAD') == 0
+            or die "cannot check out the fetched $rev\n";
+        1;
+    };
+    if (!$cloned or !eval { verify_oracle($staging); 1 }) {
+        my $error = $@ || 'unknown error';
+        remove_tree($staging);
+        die "cannot provision the pinned noisemaker-for-cpu $rev: $error";
+    }
+    if (!rename($staging, $target) && !-d $target) {
+        my $error = $!;
+        remove_tree($staging);
+        die "cannot install the oracle clone at $target: $error\n";
+    }
+    print "provisioned pinned noisemaker-for-cpu $rev at $target\n";
+    return $target;
+}
