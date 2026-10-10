@@ -26,11 +26,12 @@
 # Usage: perl scripts/parity-summary [--size N] [case-id ...]
 #
 # Uses NOISEMAKER_CPU_DIR (or a sibling noisemaker-for-cpu checkout) at the
-# exact revision recorded in scripts/oracle-lock.json. When neither is usable,
-# the script clones that revision into a writable cache root
-# (NOISEMAKER_ORACLE_CACHE, /state/cache, or ~/.cache) and verifies the clone
-# against the recorded runtime digest, so a bare audit container can run the
-# whole-port summary without manual setup.
+# exact revision recorded in scripts/oracle-lock.json. When no configured
+# checkout verifies against the lock, the script clones that revision into a
+# writable cache root (NOISEMAKER_ORACLE_CACHE, /state/cache, or ~/.cache;
+# a private tempdir as a last resort) and verifies the clone against the
+# recorded runtime digest, so a bare audit container can run the whole-port
+# summary without manual setup.
 
 use strict;
 use warnings;
@@ -131,20 +132,23 @@ print 'PARITY-SUMMARY {'
     . "}\n";
 exit(@ids && $exact == @ids ? 0 : 1);
 
-# Where the pinned noisemaker-for-cpu oracle lives. NOISEMAKER_CPU_DIR wins and
-# must verify as-is; a sibling checkout comes next; otherwise a bare container
+# Where the pinned noisemaker-for-cpu oracle lives. NOISEMAKER_CPU_DIR wins
+# when it verifies; a sibling checkout comes next; otherwise a bare container
 # gets a clean clone of the exact pin revision, verified against the recorded
-# runtime digest.
+# runtime digest. A configured path that is missing or does not match the pin
+# never blocks the run: it is reported and the resolution falls through, and
+# the provisioned clone still has to pass the runtime-digest verification.
 sub resolve_oracle {
     if (my $dir = $ENV{NOISEMAKER_CPU_DIR}) {
-        verify_oracle($dir);
-        return $dir;
+        return $dir if eval { verify_oracle($dir); 1 };
+        print "NOISEMAKER_CPU_DIR $dir is not a usable pinned oracle: $@";
+        print "falling back to a sibling checkout or a clean clone\n";
     }
     my $sibling = File::Spec->rel2abs(
         File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-for-cpu'));
     if (-e File::Spec->catfile($sibling, 'package.json')) {
         return $sibling if eval { verify_oracle($sibling); 1 };
-        print "noisemaker-for-cpu sibling $sibling does not match oracle-lock.json; provisioning a clean clone\n";
+        print "noisemaker-for-cpu sibling $sibling does not match oracle-lock.json: $@";
     }
     return provision_oracle();
 }
@@ -168,14 +172,18 @@ sub provision_oracle {
         defined && -d && -w
     } ($ENV{NOISEMAKER_ORACLE_CACHE}, '/state/cache',
        File::Spec->rel2abs(File::Spec->catdir($ENV{HOME} || File::Spec->curdir, '.cache')));
-    $cache_root
-        or die "no writable cache root for the oracle clone; set NOISEMAKER_CPU_DIR to a pinned noisemaker-for-cpu checkout\n";
+    if (!$cache_root) {
+        # Last resort: a private tempdir. It lives for this run only, so a
+        # runner without any persistent cache still pays one depth-1 clone.
+        $cache_root = File::Temp::tempdir(CLEANUP => 0);
+        print "no persistent writable cache root; provisioning the oracle into $cache_root\n";
+    }
     my $base = File::Spec->catdir($cache_root, 'noisemaker-for-cpu-pin');
     my $target = File::Spec->catdir($base, $rev);
     return $target if eval { verify_oracle($target); 1 };
 
     File::Path::remove_tree($target) if -d $target;
-    File::Path::make_path($base);
+    File::Path::make_path($base, { chmod => 0755 });
     my $staging = File::Spec->catdir($base, "staging-$$");
     my $cloned = eval {
         system('git', 'init', $staging) == 0
