@@ -384,7 +384,12 @@ sub _canonical_uniforms {
     $full_height = $height unless defined $full_height;
     my $res    = [0.0 + $width, 0.0 + $height];
     my $full   = [0.0 + $full_width, 0.0 + $full_height];
-    my $aspect = f32($width / $height);
+    # Upstream's Pipeline computes the aspect reciprocals CPU-side and uploads
+    # them as uniforms instead of dividing in-shader; the transpiled kernels
+    # read them as plain bindings, so build them the same way: tiling uses the
+    # full image's aspect and dimensions, otherwise the render's own.
+    my $aspect_value = $full_width / $full_height;
+    my $aspect = f32($aspect_value);
     my %u = (
         renderScale => f32(1.0),
         speed       => 0,
@@ -402,6 +407,8 @@ sub _canonical_uniforms {
         tileOffset     => [0.0, 0.0],
         aspectRatio    => $aspect,
         aspect         => $aspect,
+        aspectInv      => f32(1.0 / $aspect_value),
+        invFullResolution => [f32(1.0 / $full_width), f32(1.0 / $full_height)],
         time           => f32($time),
         globalTime     => f32($time),
         deltaTime      => f32($delta_time),
@@ -889,9 +896,10 @@ sub _run_state_once {
                     if $destination->width != $dest_width || $destination->height != $dest_height;
             }
             my $pass_uniforms = _pass_uniforms($pass, $uniforms, $state->{params});
+            # The oracle binds resolution from the destination but keeps
+            # aspectRatio/aspect/aspectInv/invFullResolution canonical (the
+            # full image's aspect and dimensions), so only resolution moves.
             $pass_uniforms->{resolution} = [0.0 + $dest_width, 0.0 + $dest_height];
-            $pass_uniforms->{aspectRatio} = f32($dest_width / $dest_height);
-            $pass_uniforms->{aspect} = $pass_uniforms->{aspectRatio};
 
             if (($pass->{drawMode} || '') eq 'triangles') {
                 # CPU triangle-mesh rasterizer (render/meshRender): the fresh

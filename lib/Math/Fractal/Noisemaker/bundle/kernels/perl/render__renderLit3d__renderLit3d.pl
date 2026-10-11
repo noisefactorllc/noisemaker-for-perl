@@ -302,7 +302,7 @@ my $run_pixel = sub {
         }
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $rt->f(0.5), $fullRes, 2, 'float'), 2, 'float'), $rt->swizzle($fullRes, 'y'), 2, 'float'));
-        $ro = $rt->construct(3, $rt->binary('*', $rt->binary('*', $_u_cameraPosition, $rt->construct_raw(3, $rt->unary('-', $rt->f(1)), $rt->f(1), $rt->f(1)), 3, 'float'), $rt->f(3.5), 3, 'float'));
+        $ro = $rt->construct(3, $rt->binary('*', $_u_cameraPosition, $rt->f(3.5), 3, 'float'));
         $forward = $rt->construct(3, 0.0);
         if ($rt->binary('<', $rt->length($ro), $rt->f(0.001))) {
             @{$forward} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $rt->f(0), $rt->unary('-', $rt->f(1))))};
@@ -311,13 +311,13 @@ my $run_pixel = sub {
         }
         $worldUp = $rt->construct(3, $rt->f(0), $rt->f(1), $rt->f(0));
         if ($rt->binary('>', $rt->component_wise('abs', $rt->dot($forward, $worldUp)), $rt->f(0.999))) {
-            @{$worldUp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $rt->f(0), $rt->f(1)))};
+            @{$worldUp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $rt->f(0), $rt->component_wise('sign', $rt->swizzle($forward, 'y'))))};
         }
-        $right = $rt->normalize($rt->cross($worldUp, $forward));
-        $up = $rt->cross($forward, $right);
+        $right = $rt->normalize($rt->cross($forward, $worldUp));
+        $up = $rt->cross($right, $forward);
         $rd = $rt->normalize($rt->binary('+', $rt->binary('+', $forward, $rt->binary('*', $rt->swizzle($uv, 'x'), $right, 3, 'float'), 3, 'float'), $rt->binary('*', $rt->swizzle($uv, 'y'), $up, 3, 'float'), 3, 'float'));
-        $worldLightDir = $rt->normalize($rt->binary('*', $_u_lightDirection, $rt->construct_raw(3, $rt->unary('-', $rt->f(1)), $rt->f(1), $rt->f(1)), 3, 'float'));
-        $angle = $rt->binary('*', $rt->binary('*', $_u_time, $g->{TAU}, 1, 'float'), $rt->construct(1, $_u_orbitSpeed), 1, 'float');
+        $worldLightDir = $rt->normalize($_u_lightDirection);
+        $angle = $rt->binary('*', $rt->binary('*', $rt->unary('-', $_u_time), $g->{TAU}, 1, 'float'), $rt->construct(1, $_u_orbitSpeed), 1, 'float');
         $c = $rt->component_wise('cos', $angle);
         $s = $rt->component_wise('sin', $angle);
         $roVol = $rt->construct(3, $rt->binary('+', $rt->binary('*', $rt->swizzle($ro, 'x'), $c, 1, 'float'), $rt->binary('*', $rt->swizzle($ro, 'z'), $s, 1, 'float'), 1, 'float'), $rt->swizzle($ro, 'y'), $rt->binary('+', $rt->binary('*', $rt->unary('-', $rt->swizzle($ro, 'x')), $s, 1, 'float'), $rt->binary('*', $rt->swizzle($ro, 'z'), $c, 1, 'float'), 1, 'float'));

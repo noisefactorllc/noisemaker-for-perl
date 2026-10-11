@@ -18,8 +18,6 @@ my $run_pixel = sub {
     my $_u_juliaY = exists $U->{'juliaY'} ? $U->{'juliaY'} : $rt->f(0.0);
     my $_u_juliaZ = exists $U->{'juliaZ'} ? $U->{'juliaZ'} : $rt->f(0.0);
     my $_u_colorMode = exists $U->{'colorMode'} ? $U->{'colorMode'} : 0;
-    my $_u_tileOffset = exists $U->{'tileOffset'} ? $U->{'tileOffset'} : $rt->construct(2, 0.0);
-    my $_u_renderScale = exists $U->{'renderScale'} ? $U->{'renderScale'} : $rt->f(0.0);
     $g->{fragColor} = $rt->construct(4, 0.0);
     $g->{geoOut} = $rt->construct(4, 0.0);
     $g->{PI} = $rt->f(3.1415926535897931);
@@ -225,21 +223,19 @@ my $run_pixel = sub {
         }
     };
     $main__void = sub {
-        my ($dist, $dxp, $dyp, $dzp, $eps, $globalPixelCoord, $gradient, $iterRatio, $juliaC, $normal, $normalizedDist, $p, $pixelCoord, $result, $scaledVolSize, $scaledVolSizeF, $trap, $volSize, $x, $y, $z);
+        my ($dist, $dxp, $dyp, $dzp, $eps, $gradient, $iterRatio, $juliaC, $normal, $normalizedDist, $p, $pixelCoord, $result, $trap, $volSize, $volSizeF, $x, $y, $z);
         $volSize = $_u_volumeSize;
-        $scaledVolSize = $rt->construct(1, $rt->binary('*', $rt->construct(1, $volSize), $_u_renderScale, 1, 'float'), 'int');
-        $scaledVolSizeF = $rt->construct(1, $scaledVolSize);
-        $globalPixelCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $pixelCoord = $rt->construct(2, $globalPixelCoord, 'int');
-        $x = $rt->construct(1, $rt->component_wise('mod', $rt->construct(1, $rt->swizzle($pixelCoord, 'x')), $scaledVolSizeF), 'int');
-        $y = $rt->binary('%', $rt->swizzle($pixelCoord, 'y'), $scaledVolSize, 1, 'int');
-        $z = $rt->binary('/', $rt->swizzle($pixelCoord, 'y'), $scaledVolSize, 1, 'int');
-        if ((((($rt->binary('>=', $x, $scaledVolSize)) || ($rt->binary('>=', $y, $scaledVolSize)) ? 1 : 0)) || ($rt->binary('>=', $z, $scaledVolSize)) ? 1 : 0)) {
+        $volSizeF = $rt->construct(1, $volSize);
+        $pixelCoord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
+        $x = $rt->swizzle($pixelCoord, 'x');
+        $y = $rt->binary('%', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'int');
+        $z = $rt->binary('/', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'int');
+        if ((((($rt->binary('>=', $x, $volSize)) || ($rt->binary('>=', $y, $volSize)) ? 1 : 0)) || ($rt->binary('>=', $z, $volSize)) ? 1 : 0)) {
             @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
             @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(0.5), $rt->f(0.5), $rt->f(0)))};
             return;
         }
-        $p = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->construct_raw(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $scaledVolSizeF, $rt->f(1), 1, 'float'), 3, 'float'), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'), $rt->f(1.5), 3, 'float'));
+        $p = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->construct_raw(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float'), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'), $rt->f(1.5), 3, 'float'));
         $juliaC = $rt->construct(3, $rt->binary('*', $rt->construct_raw(3, $_u_juliaX, $_u_juliaY, $_u_juliaZ), $rt->f(0.01), 3, 'float'));
         $result = $computeFractal__vec3_vec3->($p, $juliaC);
         $dist = $rt->swizzle($result, 'x');
