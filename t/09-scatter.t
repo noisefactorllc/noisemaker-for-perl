@@ -12,6 +12,23 @@ sub close_to {
     cmp_ok(abs($actual - $expected), '<=', 1e-12, $name);
 }
 
+# Agent-state fixtures mirror the oracle's scatter-adapters.test.js helpers:
+# poke_agent writes through the independently stated row flip, pixel_at reads
+# a (storageRow, col) pixel as four floats.
+sub poke_agent {
+    my ($surface, $sx, $sy, $rgba) = @_;
+    my $storage_row = $surface->height - 1 - $sy;
+    my $offset      = ($storage_row * $surface->width + $sx) * 4;
+    @{ $surface->data }[ $offset .. $offset + 3 ] = @$rgba;
+    return;
+}
+
+sub pixel_at {
+    my ($surface, $storage_row, $col) = @_;
+    my $offset = ($storage_row * $surface->width + $col) * 4;
+    return [ @{ $surface->data }[ $offset .. $offset + 3 ] ];
+}
+
 is(
     Math::Fractal::Noisemaker::DrawOps::scatter_point_pixel(0, 0, 1, 3, 3),
     (1 * 3 + 1) * 4,
@@ -58,10 +75,91 @@ my $flow_stats = $flow3d->({
 });
 is($flow_stats->{pixels}, 1, 'flow3d deposits the eligible agent');
 is_deeply(
-    [@{ $flow_dest->data }[20 .. 23]],
+    [@{ $flow_dest->data }[24 .. 27]],
     [0.2, 0.3, 0.4, 1],
     'flow3d flattens voxel xyz into the canonical volume atlas pixel',
 );
+
+# The M4/Metal point rasterizer snaps window positions to a 1/256 subpixel
+# grid and assigns an integer boundary to the lower GL pixel; cases ported
+# from the oracle's scatter-adapters.test.js.
+
+{
+    my $state1 = Math::Fractal::Noisemaker::Surface->new(2, 1);
+    my $state2 = Math::Fractal::Noisemaker::Surface->new(2, 1);
+    poke_agent($state1, 0, 0, [20, 1.9599609375, 5.7421875, 0]);
+    poke_agent($state1, 1, 0, [20.71875, 17, 29.671875, 0]);
+    poke_agent($state2, 0, 0, [0.5, 0, 0, 1]);
+    poke_agent($state2, 1, 0, [0.25, 0, 0, 1]);
+    my $dest = Math::Fractal::Noisemaker::Surface->new(32, 1024);
+    my $stats = $flow3d->({
+        uniforms    => { density => 100, volumeSize => 32 },
+        inputs      => { stateTex1 => $state1, stateTex2 => $state2 },
+        destination => $dest,
+    });
+    is($stats->{pixels}, 2, 'flow3d boundary placement deposits both agents');
+    is_deeply(pixel_at($dest, 862, 19), [0.5, 0, 0, 1], 'flow3d places an integer atlas column boundary in the lower GL pixel');
+    is_deeply(pixel_at($dest, 862, 20), [0, 0, 0, 0], 'flow3d upper boundary pixel stays untouched');
+    is_deeply(pixel_at($dest, 79, 20), [0.25, 0, 0, 1], 'flow3d places an integer atlas row boundary in the lower GL pixel');
+    is_deeply(pixel_at($dest, 78, 20), [0, 0, 0, 0], 'flow3d upper row boundary pixel stays untouched');
+}
+
+{
+    my $state1 = Math::Fractal::Noisemaker::Surface->new(1, 1);
+    my $state2 = Math::Fractal::Noisemaker::Surface->new(1, 1);
+    poke_agent($state1, 0, 0, [1.25, 0.0001220703125, 63, 0]);
+    poke_agent($state2, 0, 0, [0.5, 0, 0, 1]);
+    my $dest = Math::Fractal::Noisemaker::Surface->new(64, 4096);
+    my $stats = $flow3d->({
+        uniforms    => { density => 100, volumeSize => 64 },
+        inputs      => { stateTex1 => $state1, stateTex2 => $state2 },
+        destination => $dest,
+    });
+    is($stats->{pixels}, 1, 'flow3d frounded atlas addition still deposits');
+    is_deeply(pixel_at($dest, 64, 1), [0.5, 0, 0, 1], 'flow3d rounds the atlas addition as GLSL float before raster placement');
+    is_deeply(pixel_at($dest, 63, 1), [0, 0, 0, 0], 'flow3d unrounded placement pixel stays untouched');
+}
+
+for my $case (
+    [32, [0.00032138824462890625, 22.546875, 13.6015625, 0]],
+    [32, [1 / 512, 22.546875, 13.6015625, 0]],
+    [64, [1.25, 0.00006103515625, 0, 0]],
+    [64, [1.25, 1 / 512, 0, 0]],
+) {
+    my ($volume_size, $position) = @$case;
+    my $state1 = Math::Fractal::Noisemaker::Surface->new(1, 1);
+    my $state2 = Math::Fractal::Noisemaker::Surface->new(1, 1);
+    poke_agent($state1, 0, 0, $position);
+    poke_agent($state2, 0, 0, [0.5, 0, 0, 1]);
+    my $dest = Math::Fractal::Noisemaker::Surface->new($volume_size, $volume_size**2);
+    my $stats = $flow3d->({
+        uniforms    => { density => 100, volumeSize => $volume_size },
+        inputs      => { stateTex1 => $state1, stateTex2 => $state2 },
+        destination => $dest,
+    });
+    is($stats->{pixels}, 0, "flow3d culls a point inside the M4 viewport subpixel edge (volumeSize $volume_size)");
+    ok(!grep($_ != 0, @{ $dest->data }), "flow3d subpixel-edge cull leaves the destination untouched (volumeSize $volume_size)");
+}
+
+{
+    my $state1 = Math::Fractal::Noisemaker::Surface->new(2, 1);
+    my $state2 = Math::Fractal::Noisemaker::Surface->new(2, 1);
+    poke_agent($state1, 0, 0, [1.0009765625, 0.25, 1.1, 0]);
+    poke_agent($state1, 1, 0, [2.25, 1.0009765625, 1.1, 0]);
+    poke_agent($state2, 0, 0, [0.5, 0, 0, 1]);
+    poke_agent($state2, 1, 0, [0.25, 0, 0, 1]);
+    my $dest = Math::Fractal::Noisemaker::Surface->new(32, 1024);
+    my $stats = $flow3d->({
+        uniforms    => { density => 100, volumeSize => 32 },
+        inputs      => { stateTex1 => $state1, stateTex2 => $state2 },
+        destination => $dest,
+    });
+    is($stats->{pixels}, 2, 'flow3d subpixel snapping deposits both agents');
+    is_deeply(pixel_at($dest, 991, 0), [0.5, 0, 0, 1], 'flow3d snaps a near-integer atlas column to the M4 subpixel grid');
+    is_deeply(pixel_at($dest, 991, 1), [0, 0, 0, 0], 'flow3d snapped column upper pixel stays untouched');
+    is_deeply(pixel_at($dest, 991, 2), [0.25, 0, 0, 1], 'flow3d snaps a near-integer atlas row to the M4 subpixel grid');
+    is_deeply(pixel_at($dest, 990, 2), [0, 0, 0, 0], 'flow3d snapped row upper pixel stays untouched');
+}
 
 cmp_ok(
     abs(Math::Fractal::Noisemaker::DrawOps::billboard_shape_alpha(1, 0.5, 0.5) - 1),

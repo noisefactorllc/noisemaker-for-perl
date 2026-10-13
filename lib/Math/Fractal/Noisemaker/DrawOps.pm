@@ -32,6 +32,15 @@ sub _add { _f32($_[0] + $_[1]) }
 sub _mul { _f32($_[0] * $_[1]) }
 sub _div { _f32($_[0] / $_[1]) }
 
+# JS Math.round: nearest integer, exact .5 ties toward +infinity.
+sub _js_round {
+    my ($x) = @_;
+    my $floor = POSIX::floor($x);
+    my $diff  = $x - $floor;
+    return $floor + 1 if $diff >= 0.5;
+    return $floor;
+}
+
 # texelFetch on agent-state textures: GLSL rows are bottom-up while Surface
 # storage is top-down.
 sub texel_fetch_agent {
@@ -203,13 +212,19 @@ sub _flow3d_deposit {
         my $position = texel_fetch_agent($state1, $state_x, $state_y);
         my $color = texel_fetch_agent($state2, $state_x, $state_y);
         my $atlas_x = $position->[0];
-        my $atlas_y = $position->[1] + POSIX::floor($position->[2]) * $volume_size;
-        my $offset = scatter_point_pixel(
-            ($atlas_x / $volume_size) * 2 - 1,
-            ($atlas_y / $atlas_height) * 2 - 1,
-            1, $dest->width, $dest->height,
-        );
-        next unless defined $offset;
+        my $atlas_y = _f32($position->[1] + POSIX::floor($position->[2]) * $volume_size);
+        # The M4/Metal point rasterizer snaps window positions to 1/256 pixel
+        # and assigns an integer boundary to the lower GL pixel. A center
+        # within half a subpixel step at the left or bottom edge produces no
+        # fragment (see the oracle's flow3d-deposit.js).
+        next if $atlas_x <= 1 / 512 || $atlas_y <= 1 / 512;
+        my $gl_col = POSIX::ceil(_js_round($atlas_x * 256) / 256) - 1;
+        my $gl_row = POSIX::ceil(_js_round($atlas_y * 256) / 256) - 1;
+        my $inf = 9**9**9;
+        next if $gl_col != $gl_col || $gl_row != $gl_row
+            || abs($gl_col) == $inf || abs($gl_row) == $inf;
+        next if $gl_col < 0 || $gl_col >= $volume_size || $gl_row < 0 || $gl_row >= $atlas_height;
+        my $offset = (($atlas_height - 1 - $gl_row) * $volume_size + $gl_col) * 4;
         $dest->data->[$offset]     += $color->[0];
         $dest->data->[$offset + 1] += $color->[1];
         $dest->data->[$offset + 2] += $color->[2];
