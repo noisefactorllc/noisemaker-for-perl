@@ -191,6 +191,7 @@ my $run_pixel = sub {
         $color = $rt->construct(4, $rt->f(0));
         $blendy = $periodicFunction__float->($rt->binary('-', $_u_time, $offsets__vec2->($uv), 1, 'float'));
         @{$color} = map { $rt->f32($_) } @{($glitch__vec2->($uv))};
+        $color = $rt->assign_swizzle($color, 'rgb', $rt->construct(3, $rt->binary('/', $rt->component_wise('floor', $rt->construct(3, $rt->binary('+', $rt->construct(3, $rt->binary('*', $rt->component_wise('clamp', $rt->swizzle($color, 'rgb'), $rt->f(0), $rt->f(1)), $rt->f(255), 3, 'float')), $rt->f(0.5), 3, 'float'))), $rt->f(255), 3, 'float')));
         if ($rt->binary('!=', $_u_scanlinesAmt, $rt->f(0))) {
             @{$color} = map { $rt->f32($_) } @{($scanlines__vec4_vec2->($color, $uv))};
         }
