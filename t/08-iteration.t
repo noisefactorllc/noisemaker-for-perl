@@ -83,6 +83,41 @@ is_deeply(
     'particle segment groups while ordinary and private-state effects stay isolated',
 );
 
+my $flow_effects = {
+    'filter3d/flow3d' => { iterated => 1, textures => {}, passes => [] },
+    'synth3d/noise3d' => { iterated => 0, textures => {}, passes => [] },
+};
+
+$groups = compute_iteration_groups([
+    effect_step('synth3d/noise3d', { speed => 1 }),
+    effect_step('filter3d/flow3d', { iterationCount => 2 }),
+], $flow_effects);
+is_deeply(
+    [map { [$_->{iterated} ? 1 : 0, scalar @{ $_->{steps} }] } @$groups],
+    [[1, 2]],
+    'flow3d re-evaluates an animated noise3d input per tick',
+);
+
+$groups = compute_iteration_groups([
+    effect_step('synth3d/noise3d', { speed => 0 }),
+    effect_step('filter3d/flow3d', { iterationCount => 2 }),
+], $flow_effects);
+is_deeply(
+    [map { [$_->{iterated} ? 1 : 0, scalar @{ $_->{steps} }] } @$groups],
+    [[0, 1], [1, 1]],
+    'a static noise3d input stays a separate group',
+);
+
+$groups = compute_iteration_groups([
+    effect_step('synth3d/noise3d', { speed => 1 }),
+    effect_step('filter3d/flow3d', { iterationCount => 0 }),
+], $flow_effects);
+is_deeply(
+    [map { [$_->{iterated} ? 1 : 0, scalar @{ $_->{steps} }] } @$groups],
+    [[0, 1], [1, 1]],
+    'a zero-iteration flow3d keeps the noise3d group separate',
+);
+
 $groups = compute_iteration_groups([
     effect_step('render/pointsEmit'),
     effect_step('render/pointsEmit'),

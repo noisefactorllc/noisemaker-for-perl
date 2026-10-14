@@ -100,6 +100,18 @@ write_kernel('points/testMrt:combine', q{
     my $offset = ($row * $xyz->width + $x) * 4;
     @$out = ($xyz->data->[$offset], $vel->data->[$offset], 0, 1);
 });
+write_kernel('synth3d/noise3d:fill', q{
+    my $u = $ctx->uniforms;
+    @$out = ($u->{frame} // 0, 0, 0, 1);
+});
+write_kernel('filter3d/flow3d:add', q{
+    my $surface = $ctx->texture_binding('inputTex');
+    my $x = int($ctx->frag_coord->[0]);
+    my $shader_y = int($ctx->frag_coord->[1]);
+    my $row = $surface->height - 1 - $shader_y;
+    my $offset = ($row * $surface->width + $x) * 4;
+    @$out = ($surface->data->[$offset] + 0.1, 0, 0, 1);
+});
 write_kernel('synth/optionalSurface:first', q{ @$out = (0.75, 0.5, 0.25, 1); });
 write_kernel('synth/optionalSurface:sample', q{
     my $surface = $ctx->texture_binding('tex');
@@ -202,6 +214,22 @@ my $metadata = {
                 { name => 'combine', program => 'combine', key => 'points/testMrt:combine',
                   inputs => { xyzTex => 'global_xyz', velTex => 'global_vel' }, outputs => { fragColor => 'outputTex' } },
             ],
+        },
+        'synth3d/noise3d' => {
+            namespace => 'synth3d', func => 'noise3d', kind => 'generator',
+            params => {
+                speed          => { type => 'float', default => 1, uniform => 'speed' },
+                iterationCount => int_param(60),
+            },
+            paramOrder => ['speed', 'iterationCount'],
+            textures   => { outputTex => $screen_texture },
+            passes     => [{ name => 'fill', program => 'fill', key => 'synth3d/noise3d:fill', inputs => {}, outputs => { fragColor => 'outputTex' } }],
+        },
+        'filter3d/flow3d' => {
+            namespace => 'filter3d', func => 'flow3d', kind => 'filter', iterated => 1,
+            params    => { iterationCount => int_param(60) }, paramOrder => ['iterationCount'],
+            textures  => { outputTex => $screen_texture },
+            passes    => [{ name => 'add', program => 'add', key => 'filter3d/flow3d:add', inputs => { inputTex => 'inputTex' }, outputs => { fragColor => 'outputTex' } }],
         },
         'synth/optionalSurface' => {
             namespace => 'synth', func => 'optionalSurface', kind => 'generator',
@@ -399,6 +427,27 @@ sub close_to {
         abs($surface->data->[0] - 0.9), '<=', 0.002,
         'loop iterations freeze the pre-loop input and advance only global_accum',
     );
+}
+
+# The merged animated-noise3d + flow3d group is owned by flow3d (cpu's
+# runIteratedGroupSync takes the count from the first iterated step), and the
+# leading noise3d step re-runs on every tick with the advancing frame.
+{
+    my $surface = render_dsl(
+        "search synth3d, filter3d\nnoise3d(speed: 1).flow3d(iterationCount: 2).write(o0)\nrender(o0)",
+        width => 1, height => 1,
+    );
+    close_to($surface->data->[0], 1.1,
+        'merged flow3d group re-runs the animated noise3d per tick');
+}
+
+{
+    my $surface = render_dsl(
+        "search synth3d, filter3d\nnoise3d(speed: 1, iterationCount: 9).flow3d(iterationCount: 3).write(o0)\nrender(o0)",
+        width => 1, height => 1,
+    );
+    close_to($surface->data->[0], 2.1,
+        'merged group iteration count comes from the iterated step, not steps[0]');
 }
 
 done_testing();

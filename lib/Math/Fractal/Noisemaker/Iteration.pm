@@ -5,6 +5,7 @@ package Math::Fractal::Noisemaker::Iteration;
 use strict;
 use warnings;
 use Exporter 'import';
+use Scalar::Util ();
 
 our @EXPORT_OK = qw(
     compute_iteration_groups
@@ -54,6 +55,21 @@ sub _iterated {
     return _definition($step, $effects)->{iterated} ? 1 : 0;
 }
 
+# JS-coercion mirrors for the animated-input merge rule: JS reads
+# `undefined > 0` as false and `undefined !== 0` as true, so a missing
+# iterationCount blocks the merge while a missing speed allows it.
+sub _positive_param {
+    my ($value) = @_;
+    return defined $value && !ref $value
+        && Scalar::Util::looks_like_number($value) && $value > 0 ? 1 : 0;
+}
+
+sub _zero_param {
+    my ($value) = @_;
+    return defined $value && !ref $value
+        && Scalar::Util::looks_like_number($value) && $value == 0 ? 1 : 0;
+}
+
 sub compute_iteration_groups {
     my ($steps, $effects) = @_;
     $effects ||= {};
@@ -98,6 +114,22 @@ sub compute_iteration_groups {
         }
         if ($open && _references_particle_state($step, $effects)) {
             push @{ $open->{steps} }, $step;
+            next;
+        }
+        # The authority re-runs animated noise3d before every flow3d tick:
+        # a single preceding synth3d/noise3d step with a non-zero speed joins
+        # the flow3d step in one iterated group (mirrors cpu's
+        # computeIterationGroups animated-input rule).
+        my $previous = $groups[-1];
+        if (!$open
+            && ($step->{effect_id} // '') eq 'filter3d/flow3d'
+            && _positive_param($step->{params}{iterationCount})
+            && $previous
+            && @{ $previous->{steps} } == 1
+            && ($previous->{steps}[0]{effect_id} // '') eq 'synth3d/noise3d'
+            && !_zero_param($previous->{steps}[0]{params}{speed})) {
+            pop @groups;
+            push @groups, { steps => [ $previous->{steps}[0], $step ], iterated => 1 };
             next;
         }
         $close->();

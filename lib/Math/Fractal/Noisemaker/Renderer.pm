@@ -1169,7 +1169,15 @@ sub _run_iteration_group {
             $owner_state_size = $state->{params}{stateSize};
         }
     }
-    my $count = _group_iteration_count($states[0]);
+    # cpu's runIteratedGroupSync takes the iteration count from the first
+    # step whose definition is iterated (the merged animated-noise3d +
+    # flow3d group is owned by flow3d, not by its leading noise3d step);
+    # the zero-iteration output still mirrors group.steps[0].
+    my $owner_state = $states[0];
+    for my $state (@states) {
+        if ($state->{eff}{iterated}) { $owner_state = $state; last }
+    }
+    my $count = _group_iteration_count($owner_state);
     return _zero_iteration_output($group_input, $width, $height, $states[0]) unless $count > 0;
 
     my %group_resources;
