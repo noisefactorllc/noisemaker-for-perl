@@ -153,6 +153,10 @@ sub _lenia_deposit {
     my $dest = $ctx->{destination};
     my ($width, $height) = ($xyz->width, $xyz->height);
     my $amount = $ctx->{uniforms}{depositAmount};
+    # Additive blending writes back to the half-float attachment after every
+    # point: each write truncates to IEEE 754 half before the next point adds.
+    my $format = $dest->format // '';
+    my $half_float_blend = $format eq 'rgba16f' || $format eq 'rgba16float';
     my $pixels = 0;
     for my $v (0 .. $width * $height - 1) {
         my $pos = texel_fetch_agent($xyz, $v % $width, POSIX::floor($v / $width));
@@ -160,8 +164,12 @@ sub _lenia_deposit {
         my $offset = scatter_point_pixel($pos->[0] * 2 - 1, $pos->[1] * 2 - 1,
             1, $dest->width, $dest->height);
         next unless defined $offset;
-        $dest->data->[$offset] += $amount;
-        $dest->data->[ $offset + 3 ] += 1;
+        $dest->data->[$offset] = $half_float_blend
+            ? float16_truncate($dest->data->[$offset] + $amount)
+            : $dest->data->[$offset] + $amount;
+        $dest->data->[ $offset + 3 ] = $half_float_blend
+            ? float16_truncate($dest->data->[ $offset + 3 ] + 1)
+            : $dest->data->[ $offset + 3 ] + 1;
         $pixels++;
     }
     return { pixels => $pixels };
@@ -242,7 +250,9 @@ sub _points_render_deposit {
     my $threshold = ($ctx->{uniforms}{density} // 0) / 100;
     my $pixels = 0;
     for my $v (0 .. $width * $height - 1) {
-        next if _fract($v * $GOLDEN_RATIO_CONJUGATE) > $threshold;
+        # Cull on fract(v * conjugate) computed in f32 (the oracle frounds the
+        # constant and the product), matching GLSL highp float.
+        next if _fract(_f32($v * _f32($GOLDEN_RATIO_CONJUGATE))) > $threshold;
         my ($sx, $sy) = ($v % $width, POSIX::floor($v / $width));
         my $pos = texel_fetch_agent($xyz, $sx, $sy);
         next if $pos->[3] < 0.5;

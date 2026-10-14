@@ -48,6 +48,11 @@ sub new {
         data   => $data,
         # "nearest" (canonical internal default) or "linear" (external images).
         filter => 'nearest',
+        # Destination attachment format ('rgba16f', 'rgba16float', ...), the
+        # counterpart of the oracle's Surface.format: set by the renderer when
+        # a pass creates the destination, read by draw ops that must match the
+        # attachment's write semantics (e.g. half-float additive blending).
+        format => undef,
     }, $class;
 }
 
@@ -55,6 +60,7 @@ sub width  { $_[0]{width} }
 sub height { $_[0]{height} }
 sub data   { $_[0]{data} }
 sub filter { @_ > 1 ? ($_[0]{filter} = $_[1]) : $_[0]{filter} }
+sub format { @_ > 1 ? ($_[0]{format} = $_[1]) : $_[0]{format} }
 
 sub from_rgba8 {
     my ($class, $width, $height, $bytes) = @_;

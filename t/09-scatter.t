@@ -62,6 +62,29 @@ $lenia->({
 });
 is_deeply($dest->data, [0.25, 0, 0, 1], 'lenia deposits one additive point');
 
+# Mirrors the oracle's "lenia deposit rounds each additive blend into an
+# rgba16f target": every write into a half-float attachment truncates to
+# IEEE 754 half before the next point adds, so alpha sticks at the last
+# exactly representable integer (2048) and red at its truncated accumulator.
+{
+    my $xyz64 = Math::Fractal::Noisemaker::Surface->new(64, 64);
+    for (my $i = 0; $i < @{ $xyz64->data }; $i += 4) {
+        @{ $xyz64->data }[ $i .. $i + 3 ] = (0.5, 0.5, 0, 1);
+    }
+    my $dest16 = Math::Fractal::Noisemaker::Surface->new(4, 4);
+    $dest16->format('rgba16f');
+    my $stats = $lenia->({
+        pass        => { blend => 1 },
+        uniforms    => { depositAmount => 3.6 },
+        inputs      => { xyzTex => $xyz64 },
+        destination => $dest16,
+        params      => {},
+    });
+    is($stats->{pixels}, 4096, 'lenia rgba16f deposit counts every alive agent');
+    is_deeply(pixel_at($dest16, 1, 2), [4096, 0, 0, 2048],
+        'lenia truncates each additive blend into the rgba16f target');
+}
+
 my $flow3d = Math::Fractal::Noisemaker::DrawOps::get_draw_op('filter3d/flow3d', 'deposit');
 ok(ref $flow3d eq 'CODE', 'flow3d scatter adapter is registered');
 my $flow_state1 = Math::Fractal::Noisemaker::Surface->new(1, 1, [1, 1, 0, 1]);
@@ -237,6 +260,28 @@ $points->({
     destination => $points_dest,
 });
 is_deeply($points_dest->data, [0.2, 0.3, 0.4, 0.5], 'point renderer deposits unscaled agent color');
+
+# Mirrors the oracle's "pointsRender density cull matches M4 highp float at
+# 65536 agents": the golden-ratio cull computes fract(v * conjugate) in f32
+# (Math.fround on both sides of the product in the oracle), which keeps a
+# different agent set than an unrounded f64 product would.
+{
+    my $big_xyz  = Math::Fractal::Noisemaker::Surface->new(256, 256);
+    my $big_rgba = Math::Fractal::Noisemaker::Surface->new(256, 256);
+    for (my $i = 0; $i < @{ $big_xyz->data }; $i += 4) {
+        @{ $big_xyz->data }[ $i .. $i + 3 ] = (0.5, 0.5, 0, 1);
+        @{ $big_rgba->data }[ $i .. $i + 3 ] = (1, 0, 0, 1);
+    }
+    my $cull_dest = Math::Fractal::Noisemaker::Surface->new(8, 8);
+    my $cull_stats = $points->({
+        uniforms    => { density => 0.1, viewMode => 0 },
+        inputs      => { xyzTex => $big_xyz, rgbaTex => $big_rgba },
+        destination => $cull_dest,
+    });
+    is($cull_stats->{pixels}, 142, 'pointsRender density cull matches highp float at 65536 agents');
+    is_deeply(pixel_at($cull_dest, 3, 4), [142, 0, 0, 142],
+        'pointsRender frounded cull accumulates every kept agent on one pixel');
+}
 
 close_to(
     Math::Fractal::Noisemaker::DrawOps::billboard_hash(0, 42),

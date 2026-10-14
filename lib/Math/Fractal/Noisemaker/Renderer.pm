@@ -890,6 +890,13 @@ sub _run_state_once {
             my @destinations = map {
                 _output_destination($_, $state, $states, $width, $height, $pass, \%resources)
             } @output_names;
+            # Stamp each destination with its attachment format (the counterpart
+            # of the oracle's canonicalDestination surface.format), so draw ops
+            # can match the attachment's write semantics (e.g. rgba16f additive
+            # blending truncates to half float on every write).
+            for my $index (0 .. $#destinations) {
+                $destinations[$index]->format(_output_format($output_names[$index], $state, $states));
+            }
             my ($dest_width, $dest_height) = ($destinations[0]->width, $destinations[0]->height);
             for my $destination (@destinations) {
                 die "$state->{effect_id} pass '$pass->{name}' MRT destinations must share dimensions\n"
