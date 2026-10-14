@@ -7,7 +7,7 @@
     "classicNoisedeck/coalesce:coalesce": "bdfeb9d6dd3bf2dca59bec6a1e71cebd4d5e9b814e26a6d189c74874008287cb",
     "classicNoisedeck/colorLab:colorLab": "9df136417f022f65b55b2a6fb7fcdaa86d1638d98593e2fc0b6b6ca353573279",
     "classicNoisedeck/composite:composite": "fddb1c73c44fac55f7f43615125a93628119313b06c4e484c0a5d1e45998fb4d",
-    "classicNoisedeck/effects:effects": "53f09dd48a9a4ac39b719ba934f46919c446628b1dfd9a435123f72b7a6df4f6",
+    "classicNoisedeck/effects:effects": "fea962830e496d95ae1137a62fd53ccd0ae126bfe8c03d4ce04a585817fe66db",
     "classicNoisedeck/fractal:fractal": "d041e8b1fc4e9aff5b674fff5a42db40510b0af4412c23e2f5f4224dcfdf91db",
     "classicNoisedeck/glitch:glitch": "b47a6b5a41f825c29e3bd6f5b36e925c4cf086ceca0c096b02c8d060a8c219eb",
     "classicNoisedeck/kaleido:kaleido": "f8bc2df0d3aaf1386d767c257d187ba291b94fdf2797b670eba8c4c19be94f9d",
@@ -298,5 +298,5 @@
   },
   "source": "https://shaders.noisedeck.app",
   "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-  "version": "1.0.291"
+  "version": "1.0.293"
 }
