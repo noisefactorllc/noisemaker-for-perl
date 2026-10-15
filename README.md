@@ -18,8 +18,7 @@ Rendering works offline. During development, a pure-Perl GLSL ES 3.00 front end 
 - Screen-space derivatives.
 - GL texture sampling.
 
-Version 1.000 is incompatible with the historical 0.105 API. Read the migration
-section before upgrading existing programs.
+*Why?* Noisemaker actually started life as a Perl package, way back in 2008, then migrated through Python, JS, shaders. Circle of life stuff.
 
 ## Install
 
