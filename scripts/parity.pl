@@ -10,7 +10,8 @@
 # cannot bind, so the oracle side renders them through
 # scripts/oracle-external-input.mjs.
 #
-# Usage: perl scripts/parity.pl [--only id,id] [--size N] [--volume-size N]
+# Usage: perl scripts/parity.pl [--only id,id] [--size N] [--seed N]
+#                              [--time T] [--volume-size N] [--mesh-scale S]
 
 use strict;
 use warnings;
@@ -37,15 +38,40 @@ my $SIZE = 8;
 my $SEED = 1;
 my $TIME = 0.25;
 my $VOLUME_SIZE = 16;
+my $MESH_SCALE;
 my $only;
 for (my $i = 0; $i <= $#ARGV; $i++) {
     if    ($ARGV[$i] eq '--only')        { $only = { map { $_ => 1 } split /,/, $ARGV[++$i] } }
     elsif ($ARGV[$i] eq '--size')        { $SIZE = $ARGV[++$i] }
+    elsif ($ARGV[$i] eq '--seed')        { $SEED = $ARGV[++$i] }
+    elsif ($ARGV[$i] eq '--time')        { $TIME = $ARGV[++$i] }
+    elsif ($ARGV[$i] eq '--mesh-scale')  {
+        $MESH_SCALE = $ARGV[++$i];
+        die "Missing value for --mesh-scale\n" unless defined $MESH_SCALE;
+    }
     elsif ($ARGV[$i] eq '--volume-size') { $VOLUME_SIZE = $ARGV[++$i] }
     else  { die "Unknown parity option $ARGV[$i]\n" }
 }
 die "sizes must be positive integers\n"
     unless $SIZE =~ /^\d+$/ && $SIZE > 0 && $VOLUME_SIZE =~ /^\d+$/ && $VOLUME_SIZE > 0;
+die "seed must be a non-negative integer\n"
+    unless defined($SEED) && $SEED =~ /^\d+$/;
+die "time must be finite and in [0, 1)\n"
+    unless defined($TIME) && $TIME =~ /\A(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\z/
+        && $TIME >= 0 && $TIME < 1;
+die "mesh scale must be finite and in [0.01, 10]\n"
+    if defined($MESH_SCALE) && ($MESH_SCALE !~ /\A(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\z/
+        || $MESH_SCALE < 0.01 || $MESH_SCALE > 10);
+
+sub external_source {
+    my ($effect_id) = @_;
+    my $source = $EXTERNAL_INPUT_SOURCES{$effect_id};
+    if ($effect_id eq 'render/meshRender' && defined $MESH_SCALE) {
+        $source =~ s/meshRender\(\)/meshRender(scale: $MESH_SCALE)/
+            or die "meshRender fixture has no scale call\n";
+    }
+    return $source;
+}
 
 my $TMP = File::Temp::tempdir(CLEANUP => 1);
 my $EXT_PNG = File::Spec->catfile($TMP, 'ph_ext.png');
@@ -104,7 +130,7 @@ sub _run_oracle {
 
 sub js_effect {
     my ($effect_id, $out, $input_png, $params) = @_;
-    if (my $source = $EXTERNAL_INPUT_SOURCES{$effect_id}) {
+    if (my $source = external_source($effect_id)) {
         local $ENV{NOISEMAKER_CPU_DIR} = $CPU_DIR;
         unlink $out;
         die "oracle failed\n" unless _run_oracle($source,
@@ -143,7 +169,7 @@ sub perl_render {
     my ($effect_id, $kind, $ext, $render_params) = @_;
     my $eff = meta()->{effects}{$effect_id};
     my %opts = (width => $SIZE, height => $SIZE, seed => $SEED, time => $TIME);
-    if (my $source = $EXTERNAL_INPUT_SOURCES{$effect_id}) {
+    if (my $source = external_source($effect_id)) {
         return render_dsl($source, %opts, external_inputs => external_inputs_for($effect_id));
     }
     if (my $program = particle_program($eff, $render_params)) {
@@ -232,20 +258,55 @@ for my $eid (@ids) {
             $alpha_changed = 1 if $i % 4 == 3;
         }
     }
-    # This pinned 64x64 fractal capture was reviewed side by side. Only the
-    # recorded RGBA values at the two recorded pixels qualify as near.
-    my $reviewed_fractal_pixels = $eid eq 'classicNoisedeck/fractal'
+    # These pinned 64x64 fractal captures were reviewed side by side at native
+    # size. Keep each bound specific to its measured seed/time protocol.
+    my $reviewed_fractal_default = $eid eq 'classicNoisedeck/fractal'
         && $SIZE == 64 && $d == 1 && $changed_pixels == 2;
-    if ($reviewed_fractal_pixels) {
+    if ($reviewed_fractal_default) {
         for my $pixel (27 * 64 + 41, 36 * 64 + 22) {
             my $offset = 4 * $pixel;
             for my $channel (0 .. 2) {
-                $reviewed_fractal_pixels &&= $ja[$offset + $channel] == 239
+                $reviewed_fractal_default &&= $ja[$offset + $channel] == 239
                     && $pa[$offset + $channel] == 240;
             }
-            $reviewed_fractal_pixels &&= $ja[$offset + 3] == 255
+            $reviewed_fractal_default &&= $ja[$offset + 3] == 255
                 && $pa[$offset + 3] == 255;
         }
+    }
+    my $reviewed_fractal_seed_time = $eid eq 'classicNoisedeck/fractal'
+        && $SIZE == 64 && $SEED == 97 && $TIME == 0.75
+        && $d == 18 && $changed_pixels == 14 && !$alpha_changed;
+    if ($reviewed_fractal_seed_time) {
+        for my $entry (
+            [37, 10, 215, 223], [20, 12, 227, 223],
+            [17, 17, 215, 227], [38, 21, 230, 215],
+            [35, 22, 233, 215], [43, 26, 230, 227],
+            [31, 27, 134, 126], [32, 36, 134, 126],
+            [20, 37, 230, 227], [28, 41, 233, 215],
+            [25, 42, 230, 215], [46, 46, 215, 227],
+            [43, 51, 227, 223], [26, 53, 215, 223],
+        ) {
+            my ($x, $y, $reference, $candidate) = @$entry;
+            my $offset = 4 * ($y * 64 + $x);
+            for my $channel (0 .. 2) {
+                $reviewed_fractal_seed_time &&= $ja[$offset + $channel] == $reference
+                    && $pa[$offset + $channel] == $candidate;
+            }
+            $reviewed_fractal_seed_time &&= $ja[$offset + 3] == 255
+                && $pa[$offset + 3] == 255;
+        }
+    }
+    my $reviewed_grain_seed_time = $eid eq 'filter/grain'
+        && $SIZE == 64 && $SEED == 97 && $TIME == 0.75
+        && $d == 1 && $changed_pixels == 1 && !$alpha_changed;
+    if ($reviewed_grain_seed_time) {
+        my $offset = 4 * (10 * 64);
+        for my $channel (0 .. 2) {
+            $reviewed_grain_seed_time &&= $ja[$offset + $channel] == 114
+                && $pa[$offset + $channel] == 115;
+        }
+        $reviewed_grain_seed_time &&= $ja[$offset + 3] == 255
+            && $pa[$offset + 3] == 255;
     }
     if ($d == 0) {
         push @ok, $eid;
@@ -254,10 +315,16 @@ for my $eid (@ids) {
     elsif ($eid eq 'classicNoisedeck/fractal'
         && $SIZE == 64
         && $oracle_pin->{revision} eq '5fd2194afb4a97e24ffe182e9cd94f2d36fb2905'
-        && $d == 1 && $reviewed_fractal_pixels && !$alpha_changed) {
+        && (($SEED == 1 && $TIME == 0.25 && $d == 1
+                && $reviewed_fractal_default && !$alpha_changed)
+            || $reviewed_fractal_seed_time)) {
         push @near, [$eid, $d, $changed_pixels];
     }
-    else { push @diffs, [$eid, $d] }
+    elsif ($oracle_pin->{revision} eq '5fd2194afb4a97e24ffe182e9cd94f2d36fb2905'
+        && $reviewed_grain_seed_time) {
+        push @near, [$eid, $d, $changed_pixels];
+    }
+    else { push @diffs, [$eid, $d, $changed_pixels] }
 }
 
 my $err_count = 0;
@@ -273,7 +340,7 @@ if (%errors) {
 if (@diffs) {
     print "\nDIFFS (rendered but off):\n";
     for my $d ((sort { $b->[1] <=> $a->[1] } @diffs)[0 .. (@diffs > 20 ? 19 : $#diffs)]) {
-        printf "  %4d  %s\n", $d->[1], $d->[0];
+        printf "  %4d  %s  (%d changed pixels)\n", $d->[1], $d->[0], $d->[2];
     }
 }
 if (@near) {

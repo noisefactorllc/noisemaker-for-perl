@@ -24,7 +24,8 @@
 #
 # Exit 0 iff expected > 0 and every expected case is exact or reviewed near.
 #
-# Usage: perl scripts/parity-summary [--size N] [case-id ...]
+# Usage: perl scripts/parity-summary [--size N] [--seed N] [--time T]
+#                                    [--mesh-scale S] [case-id ...]
 #
 # Uses NOISEMAKER_CPU_DIR (or a sibling noisemaker-for-cpu checkout) at the
 # exact revision recorded in scripts/oracle-lock.json. When no configured
@@ -50,7 +51,13 @@ use Math::Fractal::Noisemaker::Renderer qw(meta);
 my @requested;
 my @pass_through;
 for (my $i = 0; $i <= $#ARGV; $i++) {
-    if ($ARGV[$i] eq '--size') { push @pass_through, '--size', $ARGV[++$i] }
+    if ($ARGV[$i] eq '--size' || $ARGV[$i] eq '--seed' || $ARGV[$i] eq '--time'
+        || $ARGV[$i] eq '--mesh-scale') {
+        my $option = $ARGV[$i];
+        my $value = $ARGV[++$i];
+        die "Missing value for $option\n" unless defined $value;
+        push @pass_through, $option, $value;
+    }
     elsif ($ARGV[$i] =~ /^--/) { die "Unknown parity-summary option $ARGV[$i]\n" }
     else { (my $id = $ARGV[$i]) =~ s{__}{/}; push @requested, $id }
 }

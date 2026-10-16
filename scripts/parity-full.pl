@@ -25,6 +25,20 @@ use ParityOracle qw(verify_oracle);
 
 my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR} || shift
     or die "usage: $0 /path/to/noisemaker-for-cpu\n";
+my %only;
+my $parameter_profile = 0;
+while (@ARGV) {
+    my $option = shift @ARGV;
+    if ($option eq '--parameter-profile') { $parameter_profile = 1 }
+    elsif ($option eq '--only') {
+        my $value = shift @ARGV;
+        die "missing value for --only\n" unless defined $value;
+        my @selected = split /,/, $value, -1;
+        die "empty case in --only\n" if !@selected || grep { $_ eq '' } @selected;
+        $only{$_} = 1 for @selected;
+    }
+    else { die "unknown parity-full option $option\n" }
+}
 my $PERL_ROOT = File::Spec->catdir($FindBin::Bin, '..');
 my $PERL_CLI  = File::Spec->catfile($PERL_ROOT, 'bin', 'make-noise');
 my $CPU_CLI   = File::Spec->catfile($CPU_DIR, 'bin', 'noisemaker-cpu.js');
@@ -39,6 +53,8 @@ my $meta = decode_json(do {
 });
 my $effects = $meta->{effects};
 my @ids = sort keys %$effects;
+die "unknown parity-full case: " . join(', ', grep { !$effects->{$_} } sort keys %only) . "\n"
+    if grep { !$effects->{$_} } keys %only;
 print "Catalog: " . scalar(@ids) . " effects\n";
 
 my $TMP = tempdir(CLEANUP => 1);
@@ -80,7 +96,8 @@ sub smoke_program {
         else { $v = "$d" }
         push @args, "$name: $v";
     }
-    push @args, 'iterationCount: ' . ($domain eq 'image' ? 4 : 1)
+    push @args, 'iterationCount: ' . ($parameter_profile && $id eq 'points/flock'
+        ? 1 : $domain eq 'image' ? 4 : 1)
         if $effect->{iterated};
     push @args, 'volumeSize: 2' if $params->{volumeSize};
     push @args, 'type: 1' if $id eq 'synth3d/flythrough3d';
@@ -107,8 +124,11 @@ sub smoke_program {
     }
 
     if ($needs_pipeline) {
+        my $emitter = $parameter_profile && $id eq 'points/flock'
+            ? 'pointsEmit(stateSize: x64, iterationCount: 1)'
+            : 'pointsEmit(stateSize: x64)';
         return "search points, render, synth\n"
-            . "solid(color: #58c).pointsEmit(stateSize: x64).$call.write(o0)\nrender(o0)";
+            . "solid(color: #58c).$emitter.$call.write(o0)\nrender(o0)";
     }
     if ($domain eq 'loop-begin' || $domain eq 'loop-end') {
         my $begin_call = $domain eq 'loop-begin' ? $call : 'loopBegin(iterationCount: 4)';
@@ -130,8 +150,60 @@ sub smoke_program {
     return "$search\nsolid(color: #58c).write(o0)\nread(o0).$call.write(o1)\nrender(o1)";
 }
 
+sub varied_parameter {
+    my ($effect, $id) = @_;
+    # The oracle CLI cannot run meshRender without external meshData.
+    return if $id eq 'render/meshRender';
+    return 'smoothness: 0.2' if $id eq 'mixer/mashup';
+    return 'bgAlpha: 0.5' if $id eq 'synth/remap';
+    return 'maxIter: 20' if $id eq 'points/buddhabrot';
+    my $params = $effect->{params} || {};
+    my %skip = map { $_ => 1 } qw(seed iterationCount iterations stateSize volumeSize type filtering);
+    for my $name (@{ $effect->{paramOrder} || [sort keys %$params] }) {
+        next if $skip{$name};
+        my $spec = $params->{$name} or next;
+        my $ui = $spec->{ui} || {};
+        next if exists $ui->{enabledBy} || $ui->{hidden}
+            || (exists $ui->{control} && !$ui->{control});
+        my $default = $spec->{default};
+        next unless defined $default;
+        if (($spec->{type} || '') eq 'boolean' && JSON::PP::is_bool($default)) {
+            return "$name: " . ($default ? 'false' : 'true');
+        }
+        if (ref($spec->{choices}) eq 'HASH') {
+            my $default_value = $default;
+            if (($spec->{type} || '') eq 'member' && $default =~ /\A[^.]+\.([^.]+)\z/) {
+                $default_value = $spec->{choices}{$1};
+            }
+            for my $choice (sort keys %{ $spec->{choices} }) {
+                my $value = $spec->{choices}{$choice};
+                next unless defined $value && !ref($value)
+                    && $value =~ /\A-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?\z/;
+                return "$name: $value" if defined $default_value
+                    && !ref($default_value)
+                    && $default_value =~ /\A-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?\z/
+                    && $value != $default_value;
+            }
+        }
+        next unless ($spec->{type} || '') eq 'float' || ($spec->{type} || '') eq 'int';
+        my ($min, $max) = @{$spec}{qw(min max)};
+        next unless defined $min && defined $max && $min < $max;
+        next if ref $default || $default !~ /\A-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?\z/;
+        next if $default < $min || $default > $max;
+        if ($spec->{type} eq 'int') {
+            my $value = $default + 1 <= $max ? $default + 1 : $default - 1;
+            return "$name: $value" if $value >= $min && $value <= $max;
+            next;
+        }
+        my $middle = ($min + $max) / 2;
+        my $value = $middle != $default ? $middle : ($min + $middle) / 2;
+        return "$name: " . sprintf('%.10g', $value) if $value != $default;
+    }
+    return;
+}
+
 sub run_side {
-    my ($side, $program, $w, $h, $out) = @_;
+    my ($side, $program, $w, $h, $out, $id) = @_;
     my $err = File::Spec->catfile($TMP, "$side-err.txt");
     my @cmd = $side eq 'perl'
         ? ($^X, '-I' . File::Spec->catdir($PERL_ROOT, 'lib'), $PERL_CLI, 'run')
@@ -139,7 +211,10 @@ sub run_side {
     # The perl interpreter is far slower than the JS runtime on heavy agent
     # kernels (points/flock); a bounded timeout records the port render as an
     # error instead of blocking the sweep for hours.
-    unshift @cmd, 'timeout', ($side eq 'perl' ? 600 : 300);
+    my $timeout = $side eq 'perl'
+        ? ($parameter_profile && $id eq 'points/flock' ? 3600 : 600)
+        : 300;
+    unshift @cmd, 'timeout', $timeout;
     push @cmd, '--width', $w, '--height', $h, '--seed', 3, '--time', 0.25,
         '--input', $EXT_PNG, '--filename', $out;
     my $dsl = File::Spec->catfile($TMP, "$side-program.dsl");
@@ -151,6 +226,12 @@ sub run_side {
             . ' < ' . quotemeta($dsl)
             . ' > /dev/null 2> ' . quotemeta($err),
     );
+    if ($status != 0) {
+        open my $fh, '<', $err or die "cannot read $err: $!\n";
+        my $detail = do { local $/; <$fh> } // '';
+        $detail =~ s/\s+/ /g;
+        warn "$side render exited $status: " . substr($detail, 0, 500) . "\n";
+    }
     return $status == 0;
 }
 
@@ -164,16 +245,17 @@ sub rgba8 {
 my (@ok, @diff, %errors);
 sub compare_case {
     my ($label, $id, $program, $w, $h) = @_;
+    return if %only && !$only{$id};
     my $effect = $effects->{$id};
     my $cpu_png = File::Spec->catfile($TMP, 'cpu.png');
     my $pl_png  = File::Spec->catfile($TMP, 'pl.png');
     unlink $cpu_png, $pl_png;
-    unless (run_side('cpu', $program, $w, $h, $cpu_png)) {
+    unless (run_side('cpu', $program, $w, $h, $cpu_png, $id)) {
         push @{ $errors{'oracle-render-error'} }, $label;
         print "ERROR   $label (cpu side failed)\n";
         return;
     }
-    unless (run_side('perl', $program, $w, $h, $pl_png)) {
+    unless (run_side('perl', $program, $w, $h, $pl_png, $id)) {
         push @{ $errors{'port-render-error'} }, $label;
         print "ERROR   $label (perl side failed)\n";
         return;
@@ -194,18 +276,27 @@ sub compare_case {
     else { push @diff, [$label, $max]; print "DIFF    $label (max channel delta $max)\n" }
 }
 
+my @excluded;
 for my $id (@ids) {
+    next if %only && !$only{$id};
     my $effect = $effects->{$id};
     my $w = $effect->{iterated} ? 16 : 2;
+    $w = 4 if $parameter_profile
+        && ($id eq 'points/buddhabrot' || $id eq 'points/flock');
     my $h = $w;
-    compare_case($id, $id, smoke_program($id, []), $w, $h);
+    if ($parameter_profile) {
+        my $arg = varied_parameter($effect, $id);
+        if (!defined $arg) { push @excluded, $id; next }
+        compare_case("$id [$arg]", $id, smoke_program($id, [$arg]), $w, $h);
+    }
+    else { compare_case($id, $id, smoke_program($id, []), $w, $h) }
 }
 
 # Extra cases for the compile-time filtering choice on the volume renderers
 # (FILTERING is a define, baked per render): the isosurface path alongside
 # each renderer's voxel default, including the non-solid-ray march
 # (threshold 0.9) that cpu's own volume-effects test exercises.
-for my $id (qw(render/render3d render/renderCubemap3d render/renderLandscape3d)) {
+for my $id ($parameter_profile ? () : qw(render/render3d render/renderCubemap3d render/renderLandscape3d)) {
     my $w = 4; my $h = $w;
     my @extra = ('filtering: 0');
     push @extra, 'threshold: 0.9' if $id eq 'render/renderLandscape3d';
@@ -223,7 +314,7 @@ my $osc_programs = [
     ['filter/threshold', "search synth, filter\nnoise().threshold(level: osc(type: saw, speed: osc(type: sine, min: 0.5, max: 2))).write(o0)\nrender(o0)", 4],
     ['filter/feedback',  "search synth, filter\nnoise().write(o0)\nread(o0).feedback(mix: osc(tri), iterationCount: 4).write(o1)\nrender(o1)", 8],
 ];
-for my $case (@$osc_programs) {
+for my $case ($parameter_profile ? () : @$osc_programs) {
     my ($id, $program, $w) = @$case;
     compare_case("osc: $id", $id, $program, $w, $w);
 }
@@ -237,4 +328,5 @@ for my $group (sort keys %errors) {
     print "  $group: @{$errors{$group}}\n";
 }
 print "DIFFS: " . join(', ', map { "$_->[0]($_->[1])" } @diff) . "\n" if @diff;
-exit(@diff || %errors ? 1 : 0);
+print "PARAMETER EXCLUSIONS: " . scalar(@excluded) . " [@excluded]\n" if $parameter_profile;
+exit($total_cases == 0 || @diff || %errors ? 1 : 0);
