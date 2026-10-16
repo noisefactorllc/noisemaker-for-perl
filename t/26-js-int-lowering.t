@@ -95,6 +95,8 @@ is $rt->binary('%', 4241615619, 10, 1, 'uint'), 9,      'default % is an unsigne
     is $rt->binary('>>', 4241615619, 15, 1, 'uint'), -1629, 'js >> is an arithmetic ToInt32 shift';
     is $rt->binary('>>', 4294967295, 16, 1, 'uint'), -1,    'js >> sign-fills negative int32 values';
     is $rt->binary('%', -5, 10, 1, 'uint'), -5,             'js % keeps the dividend sign';
+    is $rt->binary('^', 3, 4292310339, 1, 'uint'), -2656960,
+        'js xor keeps low 32 bits when the right operand has its sign bit set';
     # The spookyTicker hash chain end to end (uint(1) * 7919 -> 7919), exactly
     # as the oracle's canonical kernel evaluates it.
     my $v = $rt->binary('*', 1, 7919, 1, 'uint');

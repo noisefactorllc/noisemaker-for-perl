@@ -387,7 +387,7 @@ sub _js_uint_binary {
     }
     my $sa = _s32(Math::Fractal::Noisemaker::UintMath::u32($a));
     my $sb = _s32(Math::Fractal::Noisemaker::UintMath::u32($b));
-    return _s32($sa ^ $sb)                if $op eq '^';
+    return _s32(uxor($sa, $sb))           if $op eq '^';
     return _s32($sa >> ($sb & 31))        if $op eq '>>';
     return $sb ? ($sa - $sb * int($sa / $sb)) : 0 if $op eq '%';
     return _int_scalar($op, $sa, $sb, 'uint');
