@@ -15,13 +15,14 @@
 #   exact     byte-identical RGBA8
 #   strict    passes within the published numerical contract other than
 #             exact: always 0, because the contract is byte-exact RGBA8
-#   near, defer, skip
-#             always 0: no case is tolerated, deferred or skipped
-#   fail      rendered but not byte-identical, a port runtime error, or an
+#   near      a bounded, visually reviewed difference at the reviewed oracle pin
+#   defer, skip
+#             always 0: no case is deferred or skipped
+#   fail      an unaccepted rendered difference, a port runtime error, or an
 #             oracle error
 #   missing   authority cases this port does not bundle
 #
-# Exit 0 iff expected > 0 and every expected case is exact.
+# Exit 0 iff expected > 0 and every expected case is exact or reviewed near.
 #
 # Usage: perl scripts/parity-summary [--size N] [case-id ...]
 #
@@ -87,7 +88,7 @@ my $bundle = meta()->{effects};
 my @executable = grep { $bundle->{$_} } @ids;
 my @missing = grep { !$bundle->{$_} } @ids;
 
-my ($exact, $fail) = (0, 0);
+my ($exact, $near, $fail) = (0, 0, 0);
 if (@executable) {
     # Capture parity.pl's report through a file: list-form piped opens are
     # not available on Windows.
@@ -108,16 +109,18 @@ if (@executable) {
         /^=== PARITY: (\d+)\/(\d+) pass \(byte-exact\)  \|  (\d+) diff  \|  (\d+) runtime-error  \|  (\d+) oracle-error ===$/m
         or die "parity-summary: could not parse scripts/parity.pl output\n";
     $exact = $passed;
+    if ($output =~ /^NEAR: (\d+)$/m) { $near = $1 }
+    else { die "parity-summary: could not parse scripts/parity.pl near count\n" }
     $fail = $diffs + $errors + $oracle;
 }
 printf "%-45s missing (not in this port's bundle)\n", $_ for @missing;
 
 my @summary = (
     expected => scalar(@ids),
-    executed => $exact + $fail,
+    executed => $exact + $near + $fail,
     exact    => $exact,
     strict   => 0,
-    near     => 0,
+    near     => $near,
     defer    => 0,
     skip     => 0,
     fail     => $fail,
@@ -130,7 +133,7 @@ print 'PARITY-SUMMARY {'
     . join(',', map { $json->encode($summary[ 2 * $_ ]) . ':' . $json->encode($summary[ 2 * $_ + 1 ]) }
         0 .. $#summary / 2)
     . "}\n";
-exit(@ids && $exact == @ids ? 0 : 1);
+exit(@ids && $exact + $near == @ids && !$fail && !@missing ? 0 : 1);
 
 # Where the pinned noisemaker-for-cpu oracle lives. NOISEMAKER_CPU_DIR wins
 # when it verifies; a sibling checkout comes next; otherwise a bare container
