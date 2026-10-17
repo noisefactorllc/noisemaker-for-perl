@@ -320,7 +320,7 @@ for my $eid (@ids) {
             || $reviewed_fractal_seed_time)) {
         push @near, [$eid, $d, $changed_pixels];
     }
-    elsif ($oracle_pin->{revision} eq '5fd2194afb4a97e24ffe182e9cd94f2d36fb2905'
+    elsif ($oracle_pin->{revision} eq '5e93c23c6cd8c2b3f777bedc40142798be185ba8'
         && $reviewed_grain_seed_time) {
         push @near, [$eid, $d, $changed_pixels];
     }

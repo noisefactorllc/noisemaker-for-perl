@@ -373,3 +373,5 @@ t/24-external-input.t
 t/25-rounding-model.t
 t/data/rounding-model.json
 t/26-js-int-lowering.t
+t/27-fractal-precision.t
+t/28-grain-near.t

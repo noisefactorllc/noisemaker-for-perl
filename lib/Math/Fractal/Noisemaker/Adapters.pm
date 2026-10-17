@@ -248,4 +248,180 @@ register('filter/palette', 'palette', sub {
     };
 });
 
+# ---- classicNoisedeck/fractal: canonical CPU precision adapter ----
+
+sub _fmap {
+    my ($v, $lo, $hi, $a, $b) = @_;
+    return $a + ($b - $a) * ($v - $lo) / ($hi - $lo);
+}
+
+sub _fmap32 {
+    my ($v, $lo, $hi, $a, $b) = @_;
+    return _f32($a + _f32($b - $a) * (($v - $lo) * _f32(1 / _f32($hi - $lo))));
+}
+
+sub _frotate {
+    my ($x, $y, $rotation, $aspect) = @_;
+    my $angle = _fmap($rotation, 0, 360, 0, 2) * 3.14159265359;
+    my ($px, $py) = ($x - 0.5 * $aspect, $y - 0.5);
+    my ($cs, $sn) = (cos($angle), sin($angle));
+    return ($cs * $px + $sn * $py + 0.5 * $aspect,
+        -$sn * $px + $cs * $py + 0.5);
+}
+
+sub _fjulia {
+    my ($x, $y, $b, $aspect) = @_;
+    ($x, $y, $aspect) = map { _f32($_) } ($x, $y, $aspect);
+    my $zoom = _fmap32($b->{zoomAmt}, 0, 100, 2, 0.5);
+    my $speedy = _fmap32($b->{speed}, 0, 100, 0, 1);
+    my $speed = _f32(_f32(_f32($speedy * 0.05) * _f32(1 - $speedy))
+        + _f32(_f32($speedy * 0.125) * $speedy));
+    my $phase = _f32(_f32($b->{time}) * _f32(6.28318530718));
+    my $cx = _f32(sin($phase) * $speed + _fmap32($b->{offsetX}, -100, 100, -0.5, 0.5));
+    my $cy = _f32(cos($phase) * $speed + _fmap32($b->{offsetY}, -100, 100, -1, 1));
+    my $angle = _f32(_fmap32(_f32($b->{rotation}), 0, 360, 0, 2)
+        * _f32(3.1415929794311523));
+    my ($px, $py) = (_f32($x - _f32(0.5 * $aspect)), _f32($y - 0.5));
+    my ($cs, $sn) = (_f32(cos($angle)), _f32(sin($angle)));
+    # Preserve the authority's fused product/add order and one final zoom rounding.
+    $x = _f32($sn * $py + _f32($cs * $px));
+    $y = _f32($cs * $py + _f32(-$sn * $px));
+    $x = _f32($x * $zoom + _fmap32($b->{centerX}, -100, 100, 1, -1));
+    $y = _f32($y * $zoom + _fmap32($b->{centerY}, -100, 100, 1, -1));
+    my $count = $b->{iterations} * 2;
+    my $iteration = 0;
+    for (my $index = 0; $index < $count; $index++) {
+        $iteration = $index;
+        my $nx = _f32(_f32($x * $x + $cx) - $y * $y);
+        my $ny = _f32($y * $x + $x * $y + $cy);
+        last if _f32($nx * $nx + $ny * $ny) > 4;
+        ($x, $y) = ($nx, $ny);
+    }
+    return 1 if $count - $iteration < int($b->{cutoff});
+    return $b->{mode} == 0 ? _f32($iteration / $count)
+        : _f32(sqrt(_f32($x * $x + $y * $y)));
+}
+
+sub _fnewton {
+    my ($x, $y, $b, $aspect) = @_;
+    ($x, $y) = _frotate($x, $y, $b->{rotation} + 90, $aspect);
+    $x = ($x - 0.5 * $aspect) * _fmap($b->{zoomAmt}, 0, 130, 1, 0.01) + $b->{centerY} * 0.01;
+    $y = ($y - 0.5) * _fmap($b->{zoomAmt}, 0, 130, 1, 0.01) + $b->{centerX} * 0.01;
+    my $speed = _fmap($b->{speed}, 0, 100, 0, 1);
+    my $ox = _fmap($b->{offsetX}, -100, 100, -0.25, 0.25);
+    my $oy = _fmap($b->{offsetY}, -100, 100, -0.25, 0.25);
+    my $iteration = 0;
+    for (my $index = 0; $index < $b->{iterations}; $index++) {
+        my $fx = $x * $x * $x - 3 * $x * $y * $y - 1;
+        my $fy = 3 * $x * $x * $y - $y * $y * $y;
+        my $fpx = 3 * $x * $x - 3 * $y * $y;
+        my $fpy = 6 * $x * $y;
+        my $den = $fpx * $fpx + $fpy * $fpy;
+        # JS division at a singular point propagates NaN through the orbit.
+        my $tx = $den == 0 ? POSIX::nan(0) : ($fx * $fpx + $fy * $fpy) / $den;
+        my $ty = $den == 0 ? POSIX::nan(0) : ($fy * $fpx - $fx * $fpy) / $den;
+        $tx += sin($b->{time} * 6.28318530718) * 0.1 * $speed + $ox;
+        $ty += cos($b->{time} * 6.28318530718) * 0.1 * $speed + $oy;
+        last if POSIX::hypot($tx, $ty) < 0.001;
+        $x -= $tx;
+        $y -= $ty;
+        $iteration++;
+    }
+    return $b->{mode} == 0 ? $iteration / $b->{iterations} : POSIX::hypot($x, $y);
+}
+
+sub _fmandelbrot {
+    my ($x, $y, $b, $aspect) = @_;
+    my $zoom = _fmap($b->{zoomAmt}, 0, 100, 2, 0.5);
+    my $speedy = _fmap($b->{speed}, 0, 100, 0, 1);
+    my $speed = _pmix($speedy * 0.05, $speedy * 0.125, $speedy);
+    ($x, $y) = _frotate($x, $y, $b->{rotation}, $aspect);
+    $y = $y * 2 - 1;
+    $x = $x * 2 - $aspect;
+    my $cx = $zoom * $x - ($b->{centerX} + 50) * 0.01;
+    my $cy = $zoom * $y - $b->{centerY} * 0.01;
+    $x = sin($b->{time} * 6.28318530718) * $speed;
+    $y = cos($b->{time} * 6.28318530718) * $speed;
+    my $iteration = 0;
+    for (; $iteration < $b->{iterations}; $iteration++) {
+        my $nx = $x * $x - $y * $y + $cx;
+        my $ny = 2 * $x * $y + $cy;
+        ($x, $y) = ($nx, $ny);
+        last if $x * $x + $y * $y > 16;
+    }
+    return 1 if $iteration == $b->{iterations};
+    return $b->{mode} == 0 ? $iteration / $b->{iterations}
+        : POSIX::hypot($x, $y) / $b->{iterations};
+}
+
+sub _fhsv32 {
+    my ($h, $s, $v) = @_;
+    $h = _sfract($h);
+    my $c = _f32($v * $s);
+    my $base = _f32($h * 6);
+    my $mod = _f32($base - _f32(2 * POSIX::floor(_f32($base / 2))));
+    my $x = _f32($c * _f32(1 - abs($mod - 1)));
+    my $m = _f32($v - $c);
+    my @color = $h < 1/6 ? ($c, $x, 0) : $h < 2/6 ? ($x, $c, 0)
+        : $h < 3/6 ? (0, $c, $x) : $h < 4/6 ? (0, $x, $c)
+        : $h < 5/6 ? ($x, 0, $c) : ($c, 0, $x);
+    return map { _f32($_ + $m) } @color;
+}
+
+sub _fpalette32 {
+    my ($t, $b) = @_;
+    my @color;
+    for my $ch (0 .. 2) {
+        my $inner = _f32($b->{paletteFreq}[$ch] * $t + $b->{palettePhase}[$ch]);
+        my $cos = _f32(cos(_f32($inner * _f32(6.28318))));
+        $color[$ch] = _f32($b->{paletteAmp}[$ch] * $cos + $b->{paletteOffset}[$ch]);
+    }
+    return _fhsv32(@color) if $b->{paletteMode} == 1;
+    if ($b->{paletteMode} == 2) {
+        @color = map { _f32($b->{paletteOffset}[$_] + $b->{paletteAmp}[$_]
+            * cos(6.28318 * ($b->{paletteFreq}[$_] * $t + $b->{palettePhase}[$_]))) } 0 .. 2;
+        my ($L, $a, $b2) = ($color[0], $color[1] * -0.509 + 0.276, $color[2] * -0.509 + 0.198);
+        my $l = $L + 0.3963377774 * $a + 0.2158037573 * $b2;
+        my $m = $L - 0.1055613458 * $a - 0.0638541728 * $b2;
+        my $s = $L - 0.0894841775 * $a - 1.291485548 * $b2;
+        ($l, $m, $s) = ($l * $l * $l, $m * $m * $m, $s * $s * $s);
+        @color = map { _f32(_linear_to_srgb($_)) } (
+            4.0767245293 * $l - 3.3072168827 * $m + 0.2307590544 * $s,
+            -1.2681437731 * $l + 2.6093323231 * $m - 0.341134429 * $s,
+            -0.0041119885 * $l - 0.7034763098 * $m + 1.7068625689 * $s);
+    }
+    return @color;
+}
+
+register('classicNoisedeck/fractal', 'fractal', sub {
+    return sub {
+        my ($ctx, $out) = @_;
+        my $b = $ctx->{uniforms};
+        my $aspect = $b->{fullResolution}[0] / $b->{fullResolution}[1];
+        my $x = ($ctx->{frag_coord}[0] + $b->{tileOffset}[0]) / $b->{fullResolution}[1];
+        my $y = ($ctx->{frag_coord}[1] + $b->{tileOffset}[1]) / $b->{fullResolution}[1];
+        my $d = $b->{type} == 0 ? _fjulia($x, $y, $b, $aspect)
+            : $b->{type} == 1 ? _fnewton($x, $y, $b, $aspect) : _fmandelbrot($x, $y, $b, $aspect);
+        if ($d == 1) {
+            @{$out}[0 .. 2] = @{$b->{bgColor}}[0 .. 2];
+            $out->[3] = _f32(_f32($b->{bgAlpha}) * _f32(0.01));
+            return;
+        }
+        $d = _f32($d - $b->{time}) if $b->{cyclePalette} == -1;
+        $d = _f32($d + $b->{time}) if $b->{cyclePalette} == 1;
+        $d = _sfract(_f32($d * _f32($b->{repeatPalette})
+            + _f32(_f32($b->{rotatePalette}) * _f32(0.01))));
+        if ($b->{levels} > 0) {
+            my $levels = _f32(_f32($b->{levels}) + 1);
+            $d = _f32(POSIX::floor(_f32($d * $levels)) / $levels);
+        }
+        my @color = $b->{colorMode} == 0 ? ((_sfract($d)) x 3)
+            : $b->{colorMode} == 4 ? _fpalette32($d, $b)
+            : $b->{colorMode} == 6 ? _fhsv32(_f32($d * _f32(_f32($b->{hueRange}) * _f32(0.01))), 1, 1)
+            : (0, 0, 1);
+        @{$out}[0 .. 2] = map { _f32($_) } @color;
+        $out->[3] = 1;
+    };
+});
+
 1;
