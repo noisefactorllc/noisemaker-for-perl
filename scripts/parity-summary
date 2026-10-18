@@ -30,7 +30,7 @@
 # Uses NOISEMAKER_CPU_DIR (or a sibling noisemaker-for-cpu checkout) at the
 # exact revision recorded in scripts/oracle-lock.json. When no configured
 # checkout verifies against the lock, the script clones that revision into a
-# writable cache root (NOISEMAKER_ORACLE_CACHE, /state/cache, or ~/.cache;
+# writable cache root (NOISEMAKER_ORACLE_CACHE or ~/.cache;
 # a private tempdir as a last resort) and verifies the clone against the
 # recorded runtime digest, so a bare audit container can run the whole-port
 # summary without manual setup.
@@ -180,7 +180,7 @@ sub provision_oracle {
 
     my ($cache_root) = grep {
         defined && -d && -w
-    } ($ENV{NOISEMAKER_ORACLE_CACHE}, '/state/cache',
+    } ($ENV{NOISEMAKER_ORACLE_CACHE},
        File::Spec->rel2abs(File::Spec->catdir($ENV{HOME} || File::Spec->curdir, '.cache')));
     if (!$cache_root) {
         # Last resort: a private tempdir. It lives for this run only, so a
