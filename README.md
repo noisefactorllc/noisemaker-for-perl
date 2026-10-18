@@ -113,8 +113,8 @@ The exact reference commit and runtime digest are recorded in
 `NOISEMAKER_CPU_DIR` to its absolute path; Node.js 22 or later is required.
 `scripts/parity-summary` also accepts a sibling `noisemaker-for-cpu` checkout,
 and when no configured checkout verifies against the lock it clones the pinned
-commit into a writable cache root (`NOISEMAKER_ORACLE_CACHE`, `/state/cache`,
-or `~/.cache`; a private tempdir as a last resort), verifies it against the
+commit into a writable cache root (`NOISEMAKER_ORACLE_CACHE`, a shared `cache`
+mount, or `~/.cache`; a private tempdir as a last resort), verifies it against the
 recorded runtime digest, and names the installed revision in its output.
 The harness hashes the reference's `bin/`, `src/`, `package.json`, and upstream
 source-lock file before rendering, so local reference edits fail verification.
