@@ -26,11 +26,11 @@ my $run_pixel = sub {
         my ($dims, $globalCoord, $out_color, $ridged, $texel, $uv);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $dims = $rt->texture_size($_u_inputTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $dims)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $dims))));
         $texel = $rt->texture($_u_inputTex, $uv);
         $ridged = $ridge_transform__vec4_float->($texel, $_u_level);
         $out_color = $rt->construct(4, $rt->swizzle($ridged, 'xyz'), $rt->f(1));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($out_color)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($out_color)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -37,7 +37,7 @@ my $run_pixel = sub {
         my ($color, $dist, $globalCoord, $hsv, $hue, $inner, $mask, $outer, $sat, $texSize, $uv);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize))));
         $color = $rt->texture($_u_inputTex, $uv);
         $hsv = $rgb2hsv__vec3->($rt->swizzle($color, 'rgb'));
         $hue = $rt->swizzle($hsv, 'x');
@@ -47,7 +47,7 @@ my $run_pixel = sub {
         $outer = $rt->binary('+', $_u_range, $_u_feather, 1, 'float');
         $mask = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $inner, $outer, $dist), 1, 'float');
         $mask = $rt->binary('*', $mask, $sat, 1, 'float');
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $mask), $rt->swizzle($color, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $mask), $rt->swizzle($color, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

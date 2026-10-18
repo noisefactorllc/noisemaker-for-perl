@@ -422,17 +422,17 @@ my $run_pixel = sub {
         }
         $alphaVal = $rt->component_wise('clamp', $_u_alpha, $rt->f(0), $rt->f(1));
         if ($rt->binary('==', $alphaVal, $rt->f(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texel_fetch($_u_inputTex, $rt->construct(2, $rt->construct(1, $rt->swizzle($global_id, 'x'), 'int'), $rt->construct(1, $rt->swizzle($global_id, 'y'), 'int'), 'int'), $rt->i(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texel_fetch($_u_inputTex, $rt->construct(2, $rt->construct(1, $rt->swizzle($global_id, 'x'), 'int'), $rt->construct(1, $rt->swizzle($global_id, 'y'), 'int'), 'int'), $rt->i(0)))}; $g->{fragColor} };
             return;
         }
         $rs = $rt->component_wise('max', $_u_renderScale, $rt->f(1));
         $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
-        $width_f = $rt->component_wise('max', $rt->binary('/', $rt->swizzle($fullRes, 'x'), $rs, 1, 'float'), $rt->f(1));
-        $height_f = $rt->component_wise('max', $rt->binary('/', $rt->swizzle($fullRes, 'y'), $rs, 1, 'float'), $rt->f(1));
+        $width_f = $rt->component_wise('max', $rt->metal_divide($rt->swizzle($fullRes, 'x'), $rs), $rt->f(1));
+        $height_f = $rt->component_wise('max', $rt->metal_divide($rt->swizzle($fullRes, 'y'), $rs), $rt->f(1));
         $time = $_u_time;
         $speed = $_u_speed;
-        $x = $rt->binary('/', $rt->binary('+', $rt->construct(1, $rt->swizzle($global_id, 'x')), $rt->swizzle($_u_tileOffset, 'x'), 1, 'float'), $rs, 1, 'float');
-        $y = $rt->binary('/', $rt->binary('+', $rt->construct(1, $rt->swizzle($global_id, 'y')), $rt->swizzle($_u_tileOffset, 'y'), 1, 'float'), $rs, 1, 'float');
+        $x = $rt->metal_divide($rt->binary('+', $rt->construct(1, $rt->swizzle($global_id, 'x')), $rt->swizzle($_u_tileOffset, 'x'), 1, 'float'), $rs);
+        $y = $rt->metal_divide($rt->binary('+', $rt->construct(1, $rt->swizzle($global_id, 'y')), $rt->swizzle($_u_tileOffset, 'y'), 1, 'float'), $rs);
         $displacement = $rt->f(0.0625);
         $freq = $freq_for_shape__float_float_float->($rt->f(2), $width_f, $height_f);
         $base_offsets = $compute_lens_offsets__vec2_float_float_vec2_float_float_float->($rt->construct(2, $x, $y), $width_f, $height_f, $freq, $time, $speed, $displacement);
@@ -443,7 +443,7 @@ my $run_pixel = sub {
         $base_color = $rt->swizzle($base_sample, 'xyz');
         $alpha = $rt->swizzle($base_sample, 'w');
         $color = $rt->component_wise('mix', $base_color, $rt->binary('*', $rt->binary('+', $base_color, $scan_value, 3, 'float'), $scan_value, 3, 'float'), $rt->f(0.5));
-        @{$color} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $color, $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1))))};
+        scalar do { @{$color} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $color, $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1))))}; $color };
         $aber_mask = $rt->f(0.0);
         $blue_base_col = $rt->construct(3, 0.0);
         $blue_blended = $rt->construct(3, 0.0);
@@ -478,7 +478,7 @@ my $run_pixel = sub {
             $displacement_pixels = $rt->binary('*', $rt->binary('*', $displacement_base, $width_f, 1, 'float'), $simplex_value, 1, 'float');
             $singularity = $compute_singularity__float_float_float_float->($x, $y, $width_f, $height_f);
             $aber_mask = $rt->component_wise('pow', $singularity, $rt->f(3));
-            $gradient = $rt->component_wise('clamp', $rt->binary('/', $x, $rt->binary('-', $width_f, $rt->f(1), 1, 'float'), 1, 'float'), $rt->f(0), $rt->f(1));
+            $gradient = $rt->component_wise('clamp', $rt->metal_divide($x, $rt->binary('-', $width_f, $rt->f(1), 1, 'float')), $rt->f(0), $rt->f(1));
             $hue_shift = $rt->binary('-', $rt->binary('*', $random_scalar__float->($rt->binary('+', $seed_base, $rt->f(1.9099999999999999), 1, 'float')), $rt->f(0.25), 1, 'float'), $rt->f(0.125), 1, 'float');
             $red_x = $rt->component_wise('min', $rt->binary('+', $x, $displacement_pixels, 1, 'float'), $rt->binary('-', $width_f, $rt->f(1), 1, 'float'));
             $red_x = $blend_linear__float_float_float->($red_x, $x, $gradient);
@@ -499,9 +499,9 @@ my $run_pixel = sub {
             $blue_offsets = $compute_lens_offsets__vec2_float_float_vec2_float_float_float->($rt->construct(2, $blue_sample_x, $y), $width_f, $height_f, $freq, $time, $speed, $displacement);
             $blue_scan_val = $sample_scanline_bilinear__float_float_float_float_vec2_float->($rt->binary('+', $blue_sample_x, $rt->swizzle($blue_offsets, 'x'), 1, 'float'), $rt->binary('+', $y, $rt->swizzle($blue_offsets, 'y'), 1, 'float'), $width_f, $height_f, $scanline_base, $ppb);
             $blue_blended = $rt->component_wise('mix', $blue_base_col, $rt->binary('*', $rt->binary('+', $blue_base_col, $blue_scan_val, 3, 'float'), $blue_scan_val, 3, 'float'), $rt->f(0.5));
-            @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($adjust_hue__vec3_float->($red_blended, $hue_shift), 'r'), $rt->swizzle($adjust_hue__vec3_float->($green_blended, $hue_shift), 'g'), $rt->swizzle($adjust_hue__vec3_float->($blue_blended, $hue_shift), 'b')))};
-            @{$color} = map { $rt->f32($_) } @{($adjust_hue__vec3_float->($color, $rt->unary('-', $hue_shift)))};
-            @{$color} = map { $rt->f32($_) } @{($adjust_saturation__vec3_float->($color, $rt->f(1.125)))};
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($adjust_hue__vec3_float->($red_blended, $hue_shift), 'r'), $rt->swizzle($adjust_hue__vec3_float->($green_blended, $hue_shift), 'g'), $rt->swizzle($adjust_hue__vec3_float->($blue_blended, $hue_shift), 'b')))}; $color };
+            scalar do { @{$color} = map { $rt->f32($_) } @{($adjust_hue__vec3_float->($color, $rt->unary('-', $hue_shift)))}; $color };
+            scalar do { @{$color} = map { $rt->f32($_) } @{($adjust_saturation__vec3_float->($color, $rt->f(1.125)))}; $color };
             $vignette_alpha = $rt->binary('*', $random_scalar__float->($rt->binary('+', $seed_base, $rt->f(3.1699999999999999), 1, 'float')), $rt->f(0.17499999999999999), 1, 'float');
             $vignette_mask = $singularity;
             $color = $rt->assign_swizzle($color, 'x', $apply_vignette__float_float_float_float->($rt->swizzle($color, 'x'), $rt->f(0), $vignette_mask, $vignette_alpha));
@@ -509,10 +509,10 @@ my $run_pixel = sub {
             $color = $rt->assign_swizzle($color, 'z', $apply_vignette__float_float_float_float->($rt->swizzle($color, 'z'), $rt->f(0), $vignette_mask, $vignette_alpha));
         }
         $local_mean = $rt->binary('*', $rt->binary('+', $rt->binary('+', $rt->swizzle($color, 'x'), $rt->swizzle($color, 'y'), 1, 'float'), $rt->swizzle($color, 'z'), 1, 'float'), $g->{INV_THREE}, 1, 'float');
-        @{$color} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('+', $rt->binary('*', $rt->binary('-', $color, $local_mean, 3, 'float'), $rt->f(1.25), 3, 'float'), $local_mean, 3, 'float'), $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1))))};
+        scalar do { @{$color} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('+', $rt->binary('*', $rt->binary('-', $color, $local_mean, 3, 'float'), $rt->f(1.25), 3, 'float'), $local_mean, 3, 'float'), $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1))))}; $color };
         $effectColor8 = $rt->construct(3, $rt->binary('/', $rt->component_wise('floor', $rt->construct(3, $rt->binary('+', $rt->construct(3, $rt->binary('*', $rt->component_wise('clamp', $color, $rt->f(0), $rt->f(1)), $rt->f(255), 3, 'float')), $rt->f(0.5), 3, 'float'))), $rt->f(255), 3, 'float'));
-        @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $base_color, $effectColor8, $alphaVal))};
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $rt->swizzle($base_sample, 'w')))};
+        scalar do { @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $base_color, $effectColor8, $alphaVal))}; $color };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $rt->swizzle($base_sample, 'w')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

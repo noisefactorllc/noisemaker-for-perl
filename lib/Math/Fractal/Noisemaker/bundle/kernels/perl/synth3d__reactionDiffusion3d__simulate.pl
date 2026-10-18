@@ -27,10 +27,11 @@ my $run_pixel = sub {
     $hash3__vec3 = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.10000000000000001), 1, 'float'), 3, 'float'))};
-        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('fract', $rt->binary('*', $p, $rt->construct_raw(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float')))};
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->dot($p, $rt->binary('+', $rt->swizzle($p, 'yxz'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
-        return $rt->component_wise('fract', $rt->binary('*', $rt->binary('+', $rt->swizzle($p, 'x'), $rt->swizzle($p, 'y'), 1, 'float'), $rt->swizzle($p, 'z'), 1, 'float'));
+        my ($cpuHashDot);
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $p, $rt->construct(1, $rt->binary('*', $_u_seed, $rt->f(0.10000000000000001), 1, 'float')), 3, 'float')))}; $p };
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->component_wise('fract', $rt->binary('*', $p, $rt->construct_raw(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float')))}; $p };
+        $cpuHashDot = $rt->dot($p, $rt->binary('+', $rt->swizzle($p, 'yxz'), $rt->f(33.329999999999998), 3, 'float'));
+        return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->construct(1, $rt->binary('+', $rt->swizzle($p, 'x'), $rt->swizzle($p, 'y'), 1, 'float')), $rt->construct(1, $rt->binary('+', $cpuHashDot, $cpuHashDot, 1, 'float')), 1, 'float')), $rt->construct(1, $rt->binary('+', $rt->swizzle($p, 'z'), $cpuHashDot, 1, 'float')), 1, 'float')));
     };
     $atlasTexel__ivec3_int = sub {
         my ($p, $volSize) = @_;
@@ -70,10 +71,10 @@ my $run_pixel = sub {
         $pixelCoord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $x = $rt->swizzle($pixelCoord, 'x');
         $y = $rt->binary('%', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'int');
-        $z = $rt->binary('/', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'int');
+        $z = POSIX::trunc($rt->binary('/', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'float'));
         $voxel = $rt->construct(3, $x, $y, $z, 'int');
         if ((((($rt->binary('>=', $x, $volSize)) || ($rt->binary('>=', $y, $volSize)) ? 1 : 0)) || ($rt->binary('>=', $z, $volSize)) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
             return;
         }
         $state = $sampleState__ivec3_int->($voxel, $volSize);
@@ -89,8 +90,8 @@ my $run_pixel = sub {
             $seedVal = $rt->construct(4, 0.0);
             $start = 0;
             if ($_u_resetState) {
-                $start = $rt->component_wise('max', $rt->i(0), $rt->binary('-', $rt->binary('/', $volSize, $rt->i(2), 1, 'int'), $rt->i(2), 1, 'int'));
-                $end = $rt->component_wise('min', $rt->binary('-', $volSize, $rt->i(1), 1, 'int'), $rt->binary('+', $start, $rt->i(3), 1, 'int'));
+                $start = $rt->component_wise('max', $rt->i(0), $rt->binary('-', $rt->binary('/', $volSize, $rt->i(2), 1, 'float'), $rt->i(2), 1, 'float'));
+                $end = $rt->component_wise('min', $rt->binary('-', $volSize, $rt->i(1), 1, 'int'), $rt->binary('+', $start, $rt->i(3), 1, 'float'));
                 $inCenterCube = (((((((((($rt->binary('>=', $x, $start)) && ($rt->binary('<=', $x, $end)) ? 1 : 0)) && ($rt->binary('>=', $y, $start)) ? 1 : 0)) && ($rt->binary('<=', $y, $end)) ? 1 : 0)) && ($rt->binary('>=', $z, $start)) ? 1 : 0)) && ($rt->binary('<=', $z, $end)) ? 1 : 0);
                 $b = (($inCenterCube) ? ($rt->f(1)) : ($rt->f(0)));
             } else {
@@ -108,7 +109,7 @@ my $run_pixel = sub {
                     }
                 }
             }
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $b, $b, $b, $a))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $b, $b, $b, $a))}; $g->{fragColor} };
             return;
         }
         $lap = $laplacian3D__ivec3_int->($voxel, $volSize);
@@ -117,7 +118,7 @@ my $run_pixel = sub {
         $r1 = $rt->binary('/', $rt->binary('*', $_u_rate1, $rt->f(0.01), 1, 'float'), $rt->f(6), 1, 'float');
         $r2 = $rt->binary('/', $rt->binary('*', $_u_rate2, $rt->f(0.01), 1, 'float'), $rt->f(6), 1, 'float');
         $iterF = $rt->component_wise('max', $rt->f(1), $rt->construct(1, $_u_iterations));
-        $s = $rt->binary('/', $rt->binary('*', $_u_speed, $rt->f(0.01), 1, 'float'), $iterF, 1, 'float');
+        $s = $rt->metal_divide($rt->binary('*', $_u_speed, $rt->f(0.01), 1, 'float'), $iterF);
         $newA = $rt->binary('+', $a, $rt->binary('*', $rt->binary('+', $rt->binary('-', $rt->binary('*', $r1, $rt->swizzle($lap, 'y'), 1, 'float'), $rt->binary('*', $rt->binary('*', $a, $b, 1, 'float'), $b, 1, 'float'), 1, 'float'), $rt->binary('*', $f, $rt->binary('-', $rt->f(1), $a, 1, 'float'), 1, 'float'), 1, 'float'), $s, 1, 'float'), 1, 'float');
         $newB = $rt->binary('+', $b, $rt->binary('*', $rt->binary('-', $rt->binary('+', $rt->binary('*', $r2, $rt->swizzle($lap, 'x'), 1, 'float'), $rt->binary('*', $rt->binary('*', $a, $b, 1, 'float'), $b, 1, 'float'), 1, 'float'), $rt->binary('*', $rt->binary('+', $k, $f, 1, 'float'), $b, 1, 'float'), 1, 'float'), $s, 1, 'float'), 1, 'float');
         $seedLum = $rt->f(0.0);
@@ -132,11 +133,11 @@ my $run_pixel = sub {
         $density = $newB;
         $outRgb = $rt->construct(3, 0.0);
         if ($rt->binary('==', $_u_colorMode, $rt->i(0))) {
-            @{$outRgb} = map { $rt->f32($_) } @{($rt->construct(3, $density))};
+            scalar do { @{$outRgb} = map { $rt->f32($_) } @{($rt->construct(3, $density))}; $outRgb };
         } else {
-            @{$outRgb} = map { $rt->f32($_) } @{($rt->construct(3, $density, $newA, $rt->binary('-', $rt->f(1), $density, 1, 'float')))};
+            scalar do { @{$outRgb} = map { $rt->f32($_) } @{($rt->construct(3, $density, $newA, $rt->binary('-', $rt->f(1), $density, 1, 'float')))}; $outRgb };
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outRgb, $newA))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outRgb, $newA))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

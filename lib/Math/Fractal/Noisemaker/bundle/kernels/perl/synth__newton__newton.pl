@@ -112,8 +112,8 @@ my $run_pixel = sub {
         $bi = $rt->copy($bi, 'float');
         $rr = $rt->copy($rr, 'float');
         $ri = $rt->copy($ri, 'float');
-        @{$rr} = map { $rt->f32($_) } @{($df64_sub__vec2_vec2->($df64_mul__vec2_vec2->($ar, $br), $df64_mul__vec2_vec2->($ai, $bi)))};
-        @{$ri} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_mul__vec2_vec2->($ar, $bi), $df64_mul__vec2_vec2->($ai, $br)))};
+        scalar do { @{$rr} = map { $rt->f32($_) } @{($df64_sub__vec2_vec2->($df64_mul__vec2_vec2->($ar, $br), $df64_mul__vec2_vec2->($ai, $bi)))}; $rr };
+        scalar do { @{$ri} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_mul__vec2_vec2->($ar, $bi), $df64_mul__vec2_vec2->($ai, $br)))}; $ri };
         return (undef, $rr, $ri);
     };
     $transformCoords_df64__vec2_vec2_vec2_float_float_vec2_vec2 = sub {
@@ -124,16 +124,16 @@ my $run_pixel = sub {
         $re_df = $rt->copy($re_df, 'float');
         $im_df = $rt->copy($im_df, 'float');
         my ($angle, $c, $s, $scale, $uv, $uv_im_df, $uv_re_df);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'))));
         $angle = $rt->binary('/', $rt->binary('*', $rt->unary('-', $rot), $g->{TAU}, 1, 'float'), $rt->f(360), 1, 'float');
         $c = $rt->component_wise('cos', $angle);
         $s = $rt->component_wise('sin', $angle);
-        @{$uv} = map { $rt->f32($_) } @{($rt->matrix_mult($rt->construct(4, $c, $rt->unary('-', $s), $s, $c), $uv, 2))};
+        scalar do { @{$uv} = map { $rt->f32($_) } @{($rt->matrix_mult($rt->construct(4, $c, $rt->unary('-', $s), $s, $c), $uv, 2))}; $uv };
         $scale = $rt->binary('/', $rt->f(2.5), $z_zoom, 1, 'float');
         $uv_re_df = $df64_mul_f__vec2_float->($df64_from__float->($rt->swizzle($uv, 'x')), $scale);
         $uv_im_df = $df64_mul_f__vec2_float->($df64_from__float->($rt->swizzle($uv, 'y')), $scale);
-        @{$re_df} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($uv_re_df, $cX_df))};
-        @{$im_df} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($uv_im_df, $cY_df))};
+        scalar do { @{$re_df} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($uv_re_df, $cX_df))}; $re_df };
+        scalar do { @{$im_df} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($uv_im_df, $cY_df))}; $im_df };
         return (undef, $re_df, $im_df);
     };
     $getPOI__int = sub {
@@ -181,13 +181,13 @@ my $run_pixel = sub {
         $p = [$rt->construct(4, 0.0), $rt->f(0.0), $rt->f(0.0)];
         if ($rt->binary('>', $poiIdx, $rt->i(0))) {
             $p = $getPOI__int->($poiIdx);
-            @{$cHi} = map { $rt->f32($_) } @{($rt->binary('+', $rt->swizzle($p->[0], 'xy'), $rt->construct_raw(2, $_u_centerHiX, $_u_centerHiY), 2, 'float'))};
-            @{$cLo} = map { $rt->f32($_) } @{($rt->binary('+', $rt->swizzle($p->[0], 'zw'), $rt->construct_raw(2, $_u_centerLoX, $_u_centerLoY), 2, 'float'))};
+            scalar do { @{$cHi} = map { $rt->f32($_) } @{($rt->binary('+', $rt->swizzle($p->[0], 'xy'), $rt->construct_raw(2, $_u_centerHiX, $_u_centerHiY), 2, 'float'))}; $cHi };
+            scalar do { @{$cLo} = map { $rt->f32($_) } @{($rt->binary('+', $rt->swizzle($p->[0], 'zw'), $rt->construct_raw(2, $_u_centerLoX, $_u_centerLoY), 2, 'float'))}; $cLo };
             $effDegree = $p->[1];
             $effZoomDepth = $rt->component_wise('min', $_u_zoomDepth, $p->[2]);
         } else {
-            @{$cHi} = map { $rt->f32($_) } @{($rt->construct(2, $_u_centerHiX, $_u_centerHiY))};
-            @{$cLo} = map { $rt->f32($_) } @{($rt->construct(2, $_u_centerLoX, $_u_centerLoY))};
+            scalar do { @{$cHi} = map { $rt->f32($_) } @{($rt->construct(2, $_u_centerHiX, $_u_centerHiY))}; $cHi };
+            scalar do { @{$cLo} = map { $rt->f32($_) } @{($rt->construct(2, $_u_centerLoX, $_u_centerLoY))}; $cLo };
         }
         $zoom = $rt->f(0.0);
         $zoomPhase = $rt->f(0.0);
@@ -216,8 +216,8 @@ my $run_pixel = sub {
             if ($rt->binary('>=', $k, $numRoots)) {
                 last;
             }
-            $angle = $rt->binary('/', $rt->binary('*', $g->{TAU}, $rt->construct(1, $k), 1, 'float'), $rt->construct(1, $intDeg), 1, 'float');
-            @{$roots->[int($k)]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)))};
+            $angle = $rt->metal_divide($rt->binary('*', $g->{TAU}, $rt->construct(1, $k), 1, 'float'), $rt->construct(1, $intDeg));
+            scalar do { @{$roots->[int($k)]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)))}; $roots->[int($k)] };
         }
         $iter = $rt->f(0);
         $convergedRoot = $rt->unary('-', $rt->i(1));
@@ -256,8 +256,8 @@ my $run_pixel = sub {
                 $tr = $rt->construct(2, 0.0);
                 $ti = $rt->construct(2, 0.0);
                 do { ($_retc, $tr, $ti) = $df64_cmul__vec2_vec2_vec2_vec2_vec2_vec2->($pwr, $pwi, $zr_df, $zi_df, $tr, $ti); };
-                @{$pwr} = map { $rt->f32($_) } @{($tr)};
-                @{$pwi} = map { $rt->f32($_) } @{($ti)};
+                scalar do { @{$pwr} = map { $rt->f32($_) } @{($tr)}; $pwr };
+                scalar do { @{$pwi} = map { $rt->f32($_) } @{($ti)}; $pwi };
             }
             $znr = $rt->construct(2, 0.0);
             $zni = $rt->construct(2, 0.0);
@@ -272,13 +272,13 @@ my $run_pixel = sub {
                 last;
             }
             $denom = $rt->binary('+', $rt->binary('*', $fpzr_f, $fpzr_f, 1, 'float'), $rt->binary('*', $fpzi_f, $fpzi_f, 1, 'float'), 1, 'float');
-            $inv_denom = $rt->binary('/', $rt->f(1), $denom, 1, 'float');
+            $inv_denom = $rt->metal_divide($rt->f(1), $denom);
             $nr = $df64_add__vec2_vec2->($df64_mul__vec2_vec2->($fzr, $fpzr), $df64_mul__vec2_vec2->($fzi, $fpzi));
             $ni = $df64_sub__vec2_vec2->($df64_mul__vec2_vec2->($fzi, $fpzr), $df64_mul__vec2_vec2->($fzr, $fpzi));
             $dr = $df64_mul_f__vec2_float->($nr, $inv_denom);
             $di = $df64_mul_f__vec2_float->($ni, $inv_denom);
-            @{$zr_df} = map { $rt->f32($_) } @{($df64_sub__vec2_vec2->($zr_df, $df64_mul_f__vec2_float->($dr, $effRelax)))};
-            @{$zi_df} = map { $rt->f32($_) } @{($df64_sub__vec2_vec2->($zi_df, $df64_mul_f__vec2_float->($di, $effRelax)))};
+            scalar do { @{$zr_df} = map { $rt->f32($_) } @{($df64_sub__vec2_vec2->($zr_df, $df64_mul_f__vec2_float->($dr, $effRelax)))}; $zr_df };
+            scalar do { @{$zi_df} = map { $rt->f32($_) } @{($df64_sub__vec2_vec2->($zi_df, $df64_mul_f__vec2_float->($di, $effRelax)))}; $zi_df };
             $zx = $df64_to_float__vec2->($zr_df);
             $zy = $df64_to_float__vec2->($zi_df);
             if ($rt->binary('>', $rt->binary('+', $rt->binary('*', $zx, $zx, 1, 'float'), $rt->binary('*', $zy, $zy, 1, 'float'), 1, 'float'), $bailout)) {
@@ -313,28 +313,28 @@ my $run_pixel = sub {
         }
         $smoothIter = $iter;
         if ((((($rt->binary('>=', $convergedRoot, $rt->i(0))) && ($rt->binary('>', $convergeDist, $rt->f(0))) ? 1 : 0)) && ($rt->binary('<', $convergeDist, $_u_tolerance)) ? 1 : 0)) {
-            $smoothIter = $rt->binary('-', $iter, $rt->component_wise('log2', $rt->binary('/', $rt->component_wise('log', $convergeDist), $rt->component_wise('log', $_u_tolerance), 1, 'float')), 1, 'float');
+            $smoothIter = $rt->binary('-', $iter, $rt->component_wise('log2', $rt->metal_divide($rt->component_wise('log', $convergeDist), $rt->component_wise('log', $_u_tolerance))), 1, 'float');
         }
         $value = $rt->f(0);
         $maxIterF = $rt->construct(1, $maxIter);
         $numRootsF = $rt->construct(1, $numRoots);
         if ($rt->binary('==', $outMode, $rt->i(0))) {
-            $value = $rt->binary('/', $smoothIter, $maxIterF, 1, 'float');
+            $value = $rt->metal_divide($smoothIter, $maxIterF);
         } else {
             if ($rt->binary('==', $outMode, $rt->i(1))) {
                 if ($rt->binary('>=', $convergedRoot, $rt->i(0))) {
-                    $value = $rt->binary('/', $rt->construct(1, $convergedRoot), $numRootsF, 1, 'float');
+                    $value = $rt->metal_divide($rt->construct(1, $convergedRoot), $numRootsF);
                 }
             } else {
                 if ($rt->binary('>=', $convergedRoot, $rt->i(0))) {
-                    $value = $rt->binary('/', $rt->binary('+', $rt->construct(1, $convergedRoot), $rt->binary('/', $smoothIter, $maxIterF, 1, 'float'), 1, 'float'), $numRootsF, 1, 'float');
+                    $value = $rt->metal_divide($rt->binary('+', $rt->construct(1, $convergedRoot), $rt->metal_divide($smoothIter, $maxIterF), 1, 'float'), $numRootsF);
                 }
             }
         }
         if ($doInvert) {
             $value = $rt->binary('-', $rt->f(1), $value, 1, 'float');
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $value), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $value), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

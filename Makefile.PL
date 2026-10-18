@@ -16,9 +16,9 @@ WriteMakefile(
         # Declare core dependencies too: some Perl installations split them
         # into OS packages, and CPAN clients need the complete dependency list.
         map { $_ => 0 } qw(
-            Compress::Zlib Compress::Raw::Zlib Digest::SHA Exporter
+            Compress::Zlib Compress::Raw::Zlib Digest::SHA Encode Exporter
             File::Basename File::Copy File::Find File::Path File::Spec File::Temp
-            FindBin Getopt::Long HTTP::Tiny JSON::PP List::Util POSIX Scalar::Util Time::HiRes
+            FindBin Getopt::Long HTTP::Tiny JSON::PP List::Util MIME::Base64 POSIX Scalar::Util Time::HiRes
         ),
     },
     CONFIGURE_REQUIRES => { 'ExtUtils::MakeMaker' => '6.64' },

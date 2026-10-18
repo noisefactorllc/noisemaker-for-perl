@@ -17,14 +17,14 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($baseColor, $baseSample, $combinedRgb, $finalAlpha, $inputIntensityValue, $outputSize, $trailColor, $uv);
         $outputSize = $rt->texture_size($_u_trailTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $outputSize)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $outputSize))));
         $inputIntensityValue = $rt->binary('/', $_u_inputIntensity, $rt->f(100), 1, 'float');
         $baseSample = $rt->texture($_u_mixerTex, $uv);
         $baseColor = $rt->construct(4, $rt->binary('*', $rt->swizzle($baseSample, 'rgb'), $inputIntensityValue, 3, 'float'), $rt->swizzle($baseSample, 'a'));
         $trailColor = $rt->texture($_u_trailTex, $uv);
         $combinedRgb = $rt->component_wise('clamp', $rt->binary('+', $rt->swizzle($baseColor, 'rgb'), $rt->swizzle($trailColor, 'rgb'), 3, 'float'), $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1)));
         $finalAlpha = $rt->component_wise('clamp', $rt->component_wise('max', $rt->swizzle($baseColor, 'a'), $rt->swizzle($trailColor, 'a')), $rt->f(0), $rt->f(1));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $combinedRgb, $finalAlpha))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $combinedRgb, $finalAlpha))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

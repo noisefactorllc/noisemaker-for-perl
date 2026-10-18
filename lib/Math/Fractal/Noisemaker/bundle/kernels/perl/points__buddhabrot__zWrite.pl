@@ -20,7 +20,7 @@ my $run_pixel = sub {
         $pos = $rt->texel_fetch($_u_xyzTex, $coord, $rt->i(0));
         $vel = $rt->texel_fetch($_u_velTex, $coord, $rt->i(0));
         if ($rt->binary('<', $rt->swizzle($pos, 'w'), $rt->f(0.5))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
             return;
         }
         $cRe = $rt->swizzle($vel, 'x');
@@ -42,9 +42,9 @@ my $run_pixel = sub {
             }
             $zr = $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->swizzle($z, 'x'), $rt->swizzle($z, 'x'), 1, 'float'), $rt->binary('*', $rt->swizzle($z, 'y'), $rt->swizzle($z, 'y'), 1, 'float'), 1, 'float'), $cRe, 1, 'float');
             $zi = $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->f(2), $rt->swizzle($z, 'x'), 1, 'float'), $rt->swizzle($z, 'y'), 1, 'float'), $cIm, 1, 'float');
-            @{$z} = map { $rt->f32($_) } @{($rt->construct(2, $zr, $zi))};
+            scalar do { @{$z} = map { $rt->f32($_) } @{($rt->construct(2, $zr, $zi))}; $z };
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($z, 'x'), $rt->swizzle($z, 'y'), $rt->f(0), $rt->f(0)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($z, 'x'), $rt->swizzle($z, 'y'), $rt->f(0), $rt->f(0)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -33,23 +33,23 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($bgMask, $c, $d, $fgMask, $globalCoord, $m, $outColor, $s, $sidesF, $st, $totalAlpha);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $st = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
-        @{$st} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('-', $st, $rt->f(0.5), 2, 'float'), $rt->f(2), 2, 'float'))};
+        $st = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('-', $st, $rt->f(0.5), 2, 'float'), $rt->f(2), 2, 'float'))}; $st };
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('*', $rt->swizzle($st, 'x'), $_u_aspect, 1, 'float'));
         $c = $rt->component_wise('cos', $rt->binary('/', $rt->binary('*', $_u_rotation, $rt->f(3.1415926535900001), 1, 'float'), $rt->f(180), 1, 'float'));
         $s = $rt->component_wise('sin', $rt->binary('/', $rt->binary('*', $_u_rotation, $rt->f(3.1415926535900001), 1, 'float'), $rt->f(180), 1, 'float'));
-        @{$st} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->swizzle($st, 'x'), $c, 1, 'float'), $rt->binary('*', $rt->swizzle($st, 'y'), $s, 1, 'float'), 1, 'float'), $rt->binary('+', $rt->binary('*', $rt->swizzle($st, 'x'), $s, 1, 'float'), $rt->binary('*', $rt->swizzle($st, 'y'), $c, 1, 'float'), 1, 'float')))};
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->swizzle($st, 'x'), $c, 1, 'float'), $rt->binary('*', $rt->swizzle($st, 'y'), $s, 1, 'float'), 1, 'float'), $rt->binary('+', $rt->binary('*', $rt->swizzle($st, 'x'), $s, 1, 'float'), $rt->binary('*', $rt->swizzle($st, 'y'), $c, 1, 'float'), 1, 'float')))}; $st };
         $sidesF = $rt->construct(1, $rt->component_wise('max', $_u_sides, $rt->i(3)));
         if ($rt->binary('==', $_u_sides, $rt->i(3))) {
-            @{$st} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($st, 'y'), $rt->unary('-', $rt->swizzle($st, 'x'))))};
+            scalar do { @{$st} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($st, 'y'), $rt->unary('-', $rt->swizzle($st, 'x'))))}; $st };
         }
-        $d = $rt->binary('/', $polygon__vec2_float->($st, $sidesF), $rt->component_wise('cos', $rt->binary('/', $rt->f(3.1415926535900001), $sidesF, 1, 'float')), 1, 'float');
+        $d = $rt->metal_divide($polygon__vec2_float->($st, $sidesF), $rt->component_wise('cos', $rt->metal_divide($rt->f(3.1415926535900001), $sidesF)));
         $m = $rt->component_wise('smoothstep', $_u_radius, $rt->binary('-', $_u_radius, $_u_smoothing, 1, 'float'), $d);
         $fgMask = $rt->binary('*', $m, $_u_fgAlpha, 1, 'float');
         $bgMask = $rt->binary('*', $rt->binary('-', $rt->f(1), $m, 1, 'float'), $_u_bgAlpha, 1, 'float');
         $totalAlpha = $rt->binary('+', $fgMask, $bgMask, 1, 'float');
-        $outColor = $rt->construct(3, (($rt->binary('>', $totalAlpha, $rt->f(0))) ? ($rt->binary('/', $rt->binary('+', $rt->binary('*', $_u_fgColor, $fgMask, 3, 'float'), $rt->binary('*', $_u_bgColor, $bgMask, 3, 'float'), 3, 'float'), $totalAlpha, 3, 'float')) : ($rt->construct(3, $rt->f(0)))));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $outColor, $totalAlpha, 3, 'float'), $totalAlpha))};
+        $outColor = $rt->construct(3, (($rt->binary('>', $totalAlpha, $rt->f(0))) ? ($rt->metal_divide($rt->binary('+', $rt->binary('*', $_u_fgColor, $fgMask, 3, 'float'), $rt->binary('*', $_u_bgColor, $bgMask, 3, 'float'), 3, 'float'), $totalAlpha)) : ($rt->construct(3, $rt->f(0)))));
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $outColor, $totalAlpha, 3, 'float'), $totalAlpha))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

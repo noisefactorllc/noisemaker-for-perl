@@ -47,7 +47,7 @@ my $run_pixel = sub {
         $p = $rt->assign_swizzle($p, 'x', $rt->binary('-', $rt->component_wise('abs', $rt->swizzle($p, 'x')), $r, 1, 'float'));
         $p = $rt->assign_swizzle($p, 'y', $rt->binary('+', $rt->swizzle($p, 'y'), $rt->binary('/', $r, $k, 1, 'float'), 1, 'float'));
         if ($rt->binary('>', $rt->binary('+', $rt->swizzle($p, 'x'), $rt->binary('*', $k, $rt->swizzle($p, 'y'), 1, 'float'), 1, 'float'), $rt->f(0))) {
-            @{$p} = map { $rt->f32($_) } @{($rt->binary('/', $rt->construct_raw(2, $rt->binary('-', $rt->swizzle($p, 'x'), $rt->binary('*', $k, $rt->swizzle($p, 'y'), 1, 'float'), 1, 'float'), $rt->binary('-', $rt->binary('*', $rt->unary('-', $k), $rt->swizzle($p, 'x'), 1, 'float'), $rt->swizzle($p, 'y'), 1, 'float')), $rt->f(2), 2, 'float'))};
+            scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('/', $rt->construct_raw(2, $rt->binary('-', $rt->swizzle($p, 'x'), $rt->binary('*', $k, $rt->swizzle($p, 'y'), 1, 'float'), 1, 'float'), $rt->binary('-', $rt->binary('*', $rt->unary('-', $k), $rt->swizzle($p, 'x'), 1, 'float'), $rt->swizzle($p, 'y'), 1, 'float')), $rt->f(2), 2, 'float'))}; $p };
         }
         $p = $rt->assign_swizzle($p, 'x', $rt->binary('-', $rt->swizzle($p, 'x'), $rt->component_wise('clamp', $rt->swizzle($p, 'x'), $rt->binary('*', $rt->unary('-', $rt->f(2)), $r, 1, 'float'), $rt->f(0)), 1, 'float'));
         return $rt->binary('*', $rt->unary('-', $rt->length($p)), $rt->component_wise('sign', $rt->swizzle($p, 'y')), 1, 'float');
@@ -62,7 +62,7 @@ my $run_pixel = sub {
         my ($Rlayer, $_for0_first, $baseSize, $d, $dBindu, $dir, $dynTwistRad, $folded, $i, $layerAnimRot, $layerTheta, $lt, $m, $q, $r, $radial, $shapeSize, $tangent, $theta, $twistRad, $wedge);
         $r = $rt->length($p);
         $theta = $rt->binary('-', $rt->component_wise('atan', $rt->swizzle($p, 'y'), $rt->swizzle($p, 'x')), $rt->binary('*', $rt->f(3.1415926535900001), $rt->f(0.5), 1, 'float'), 1, 'float');
-        $wedge = $rt->binary('/', $rt->f(6.2831853071800001), $rt->construct(1, $_u_symmetry), 1, 'float');
+        $wedge = $rt->metal_divide($rt->f(6.2831853071800001), $rt->construct(1, $_u_symmetry));
         $twistRad = $rt->binary('/', $rt->binary('*', $_u_twist, $rt->f(3.1415926535900001), 1, 'float'), $rt->f(180), 1, 'float');
         $baseSize = $rt->binary('+', $rt->f(0.25), $rt->binary('*', $_u_thickness, $rt->f(0.65000000000000002), 1, 'float'), 1, 'float');
         $dynTwistRad = $twistRad;
@@ -105,7 +105,7 @@ my $run_pixel = sub {
             $tangent = $rt->binary('*', $folded, $Rlayer, 1, 'float');
             $lt = $rt->f(0);
             if ($rt->binary('>', $_u_layers, $rt->i(1))) {
-                $lt = $rt->binary('-', $rt->binary('/', $rt->construct(1, $i), $rt->construct(1, $rt->binary('-', $_u_layers, $rt->i(1), 1, 'int')), 1, 'float'), $rt->f(0.5), 1, 'float');
+                $lt = $rt->binary('-', $rt->metal_divide($rt->construct(1, $i), $rt->construct(1, $rt->binary('-', $_u_layers, $rt->i(1), 1, 'int'))), $rt->f(0.5), 1, 'float');
             }
             $shapeSize = $rt->binary('*', $baseSize, $rt->binary('+', $rt->f(1), $rt->binary('*', $_u_shapeGrowth, $lt, 1, 'float'), 1, 'float'), 1, 'float');
             if ($rt->binary('==', $_u_animation, $rt->i(6))) {
@@ -132,13 +132,13 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($color, $globalCoord, $m, $p, $rad, $scaleFactor, $st);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $st = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
-        @{$st} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('-', $st, $rt->f(0.5), 2, 'float'), $rt->f(2), 2, 'float'))};
+        $st = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('-', $st, $rt->f(0.5), 2, 'float'), $rt->f(2), 2, 'float'))}; $st };
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('*', $rt->swizzle($st, 'x'), $_u_aspect, 1, 'float'));
         $rad = $rt->binary('/', $rt->binary('*', $_u_rotation, $rt->f(3.1415926535900001), 1, 'float'), $rt->f(180), 1, 'float');
-        @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $rad))};
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $rad))}; $st };
         if ($rt->binary('==', $_u_animation, $rt->i(1))) {
-            @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $rt->component_wise('floor', $_u_speed), 1, 'float')))};
+            scalar do { @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $rt->component_wise('floor', $_u_speed), 1, 'float')))}; $st };
         }
         $scaleFactor = $rt->binary('-', $rt->f(21), $_u_scale, 1, 'float');
         if ($rt->binary('==', $_u_animation, $rt->i(2))) {
@@ -147,7 +147,7 @@ my $run_pixel = sub {
         $p = $rt->construct(2, $rt->binary('*', $st, $scaleFactor, 2, 'float'));
         $m = $rt->component_wise('clamp', $mandalaMask__vec2->($p), $rt->f(0), $rt->f(1));
         $color = $rt->component_wise('mix', $_u_bgColor, $_u_fgColor, $m);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

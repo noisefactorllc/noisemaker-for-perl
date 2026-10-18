@@ -25,7 +25,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($p3);
         $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
-        @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
+        scalar do { @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))}; $p3 };
         return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
     };
     $lum__vec3 = sub {
@@ -59,7 +59,7 @@ my $run_pixel = sub {
                 last;
             }
             $v = $rt->binary('+', $v, $rt->binary('*', $a, $vnoise__vec2->($p), 1, 'float'), 1, 'float');
-            @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(2.0299999999999998), 2, 'float'))};
+            scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(2.0299999999999998), 2, 'float'))}; $p };
             $a = $rt->binary('*', $a, $rt->f(0.5), 1, 'float');
         }
         return $v;
@@ -68,7 +68,7 @@ my $run_pixel = sub {
         my ($uv) = @_;
         $uv = $rt->copy($uv, 'float');
         my ($b, $bl, $br, $l, $px, $r, $t, $tl, $tr);
-        $px = $rt->construct(2, $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float'));
+        $px = $rt->construct(2, $rt->metal_divide($rt->f(1), $_u_resolution));
         $tl = $lum__vec3->($rt->swizzle($rt->texture($_u_inputTex, $rt->binary('+', $uv, $rt->binary('*', $px, $rt->construct_raw(2, $rt->unary('-', $rt->f(1)), $rt->f(1)), 2, 'float'), 2, 'float')), 'rgb'));
         $l = $lum__vec3->($rt->swizzle($rt->texture($_u_inputTex, $rt->binary('+', $uv, $rt->binary('*', $px, $rt->construct_raw(2, $rt->unary('-', $rt->f(1)), $rt->f(0)), 2, 'float'), 2, 'float')), 'rgb'));
         $bl = $lum__vec3->($rt->swizzle($rt->texture($_u_inputTex, $rt->binary('+', $uv, $rt->binary('*', $px, $rt->construct_raw(2, $rt->unary('-', $rt->f(1)), $rt->unary('-', $rt->f(1))), 2, 'float'), 2, 'float')), 'rgb'));
@@ -116,7 +116,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($aa, $band1, $band2, $band3, $bgGate, $bgMask, $coverage, $darkGain, $darkness, $edgeAngle, $edgeBoost, $f0, $f1, $f2, $fgGate, $fgMask, $gc, $grad, $gradMag, $inkC, $inkMask, $level, $midGray, $outColor, $pb, $rough, $s, $s2, $s45a, $s45b, $sBg, $sCombined, $sEdge, $shadow, $src, $stretchAmt, $strokeMask, $t, $texture2, $theta, $toneGate, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $src = $rt->texture($_u_inputTex, $uv);
         $gc = $rt->construct(2, $rt->binary('+', $rt->component_wise('floor', $rt->swizzle($ctx->{frag_coord}, 'xy')), $_u_tileOffset, 2, 'float'));
         $theta = $dirAngle__int->($_u_direction);
@@ -160,7 +160,7 @@ my $run_pixel = sub {
         $toneGate = $rt->f(0.0);
         if ($rt->binary('==', $_u_MODE, $rt->i(0))) {
             $inkMask = $rt->component_wise('step', $s, $rt->component_wise('clamp', $rt->binary('+', $rt->binary('-', $rt->f(1), $t, 1, 'float'), $rt->binary('*', $pb, $rt->f(0.29999999999999999), 1, 'float'), 1, 'float'), $rt->f(0), $rt->f(1)));
-            @{$outColor} = map { $rt->f32($_) } @{($tonemap2__float_vec3_vec3->($rt->binary('-', $rt->f(1), $inkMask, 1, 'float'), $_u_inkColor, $_u_paperColor))};
+            scalar do { @{$outColor} = map { $rt->f32($_) } @{($tonemap2__float_vec3_vec3->($rt->binary('-', $rt->f(1), $inkMask, 1, 'float'), $_u_inkColor, $_u_paperColor))}; $outColor };
         } else {
             if ($rt->binary('==', $_u_MODE, $rt->i(1))) {
                 $s2 = $strokeField__vec2_float_float->($rt->construct(2, $rt->binary('+', $rt->binary('*', $gc, $rt->f(2), 2, 'float'), $rt->f(91.700000000000003), 2, 'float')), $theta, $rt->binary('*', $stretchAmt, $rt->f(0.5), 1, 'float'));
@@ -170,7 +170,7 @@ my $run_pixel = sub {
                 $inkMask = $rt->component_wise('step', $rt->binary('-', $rt->f(1), $coverage, 1, 'float'), $rough);
                 $darkness = $rt->component_wise('mix', $rt->f(0.55000000000000004), $rt->f(1), $rt->binary('/', $_u_pressure, $rt->f(100), 1, 'float'));
                 $inkC = $rt->component_wise('mix', $_u_paperColor, $_u_inkColor, $darkness);
-                @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $_u_paperColor, $inkC, $inkMask))};
+                scalar do { @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $_u_paperColor, $inkC, $inkMask))}; $outColor };
             } else {
                 if ($rt->binary('==', $_u_MODE, $rt->i(2))) {
                     $midGray = $rt->component_wise('mix', $_u_inkColor, $_u_paperColor, $rt->f(0.5));
@@ -180,16 +180,16 @@ my $run_pixel = sub {
                     $fgMask = $rt->component_wise('step', $rt->binary('-', $rt->f(1), $fgGate, 1, 'float'), $s);
                     $bgGate = $rt->component_wise('smoothstep', $rt->binary('-', $rt->f(0.59999999999999998), $aa, 1, 'float'), $rt->binary('+', $rt->f(0.59999999999999998), $aa, 1, 'float'), $t);
                     $bgMask = $rt->component_wise('step', $rt->binary('-', $rt->f(1), $bgGate, 1, 'float'), $sBg);
-                    @{$outColor} = map { $rt->f32($_) } @{($midGray)};
-                    @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $outColor, $_u_inkColor, $fgMask))};
-                    @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $outColor, $_u_paperColor, $bgMask))};
+                    scalar do { @{$outColor} = map { $rt->f32($_) } @{($midGray)}; $outColor };
+                    scalar do { @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $outColor, $_u_inkColor, $fgMask))}; $outColor };
+                    scalar do { @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $outColor, $_u_paperColor, $bgMask))}; $outColor };
                 } else {
                     if ($rt->binary('==', $_u_MODE, $rt->i(3))) {
                         $toneGate = $rt->component_wise('smoothstep', $rt->f(0.29999999999999999), $rt->f(0.69999999999999996), $t);
-                        $texture2 = $rt->component_wise('mix', $s, $fbm__vec2->($rt->construct(2, $rt->binary('+', $rt->binary('/', $gc, $rt->binary('*', $stretchAmt, $rt->f(0.59999999999999998), 1, 'float'), 2, 'float'), $rt->f(41), 2, 'float'))), $rt->f(0.5));
+                        $texture2 = $rt->component_wise('mix', $s, $fbm__vec2->($rt->construct(2, $rt->binary('+', $rt->metal_divide($gc, $rt->binary('*', $stretchAmt, $rt->f(0.59999999999999998), 1, 'float')), $rt->f(41), 2, 'float'))), $rt->f(0.5));
                         $level = $rt->component_wise('mix', $texture2, $toneGate, $rt->component_wise('abs', $rt->binary('-', $rt->binary('*', $toneGate, $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float')));
                         $level = $rt->component_wise('clamp', $rt->binary('+', $level, $rt->binary('*', $pb, $rt->f(0.14999999999999999), 1, 'float'), 1, 'float'), $rt->f(0), $rt->f(1));
-                        @{$outColor} = map { $rt->f32($_) } @{($tonemap2__float_vec3_vec3->($level, $_u_inkColor, $_u_paperColor))};
+                        scalar do { @{$outColor} = map { $rt->f32($_) } @{($tonemap2__float_vec3_vec3->($level, $_u_inkColor, $_u_paperColor))}; $outColor };
                     } else {
                         if ($rt->binary('==', $_u_MODE, $rt->i(4))) {
                             $s45a = $strokeField__vec2_float_float->($gc, $rt->binary('+', $theta, $rt->f(45), 1, 'float'), $stretchAmt);
@@ -201,7 +201,7 @@ my $run_pixel = sub {
                             $f0 = $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('*', $band1, $darkGain, 1, 'float'), $rt->binary('-', $rt->f(1), $s, 1, 'float'), 1, 'float'), 1, 'float');
                             $f1 = $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('*', $band2, $darkGain, 1, 'float'), $rt->binary('-', $rt->f(1), $s45a, 1, 'float'), 1, 'float'), 1, 'float');
                             $f2 = $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('*', $band3, $darkGain, 1, 'float'), $rt->binary('-', $rt->f(1), $s45b, 1, 'float'), 1, 'float'), 1, 'float');
-                            @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->swizzle($src, 'rgb'), $f0, 3, 'float'), $f1, 3, 'float'), $f2, 3, 'float'), $rt->f(0), $rt->f(1)))};
+                            scalar do { @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->swizzle($src, 'rgb'), $f0, 3, 'float'), $f1, 3, 'float'), $f2, 3, 'float'), $rt->f(0), $rt->f(1)))}; $outColor };
                         } else {
                             $grad = $lumGradient__vec2->($uv);
                             $gradMag = $rt->length($grad);
@@ -211,13 +211,13 @@ my $run_pixel = sub {
                             $sCombined = $rt->component_wise('mix', $s, $sEdge, $edgeBoost);
                             $coverage = $rt->component_wise('clamp', $rt->binary('+', $rt->binary('-', $rt->f(1), $t, 1, 'float'), $rt->binary('*', $pb, $rt->f(0.40000000000000002), 1, 'float'), 1, 'float'), $rt->f(0), $rt->f(1));
                             $strokeMask = $rt->component_wise('step', $rt->binary('-', $rt->f(1), $coverage, 1, 'float'), $sCombined);
-                            @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $_u_paperColor, $rt->swizzle($src, 'rgb'), $strokeMask))};
+                            scalar do { @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $_u_paperColor, $rt->swizzle($src, 'rgb'), $strokeMask))}; $outColor };
                         }
                     }
                 }
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $outColor, $rt->f(0), $rt->f(1)), $rt->swizzle($src, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $outColor, $rt->f(0), $rt->f(1)), $rt->swizzle($src, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -19,20 +19,20 @@ my $run_pixel = sub {
         $texSize = $rt->texture_size($_u_inputTex);
         $tileDims = $rt->construct(2, $texSize);
         $resolution = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims)));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $tileDims, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $tileDims));
         if ($rt->binary('<', $_u_size, $rt->f(1))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $uv))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $uv))}; $g->{fragColor} };
             return;
         }
         $pixelSize = $_u_size;
-        $dx = $rt->binary('/', $pixelSize, $rt->swizzle($resolution, 'x'), 1, 'float');
-        $dy = $rt->binary('/', $pixelSize, $rt->swizzle($resolution, 'y'), 1, 'float');
-        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $resolution, 2, 'float'));
+        $dx = $rt->metal_divide($pixelSize, $rt->swizzle($resolution, 'x'));
+        $dy = $rt->metal_divide($pixelSize, $rt->swizzle($resolution, 'y'));
+        $globalUV = $rt->construct(2, $rt->metal_divide($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $resolution));
         $centered = $rt->construct(2, $rt->binary('-', $globalUV, $rt->f(0.5), 2, 'float'));
-        $globalCoord = $rt->construct(2, $rt->binary('*', $dx, $rt->component_wise('floor', $rt->binary('/', $rt->swizzle($centered, 'x'), $dx, 1, 'float')), 1, 'float'), $rt->binary('*', $dy, $rt->component_wise('floor', $rt->binary('/', $rt->swizzle($centered, 'y'), $dy, 1, 'float')), 1, 'float'));
-        @{$globalCoord} = map { $rt->f32($_) } @{($rt->binary('+', $globalCoord, $rt->f(0.5), 2, 'float'))};
-        $coord = $rt->construct(2, $rt->binary('/', $rt->binary('-', $rt->binary('*', $globalCoord, $resolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $tileDims, 2, 'float'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $coord))};
+        $globalCoord = $rt->construct(2, $rt->binary('*', $dx, $rt->component_wise('floor', $rt->metal_divide($rt->swizzle($centered, 'x'), $dx)), 1, 'float'), $rt->binary('*', $dy, $rt->component_wise('floor', $rt->metal_divide($rt->swizzle($centered, 'y'), $dy)), 1, 'float'));
+        scalar do { @{$globalCoord} = map { $rt->f32($_) } @{($rt->binary('+', $globalCoord, $rt->f(0.5), 2, 'float'))}; $globalCoord };
+        $coord = $rt->construct(2, $rt->metal_divide($rt->binary('-', $rt->binary('*', $globalCoord, $resolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $tileDims));
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $coord))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

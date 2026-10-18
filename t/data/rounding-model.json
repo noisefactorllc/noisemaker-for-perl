@@ -1,5 +1,5 @@
 {
- "oracleRevision": "2df5168abbe197eb66e64e0404efff61342b7a2d",
+ "oracleRevision": "4aeb3e1e028b2dc412401f7b7f17c014c603bf14",
  "capturedFrom": "glsl-transpiler 3.0.3 with the oracle compile options of scripts/upstream/compile-glsl.js (transpile, lowerFloatLiterals, the poolLocalVectors parameter copy) run on the GlslCpuRuntime stdlib of src/csl/glsl-runtime.js",
  "expected": "float32 bit patterns of fragColor.rgb, one triple per input",
  "inputs": [
@@ -73,19 +73,19 @@
    "shader": "#version 300 es\nprecision highp float;\nuniform float eps;\nuniform float nx;\nuniform float ny;\nuniform float nz;\nuniform float nv;\nuniform vec3 w;\nuniform vec3 w2;\nuniform vec2 q;\nout vec4 fragColor;\nvec3 call3(vec3 p) { return p * 1.7 + 0.3; }\nvec2 call2(vec2 p) { return p * 1.3 - 0.1; }\nvoid main() {\n    vec3 r = vec3(nx - nv, ny - nv, nz - nv) / eps;\n    fragColor = vec4(r, 0.0);\n}\n",
    "expected": [
     [
-     3203318273,
+     3203318271,
      3202088842,
-     3209118779
+     3209118778
     ],
     [
-     3186270537,
+     3186270538,
      3204590734,
-     3218984138
+     3218984139
     ],
     [
      3230845000,
      3184117285,
-     3223144092
+     3223144091
     ]
    ]
   },
@@ -374,11 +374,11 @@
     [
      1057596673,
      1047442116,
-     3174080869
+     3174080868
     ],
     [
-     3212148252,
-     1077658756,
+     3212148253,
+     1077658757,
      1083139708
     ]
    ]
@@ -977,8 +977,8 @@
    "expected": [
     [
      1055772653,
-     1054548094,
-     1061583398
+     1054548096,
+     1061583399
     ],
     [
      1031907964,
@@ -986,8 +986,8 @@
      1064642092
     ],
     [
-     1063361940,
-     1016795789,
+     1063361941,
+     1016795790,
      1056030381
     ]
    ]

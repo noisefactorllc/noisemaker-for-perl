@@ -113,6 +113,9 @@ $void_out_kernel->{kernel}->($ctx, $void_out);
 is_deeply($void_out, [1, 2, 0, 1], 'void out-parameter statement updates each argument');
 
 my $navier_normalized = normalize(<<'GLSL', {}, 'synth/navierStokes:nsSplat');
+float hash11(float x) {
+    return fract(sin(x * 12.9898) * 43758.5453);
+}
 vec2 hash22(vec2 p) {
     p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
     return p;
@@ -120,8 +123,13 @@ vec2 hash22(vec2 p) {
 GLSL
 like(
     $navier_normalized->{source},
-    qr/p\.x = dot\(p, vec2\(127\.1, 311\.7\)\); p\.y = dot\(p, vec2\(269\.5, 183\.3\)\);/,
-    'Navier-Stokes normalization preserves pinned CPU left-to-right vector assignment',
+    qr/p = vec2\(dot\(p, vec2\(127\.1, 311\.7\)\), dot\(p, vec2\(269\.5, 183\.3\)\)\);/,
+    'Navier-Stokes normalization retains the vector assignment for staged component writes',
+);
+like(
+    $navier_normalized->{source},
+    qr/return fract\(float\(float\(sin\(float\(float\(x\) \* 12\.9898\)\)\) \* 43758\.5453\)\);/,
+    'Navier-Stokes hash11 retains each float32 boundary before fract',
 );
 
 done_testing();

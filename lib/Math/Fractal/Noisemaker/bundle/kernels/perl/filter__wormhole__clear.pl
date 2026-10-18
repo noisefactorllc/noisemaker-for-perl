@@ -11,7 +11,7 @@ my $run_pixel = sub {
     my $_retc;
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

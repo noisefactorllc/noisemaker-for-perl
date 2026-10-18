@@ -41,33 +41,33 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($colorA, $colorB, $localUV, $mapColor, $rawUV, $remappedUV, $result, $s, $sampleFromB, $sampleUV);
-        $localUV = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $localUV = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $colorA = $rt->texture($_u_inputTex, $localUV);
         $colorB = $rt->texture($_u_tex, $localUV);
         $mapColor = $rt->construct(4, (($rt->binary('==', $_u_mapSource, $rt->i(0))) ? ($colorA) : ($colorB)));
         $sampleFromB = (($rt->binary('==', $_u_mapSource, $rt->i(0))) ? ($rt->i(1)) : ($rt->i(0)));
         $rawUV = $rt->construct(2, 0.0);
         if ($rt->binary('==', $_u_channel, $rt->i(0))) {
-            @{$rawUV} = map { $rt->f32($_) } @{($rt->swizzle($mapColor, 'rg'))};
+            scalar do { @{$rawUV} = map { $rt->f32($_) } @{($rt->swizzle($mapColor, 'rg'))}; $rawUV };
         } else {
             if ($rt->binary('==', $_u_channel, $rt->i(1))) {
-                @{$rawUV} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($mapColor, 'r'), $rt->swizzle($mapColor, 'b')))};
+                scalar do { @{$rawUV} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($mapColor, 'r'), $rt->swizzle($mapColor, 'b')))}; $rawUV };
             } else {
-                @{$rawUV} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($mapColor, 'g'), $rt->swizzle($mapColor, 'b')))};
+                scalar do { @{$rawUV} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($mapColor, 'g'), $rt->swizzle($mapColor, 'b')))}; $rawUV };
             }
         }
         $s = $rt->binary('/', $_u_scale, $rt->f(100), 1, 'float');
         $remappedUV = $rt->construct(2, $rt->binary('+', $rt->binary('*', $rawUV, $s, 2, 'float'), $_u_offset, 2, 'float'));
-        @{$remappedUV} = map { $rt->f32($_) } @{($applyWrap__vec2_int->($remappedUV, $_u_wrap))};
-        $sampleUV = $rt->construct(2, $rt->binary('/', $rt->binary('-', $rt->binary('*', $remappedUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $_u_resolution, 2, 'float'));
-        @{$sampleUV} = map { $rt->f32($_) } @{($rt->component_wise('fract', $sampleUV))};
+        scalar do { @{$remappedUV} = map { $rt->f32($_) } @{($applyWrap__vec2_int->($remappedUV, $_u_wrap))}; $remappedUV };
+        $sampleUV = $rt->construct(2, $rt->metal_divide($rt->binary('-', $rt->binary('*', $remappedUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $_u_resolution));
+        scalar do { @{$sampleUV} = map { $rt->f32($_) } @{($rt->component_wise('fract', $sampleUV))}; $sampleUV };
         $result = $rt->construct(4, 0.0);
         if ($rt->binary('==', $sampleFromB, $rt->i(1))) {
-            @{$result} = map { $rt->f32($_) } @{($rt->texture($_u_tex, $sampleUV))};
+            scalar do { @{$result} = map { $rt->f32($_) } @{($rt->texture($_u_tex, $sampleUV))}; $result };
         } else {
-            @{$result} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $sampleUV))};
+            scalar do { @{$result} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $sampleUV))}; $result };
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($result)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($result)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

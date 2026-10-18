@@ -17,7 +17,7 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($inputColor, $outAlpha, $outRGB, $outRGB_pre, $scaledInput, $t, $trail, $trailColor, $trailPresence, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $inputColor = $rt->texture($_u_inputTex, $uv);
         $trailColor = $rt->texture($_u_trailTex, $uv);
         $t = $rt->binary('/', $_u_inputIntensity, $rt->f(100), 1, 'float');
@@ -30,14 +30,14 @@ my $run_pixel = sub {
         if ($rt->binary('==', $_u_blendMode, $rt->i(1))) {
             $outAlpha = $rt->binary('+', $rt->swizzle($trailColor, 'a'), $rt->binary('*', $rt->swizzle($scaledInput, 'a'), $rt->binary('-', $rt->f(1), $rt->swizzle($trailColor, 'a'), 1, 'float'), 1, 'float'), 1, 'float');
             $outRGB_pre = $rt->construct(3, $rt->binary('+', $rt->swizzle($trailColor, 'rgb'), $rt->binary('*', $rt->binary('*', $rt->swizzle($scaledInput, 'rgb'), $rt->swizzle($scaledInput, 'a'), 3, 'float'), $rt->binary('-', $rt->f(1), $rt->swizzle($trailColor, 'a'), 1, 'float'), 3, 'float'), 3, 'float'));
-            @{$outRGB} = map { $rt->f32($_) } @{((($rt->binary('>', $outAlpha, $rt->f(0))) ? ($rt->binary('/', $outRGB_pre, $outAlpha, 3, 'float')) : ($rt->construct(3, $rt->f(0)))))};
+            scalar do { @{$outRGB} = map { $rt->f32($_) } @{((($rt->binary('>', $outAlpha, $rt->f(0))) ? ($rt->binary('/', $outRGB_pre, $outAlpha, 3, 'float')) : ($rt->construct(3, $rt->f(0)))))}; $outRGB };
         } else {
             $trail = $rt->component_wise('clamp', $rt->swizzle($trailColor, 'rgb'), $rt->f(0), $rt->f(1));
             $trailPresence = $rt->component_wise('max', $rt->component_wise('max', $rt->swizzle($trail, 'r'), $rt->swizzle($trail, 'g')), $rt->swizzle($trail, 'b'));
-            @{$outRGB} = map { $rt->f32($_) } @{($rt->binary('+', $trail, $rt->binary('*', $rt->swizzle($scaledInput, 'rgb'), $rt->binary('-', $rt->f(1), $trail, 3, 'float'), 3, 'float'), 3, 'float'))};
+            scalar do { @{$outRGB} = map { $rt->f32($_) } @{($rt->binary('+', $trail, $rt->binary('*', $rt->swizzle($scaledInput, 'rgb'), $rt->binary('-', $rt->f(1), $trail, 3, 'float'), 3, 'float'), 3, 'float'))}; $outRGB };
             $outAlpha = $rt->component_wise('max', $trailPresence, $rt->swizzle($scaledInput, 'a'));
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->construct(4, $outRGB, $outAlpha), $rt->f(0), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->construct(4, $outRGB, $outAlpha), $rt->f(0), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

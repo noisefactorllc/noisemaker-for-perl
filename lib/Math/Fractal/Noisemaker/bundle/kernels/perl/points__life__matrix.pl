@@ -31,7 +31,7 @@ my $run_pixel = sub {
         $typeA = $rt->swizzle($coord, 'x');
         $typeB = $rt->swizzle($coord, 'y');
         if ((($rt->binary('>=', $typeA, $_u_typeCount)) || ($rt->binary('>=', $typeB, $_u_typeCount)) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
             return;
         }
         $seed = $rt->binary('+', $rt->construct(1, $rt->binary('*', $_u_matrixSeed, $rt->f(1000), 1, 'float'), 'uint'), $rt->construct(1, $rt->binary('+', $rt->binary('*', $typeA, $rt->i(31), 1, 'int'), $rt->binary('*', $typeB, $rt->i(17), 1, 'int'), 1, 'int'), 'uint'), 1, 'uint');
@@ -46,7 +46,7 @@ my $run_pixel = sub {
         }
         $prefDist = $rt->binary('+', $rt->f(0.29999999999999999), $rt->binary('*', $hash__uint->($rt->binary('+', $seed, $rt->i(1), 1, 'uint')), $rt->f(0.5), 1, 'float'), 1, 'float');
         $curveShape = $hash__uint->($rt->binary('+', $seed, $rt->i(2), 1, 'uint'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $strength, $prefDist, $curveShape, $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $strength, $prefDist, $curveShape, $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

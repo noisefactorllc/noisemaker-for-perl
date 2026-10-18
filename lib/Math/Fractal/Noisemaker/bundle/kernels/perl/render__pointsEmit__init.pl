@@ -41,7 +41,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($a, $agentSeed, $angle, $attritionRate, $center, $centerSeed, $check_seed, $clusterId, $clusterSeed, $needsRespawn, $newCol, $newPos, $pCol, $pPos, $pVel, $r, $radius, $respawnRand, $rnd, $rotRand, $sampledCol, $stateCoord, $strideRand, $t, $texCoord, $texDims, $timeBits, $uv);
         $stateCoord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(1, $_u_stateSize), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(1, $_u_stateSize)));
         $agentSeed = $rt->binary('+', $rt->construct(1, $rt->binary('+', $rt->swizzle($stateCoord, 'x'), $rt->binary('*', $rt->swizzle($stateCoord, 'y'), $_u_stateSize, 1, 'int'), 1, 'int'), 'uint'), $rt->construct(1, $_u_seed, 'uint'), 1, 'uint');
         $pPos = $rt->texel_fetch($_u_xyzTex, $stateCoord, $rt->i(0));
         $pVel = $rt->texel_fetch($_u_velTex, $stateCoord, $rt->i(0));
@@ -73,18 +73,18 @@ my $run_pixel = sub {
         $radius = $rt->f(0.0);
         $t = $rt->f(0.0);
         if ($rt->binary('==', $_u_layoutMode, $rt->i(0))) {
-            @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rnd, $rt->f(0)))};
+            scalar do { @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rnd, $rt->f(0)))}; $newPos };
         } else {
             if ($rt->binary('==', $_u_layoutMode, $rt->i(1))) {
-                @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $uv, $rt->f(0)))};
+                scalar do { @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $uv, $rt->f(0)))}; $newPos };
             } else {
                 if ($rt->binary('==', $_u_layoutMode, $rt->i(2))) {
-                    @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->binary('-', $rnd, $rt->f(0.5), 2, 'float'), $rt->f(0.10000000000000001), 2, 'float'), 2, 'float'), $rt->f(0)))};
+                    scalar do { @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->binary('-', $rnd, $rt->f(0.5), 2, 'float'), $rt->f(0.10000000000000001), 2, 'float'), 2, 'float'), $rt->f(0)))}; $newPos };
                 } else {
                     if ($rt->binary('==', $_u_layoutMode, $rt->i(3))) {
                         $angle = $rt->binary('*', $rt->swizzle($rnd, 'x'), $rt->f(6.2831799999999998), 1, 'float');
                         $radius = $rt->binary('+', $rt->f(0.29999999999999999), $rt->binary('*', $rt->swizzle($rnd, 'y'), $rt->f(0.10000000000000001), 1, 'float'), 1, 'float');
-                        @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $radius, 2, 'float'), 2, 'float'), $rt->f(0)))};
+                        scalar do { @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), $radius, 2, 'float'), 2, 'float'), $rt->f(0)))}; $newPos };
                     } else {
                         if ($rt->binary('==', $_u_layoutMode, $rt->i(4))) {
                             $clusterSeed = $rt->binary('*', $rt->construct(1, $_u_seed, 'uint'), $rt->i(12345), 1, 'uint');
@@ -93,14 +93,14 @@ my $run_pixel = sub {
                             $center = $rt->construct(2, $hash__uint->($centerSeed), $hash__uint->($rt->binary('+', $centerSeed, $rt->i(17), 1, 'uint')));
                             $r = $rt->binary('*', $hash__uint->($rt->binary('+', $agentSeed, $rt->i(2), 1, 'uint')), $rt->f(0.14999999999999999), 1, 'float');
                             $a = $rt->binary('*', $hash__uint->($rt->binary('+', $agentSeed, $rt->i(3), 1, 'uint')), $rt->f(6.2831799999999998), 1, 'float');
-                            @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $center, $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $a), $rt->component_wise('sin', $a)), $r, 2, 'float'), 2, 'float'), $rt->f(0)))};
+                            scalar do { @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $center, $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $a), $rt->component_wise('sin', $a)), $r, 2, 'float'), 2, 'float'), $rt->f(0)))}; $newPos };
                             $newPos = $rt->assign_swizzle($newPos, 'xy', $rt->component_wise('fract', $rt->swizzle($newPos, 'xy')));
                         } else {
                             if ($rt->binary('==', $_u_layoutMode, $rt->i(5))) {
                                 $t = $rt->binary('*', $rt->swizzle($rnd, 'x'), $rt->f(20), 1, 'float');
                                 $r = $rt->binary('*', $t, $rt->f(0.02), 1, 'float');
                                 $a = $rt->binary('*', $t, $rt->f(6.2831799999999998), 1, 'float');
-                                @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $a), $rt->component_wise('sin', $a)), $r, 2, 'float'), 2, 'float'), $rt->f(0)))};
+                                scalar do { @{$newPos} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $a), $rt->component_wise('sin', $a)), $r, 2, 'float'), 2, 'float'), $rt->f(0)))}; $newPos };
                                 $newPos = $rt->assign_swizzle($newPos, 'xy', $rt->component_wise('clamp', $rt->swizzle($newPos, 'xy'), $rt->f(0), $rt->f(1)));
                             }
                         }
@@ -117,13 +117,13 @@ my $run_pixel = sub {
         if ($needsRespawn) {
             $rotRand = $hash__uint->($rt->binary('+', $agentSeed, $rt->i(100), 1, 'uint'));
             $strideRand = $rt->binary('-', $hash__uint->($rt->binary('+', $agentSeed, $rt->i(101), 1, 'uint')), $rt->f(0.5), 1, 'float');
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPos, $rt->f(1)))};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rotRand, $strideRand))};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($newCol)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPos, $rt->f(1)))}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rotRand, $strideRand))}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($newCol)}; $g->{outRGBA} };
         } else {
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($pPos)};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($pVel)};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($pCol)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($pPos)}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($pVel)}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($pCol)}; $g->{outRGBA} };
         }
     };
     $main__void->();

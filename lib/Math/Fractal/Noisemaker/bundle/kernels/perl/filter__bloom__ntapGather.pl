@@ -23,8 +23,8 @@ my $run_pixel = sub {
         my ($_for0_first, $bloomAccum, $globalCoord, $i, $offset, $r, $radiusUV, $sampleColor, $sampleUV, $sigma, $t, $tapCount, $texSize, $texelSize, $theta, $uv, $weight, $weightSum);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->construct(2, $rt->texture_size($_u_inputTex));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float'));
-        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $texSize, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize));
+        $texelSize = $rt->construct(2, $rt->metal_divide($rt->f(1), $texSize));
         $radiusUV = $rt->construct(2, $rt->binary('*', $rt->binary('*', $_u_radius, $_u_renderScale, 1, 'float'), $texelSize, 2, 'float'));
         $tapCount = $rt->component_wise('clamp', $_u_taps, $rt->i(1), $g->{MAX_TAPS});
         $bloomAccum = $rt->construct(3, $rt->f(0));
@@ -42,7 +42,7 @@ my $run_pixel = sub {
             if ($rt->binary('>=', $i, $tapCount)) {
                 last;
             }
-            $t = $rt->binary('/', $rt->construct(1, $i), $rt->construct(1, $tapCount), 1, 'float');
+            $t = $rt->metal_divide($rt->construct(1, $i), $rt->construct(1, $tapCount));
             $r = $rt->component_wise('sqrt', $t);
             $theta = $rt->binary('*', $rt->construct(1, $i), $g->{GOLDEN_ANGLE}, 1, 'float');
             $offset = $rt->construct(2, $rt->binary('*', $rt->construct_raw(2, $rt->component_wise('cos', $theta), $rt->component_wise('sin', $theta)), $r, 2, 'float'));
@@ -50,13 +50,13 @@ my $run_pixel = sub {
             $weight = $rt->component_wise('exp', $rt->binary('/', $rt->binary('*', $rt->unary('-', $rt->f(0.5)), $rt->binary('*', $r, $r, 1, 'float'), 1, 'float'), $rt->binary('*', $sigma, $sigma, 1, 'float'), 1, 'float'));
             $sampleUV = $rt->component_wise('clamp', $rt->binary('+', $uv, $rt->binary('*', $offset, $radiusUV, 2, 'float'), 2, 'float'), $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->f(1)));
             $sampleColor = $rt->swizzle($rt->texture($_u_inputTex, $sampleUV), 'rgb');
-            @{$bloomAccum} = map { $rt->f32($_) } @{($rt->binary('+', $bloomAccum, $rt->binary('*', $sampleColor, $weight, 3, 'float'), 3, 'float'))};
+            scalar do { @{$bloomAccum} = map { $rt->f32($_) } @{($rt->binary('+', $bloomAccum, $rt->binary('*', $sampleColor, $weight, 3, 'float'), 3, 'float'))}; $bloomAccum };
             $weightSum = $rt->binary('+', $weightSum, $weight, 1, 'float');
         }
         if ($rt->binary('>', $weightSum, $rt->f(0))) {
-            @{$bloomAccum} = map { $rt->f32($_) } @{($rt->binary('/', $bloomAccum, $weightSum, 3, 'float'))};
+            scalar do { @{$bloomAccum} = map { $rt->f32($_) } @{($rt->binary('/', $bloomAccum, $weightSum, 3, 'float'))}; $bloomAccum };
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $bloomAccum, $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $bloomAccum, $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

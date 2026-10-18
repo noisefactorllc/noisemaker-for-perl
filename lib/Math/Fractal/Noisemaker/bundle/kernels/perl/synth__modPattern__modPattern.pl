@@ -66,7 +66,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($anim, $color, $globalCoord, $n1, $n2, $n3, $osc1, $osc2, $osc3, $p, $phase1, $phase2, $phase3, $s1, $s2, $s3, $shift, $spd, $uv, $val);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->binary('-', $globalCoord, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'))));
         $spd = $rt->component_wise('floor', $_u_speed);
         $anim = $rt->binary('*', $_u_time, $spd, 1, 'float');
         $s1 = $rt->binary('-', $rt->f(20.100000000000001), $_u_scale1, 1, 'float');
@@ -74,18 +74,18 @@ my $run_pixel = sub {
         $osc1 = $rt->f(0.0);
         if ($rt->binary('==', $_u_animMode, $rt->i(1))) {
             $osc1 = $rt->binary('*', $rt->component_wise('sin', $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $spd, 1, 'float')), $rt->f(0.029999999999999999), 1, 'float');
-            @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->construct(2, $osc1, $rt->f(0)), 2, 'float'))};
+            scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->construct(2, $osc1, $rt->f(0)), 2, 'float'))}; $p };
         }
         $n1 = $shape__int_vec2->($_u_shape1, $p);
         $phase1 = (($rt->binary('==', $_u_animMode, $rt->i(2))) ? ($anim) : ($rt->f(0)));
         $phase2 = (($rt->binary('==', $_u_animMode, $rt->i(2))) ? ($anim) : ($rt->f(0)));
         $phase3 = (($rt->binary('==', $_u_animMode, $rt->i(2))) ? ($anim) : ($rt->f(0)));
         $s2 = $rt->binary('-', $rt->f(10.1), $_u_scale2, 1, 'float');
-        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('*', $p, $s2, 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('*', $p, $s2, 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))}; $p };
         $osc2 = $rt->f(0.0);
         if ($rt->binary('==', $_u_animMode, $rt->i(1))) {
             $osc2 = $rt->binary('*', $rt->component_wise('sin', $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $spd, 1, 'float')), $rt->f(0.070000000000000007), 1, 'float');
-            @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->construct(2, $rt->f(0), $osc2), 2, 'float'))};
+            scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->construct(2, $rt->f(0), $osc2), 2, 'float'))}; $p };
         }
         $n2 = $shape__int_vec2->($_u_shape2, $p);
         $val = $rt->f(0);
@@ -95,29 +95,29 @@ my $run_pixel = sub {
             $val = $smoothFract__float->($rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $n1, $_u_repeat1, 1, 'float'), $phase1, 1, 'float'), $rt->binary('*', $n2, $_u_repeat2, 1, 'float'), 1, 'float'), $phase2, 1, 'float'));
         }
         $s3 = $rt->binary('-', $rt->f(6.0999999999999996), $_u_scale3, 1, 'float');
-        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('*', $p, $s3, 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('*', $p, $s3, 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))}; $p };
         $osc3 = $rt->f(0.0);
         if ($rt->binary('==', $_u_animMode, $rt->i(1))) {
             $osc3 = $rt->binary('*', $rt->component_wise('sin', $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $spd, 1, 'float')), $rt->f(0.14999999999999999), 1, 'float');
-            @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->construct(2, $rt->unary('-', $osc3), $rt->f(0)), 2, 'float'))};
+            scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->construct(2, $rt->unary('-', $osc3), $rt->f(0)), 2, 'float'))}; $p };
         }
         $n3 = $shape__int_vec2->($_u_shape3, $p);
         $shift = (($rt->binary('==', $_u_animMode, $rt->i(0))) ? ($anim) : ($rt->f(0)));
         $color = $rt->construct(3, 0.0);
         if ($rt->binary('<', $_u_blend, $rt->i(1))) {
-            @{$color} = map { $rt->f32($_) } @{($smoothFract__vec3->($rt->construct(3, $rt->component_wise('fract', $rt->binary('+', $rt->binary('+', $rt->binary('+', $val, $rt->binary('*', $n3, $_u_repeat3, 1, 'float'), 1, 'float'), $phase3, 1, 'float'), $shift, 1, 'float')))))};
+            scalar do { @{$color} = map { $rt->f32($_) } @{($smoothFract__vec3->($rt->construct(3, $rt->component_wise('fract', $rt->binary('+', $rt->binary('+', $rt->binary('+', $val, $rt->binary('*', $n3, $_u_repeat3, 1, 'float'), 1, 'float'), $phase3, 1, 'float'), $shift, 1, 'float')))))}; $color };
         } else {
             if ($rt->binary('<', $_u_blend, $rt->i(2))) {
-                @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->component_wise('max', $val, $smoothFract__float->($rt->binary('+', $rt->binary('+', $rt->binary('*', $n3, $_u_repeat3, 1, 'float'), $phase3, 1, 'float'), $shift, 1, 'float')))))};
+                scalar do { @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->component_wise('max', $val, $smoothFract__float->($rt->binary('+', $rt->binary('+', $rt->binary('*', $n3, $_u_repeat3, 1, 'float'), $phase3, 1, 'float'), $shift, 1, 'float')))))}; $color };
             } else {
                 if ($rt->binary('<', $_u_blend, $rt->i(3))) {
-                    @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->component_wise('mix', $val, $smoothFract__float->($rt->binary('+', $rt->binary('+', $rt->binary('*', $n3, $_u_repeat3, 1, 'float'), $phase3, 1, 'float'), $shift, 1, 'float')), $rt->f(0.5))))};
+                    scalar do { @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->component_wise('mix', $val, $smoothFract__float->($rt->binary('+', $rt->binary('+', $rt->binary('*', $n3, $_u_repeat3, 1, 'float'), $phase3, 1, 'float'), $shift, 1, 'float')), $rt->f(0.5))))}; $color };
                 } else {
-                    @{$color} = map { $rt->f32($_) } @{($smoothFract__vec3->($rt->construct(3, $rt->binary('+', $rt->binary('*', $n1, $_u_repeat1, 1, 'float'), $phase1, 1, 'float'), $rt->binary('+', $rt->binary('*', $n2, $_u_repeat2, 1, 'float'), $phase2, 1, 'float'), $rt->binary('+', $rt->binary('+', $rt->binary('*', $n3, $_u_repeat3, 1, 'float'), $phase3, 1, 'float'), $shift, 1, 'float'))))};
+                    scalar do { @{$color} = map { $rt->f32($_) } @{($smoothFract__vec3->($rt->construct(3, $rt->binary('+', $rt->binary('*', $n1, $_u_repeat1, 1, 'float'), $phase1, 1, 'float'), $rt->binary('+', $rt->binary('*', $n2, $_u_repeat2, 1, 'float'), $phase2, 1, 'float'), $rt->binary('+', $rt->binary('+', $rt->binary('*', $n3, $_u_repeat3, 1, 'float'), $phase3, 1, 'float'), $shift, 1, 'float'))))}; $color };
                 }
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

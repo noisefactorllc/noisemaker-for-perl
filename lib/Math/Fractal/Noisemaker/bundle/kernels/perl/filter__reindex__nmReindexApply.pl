@@ -62,7 +62,7 @@ my $run_pixel = sub {
         $texSize = $rt->texture_size($_u_inputTex);
         $pixel = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         if ((($rt->binary('>=', $rt->swizzle($pixel, 'x'), $rt->swizzle($texSize, 'x'))) || ($rt->binary('>=', $rt->swizzle($pixel, 'y'), $rt->swizzle($texSize, 'y'))) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
             return;
         }
         $texel = $rt->texel_fetch($_u_inputTex, $pixel, $rt->i(0));
@@ -71,16 +71,16 @@ my $run_pixel = sub {
         $range = $rt->binary('-', $rt->swizzle($minMax, 'y'), $rt->swizzle($minMax, 'x'), 1, 'float');
         $normalized = $referenceValue;
         if ($rt->binary('>', $range, $rt->f(0.0001))) {
-            $normalized = $clamp01__float->($rt->binary('/', $rt->binary('-', $referenceValue, $rt->swizzle($minMax, 'x'), 1, 'float'), $range, 1, 'float'));
+            $normalized = $clamp01__float->($rt->metal_divide($rt->binary('-', $referenceValue, $rt->swizzle($minMax, 'x'), 1, 'float'), $range));
         }
         $modRange = $rt->construct(1, $rt->component_wise('min', $rt->swizzle($texSize, 'x'), $rt->swizzle($texSize, 'y')));
         $offsetValue = $rt->binary('+', $rt->binary('*', $rt->binary('*', $normalized, $_u_uDisplacement, 1, 'float'), $modRange, 1, 'float'), $normalized, 1, 'float');
-        $sampleX = $rt->construct(1, $rt->binary('*', $rt->component_wise('fract', $rt->binary('/', $offsetValue, $rt->construct(1, $rt->swizzle($texSize, 'x')), 1, 'float')), $rt->construct(1, $rt->swizzle($texSize, 'x')), 1, 'float'), 'int');
-        $sampleY = $rt->construct(1, $rt->binary('*', $rt->component_wise('fract', $rt->binary('/', $offsetValue, $rt->construct(1, $rt->swizzle($texSize, 'y')), 1, 'float')), $rt->construct(1, $rt->swizzle($texSize, 'y')), 1, 'float'), 'int');
+        $sampleX = $rt->construct(1, $rt->binary('*', $rt->component_wise('fract', $rt->metal_divide($offsetValue, $rt->construct(1, $rt->swizzle($texSize, 'x')))), $rt->construct(1, $rt->swizzle($texSize, 'x')), 1, 'float'), 'int');
+        $sampleY = $rt->construct(1, $rt->binary('*', $rt->component_wise('fract', $rt->metal_divide($offsetValue, $rt->construct(1, $rt->swizzle($texSize, 'y')))), $rt->construct(1, $rt->swizzle($texSize, 'y')), 1, 'float'), 'int');
         $sampleX = $rt->component_wise('min', $sampleX, $rt->binary('-', $rt->swizzle($texSize, 'x'), $rt->i(1), 1, 'int'));
         $sampleY = $rt->component_wise('min', $sampleY, $rt->binary('-', $rt->swizzle($texSize, 'y'), $rt->i(1), 1, 'int'));
         $sampled = $rt->texel_fetch($_u_inputTex, $rt->construct(2, $sampleX, $sampleY, 'int'), $rt->i(0));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($sampled)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($sampled)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

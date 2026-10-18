@@ -29,11 +29,11 @@ my $run_pixel = sub {
     $pcg__uvec3 = sub {
         my ($v) = @_;
         $v = $rt->copy($v, 'uint');
-        @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
-        @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
@@ -74,15 +74,15 @@ my $run_pixel = sub {
         $corner = $rt->construct(1, $rt->binary('*', $h, $rt->f(4), 1, 'float'), 'int');
         $origin = $rt->construct(2, 0.0);
         if ($rt->binary('==', $corner, $rt->i(0))) {
-            @{$origin} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $halfW), $rt->unary('-', $halfH)))};
+            scalar do { @{$origin} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $halfW), $rt->unary('-', $halfH)))}; $origin };
         } else {
             if ($rt->binary('==', $corner, $rt->i(1))) {
-                @{$origin} = map { $rt->f32($_) } @{($rt->construct(2, $halfW, $rt->unary('-', $halfH)))};
+                scalar do { @{$origin} = map { $rt->f32($_) } @{($rt->construct(2, $halfW, $rt->unary('-', $halfH)))}; $origin };
             } else {
                 if ($rt->binary('==', $corner, $rt->i(2))) {
-                    @{$origin} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $halfW), $halfH))};
+                    scalar do { @{$origin} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $halfW), $halfH))}; $origin };
                 } else {
-                    @{$origin} = map { $rt->f32($_) } @{($rt->construct(2, $halfW, $halfH))};
+                    scalar do { @{$origin} = map { $rt->f32($_) } @{($rt->construct(2, $halfW, $halfH))}; $origin };
                 }
             }
         }
@@ -130,14 +130,14 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_for0_first, $bgShade, $blend, $canSplitH, $canSplitV, $cellAspect, $cellH, $cellMax, $cellMin, $cellPixelH, $cellPixelW, $cellSize, $cellUv, $cellW, $centered, $color, $curCorner, $curMask, $curShapeType, $curTexScale, $curVisualTime, $dens, $dir, $fillType, $globalCoord, $h, $halfH, $halfW, $inputColor, $isOutline, $level, $levelTime, $maxDepth, $mid, $minDim, $modeType, $nextCorner, $nextMask, $nextShapeType, $nextTexScale, $nextVisualTime, $outlineWidthX, $outlineWidthY, $ratio, $result, $shade, $shapeMask, $spd, $splitDir, $st, $texAspect, $texScale, $texUv, $visualBlend, $visualT, $wrapMode);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $st = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $st = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
         $maxDepth = $rt->construct(1, $_u_depth, 'int');
         $dens = $rt->binary('/', $_u_density, $rt->f(100), 1, 'float');
         $fillType = $rt->construct(1, $_u_fill, 'int');
         $modeType = $rt->construct(1, $_u_mode, 'int');
         $spd = $rt->binary('*', $rt->component_wise('floor', $_u_speed), $rt->f(2), 1, 'float');
-        $outlineWidthX = $rt->binary('/', $rt->binary('*', $_u_outline, $_u_renderScale, 1, 'float'), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float');
-        $outlineWidthY = $rt->binary('/', $rt->binary('*', $_u_outline, $_u_renderScale, 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
+        $outlineWidthX = $rt->metal_divide($rt->binary('*', $_u_outline, $_u_renderScale, 1, 'float'), $rt->swizzle($_u_fullResolution, 'x'));
+        $outlineWidthY = $rt->metal_divide($rt->binary('*', $_u_outline, $_u_renderScale, 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'));
         $cellMin = $rt->construct(2, $rt->f(0));
         $cellMax = $rt->construct(2, $rt->f(1));
         $isOutline = 0;
@@ -163,8 +163,8 @@ my $run_pixel = sub {
             if ($rt->binary('<', $h, $dens)) {
                 $cellW = $rt->binary('*', $rt->binary('-', $rt->swizzle($cellMax, 'x'), $rt->swizzle($cellMin, 'x'), 1, 'float'), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float');
                 $cellH = $rt->binary('*', $rt->binary('-', $rt->swizzle($cellMax, 'y'), $rt->swizzle($cellMin, 'y'), 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
-                $canSplitH = $rt->binary('>=', $rt->binary('/', $rt->component_wise('min', $cellW, $rt->binary('*', $cellH, $rt->f(0.5), 1, 'float')), $rt->component_wise('max', $cellW, $rt->binary('*', $cellH, $rt->f(0.5), 1, 'float')), 1, 'float'), $rt->f(0.20000000000000001));
-                $canSplitV = $rt->binary('>=', $rt->binary('/', $rt->component_wise('min', $rt->binary('*', $cellW, $rt->f(0.5), 1, 'float'), $cellH), $rt->component_wise('max', $rt->binary('*', $cellW, $rt->f(0.5), 1, 'float'), $cellH), 1, 'float'), $rt->f(0.20000000000000001));
+                $canSplitH = $rt->binary('>=', $rt->metal_divide($rt->component_wise('min', $cellW, $rt->binary('*', $cellH, $rt->f(0.5), 1, 'float')), $rt->component_wise('max', $cellW, $rt->binary('*', $cellH, $rt->f(0.5), 1, 'float'))), $rt->f(0.20000000000000001));
+                $canSplitV = $rt->binary('>=', $rt->metal_divide($rt->component_wise('min', $rt->binary('*', $cellW, $rt->f(0.5), 1, 'float'), $cellH), $rt->component_wise('max', $rt->binary('*', $cellW, $rt->f(0.5), 1, 'float'), $cellH)), $rt->f(0.20000000000000001));
                 $dir = $rt->f(0.0);
                 $splitDir = 0;
                 if ($rt->binary('==', $modeType, $rt->i(0))) {
@@ -238,10 +238,10 @@ my $run_pixel = sub {
         $cellPixelH = $rt->binary('*', $rt->swizzle($cellSize, 'y'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
         $minDim = $rt->component_wise('min', $cellPixelW, $cellPixelH);
         $centered = $rt->construct(2, $rt->binary('-', $cellUv, $rt->f(0.5), 2, 'float'));
-        $centered = $rt->assign_swizzle($centered, 'x', $rt->binary('*', $rt->swizzle($centered, 'x'), $rt->binary('/', $cellPixelW, $minDim, 1, 'float'), 1, 'float'));
-        $centered = $rt->assign_swizzle($centered, 'y', $rt->binary('*', $rt->swizzle($centered, 'y'), $rt->binary('/', $cellPixelH, $minDim, 1, 'float'), 1, 'float'));
-        $halfW = $rt->binary('*', $rt->binary('/', $cellPixelW, $minDim, 1, 'float'), $rt->f(0.5), 1, 'float');
-        $halfH = $rt->binary('*', $rt->binary('/', $cellPixelH, $minDim, 1, 'float'), $rt->f(0.5), 1, 'float');
+        $centered = $rt->assign_swizzle($centered, 'x', $rt->binary('*', $rt->swizzle($centered, 'x'), $rt->metal_divide($cellPixelW, $minDim), 1, 'float'));
+        $centered = $rt->assign_swizzle($centered, 'y', $rt->binary('*', $rt->swizzle($centered, 'y'), $rt->metal_divide($cellPixelH, $minDim), 1, 'float'));
+        $halfW = $rt->binary('*', $rt->metal_divide($cellPixelW, $minDim), $rt->f(0.5), 1, 'float');
+        $halfH = $rt->binary('*', $rt->metal_divide($cellPixelH, $minDim), $rt->f(0.5), 1, 'float');
         $visualT = $rt->binary('+', $rt->binary('*', $_u_time, $spd, 1, 'float'), $rt->binary('*', $g->{PHI}, $rt->f(7), 1, 'float'), 1, 'float');
         $curVisualTime = $rt->component_wise('floor', $visualT);
         $nextVisualTime = $rt->binary('+', $curVisualTime, $rt->f(1), 1, 'float');
@@ -281,34 +281,34 @@ my $run_pixel = sub {
             $nextTexScale = $rt->binary('+', $rt->f(0.29999999999999999), $rt->binary('*', $cellRand__vec2_float_float_float->($cellMin, $rt->f(0), $rt->f(5), $nextVisualTime), $rt->f(0.69999999999999996), 1, 'float'), 1, 'float');
             $texScale = $rt->component_wise('mix', $curTexScale, $nextTexScale, $visualBlend);
             $texUv = $rt->fresh($cellUv);
-            $cellAspect = $rt->binary('/', $rt->binary('*', $rt->swizzle($cellSize, 'x'), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float'), $rt->binary('*', $rt->swizzle($cellSize, 'y'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float'), 1, 'float');
-            $texAspect = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
-            $ratio = $rt->binary('/', $cellAspect, $texAspect, 1, 'float');
+            $cellAspect = $rt->metal_divide($rt->binary('*', $rt->swizzle($cellSize, 'x'), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float'), $rt->binary('*', $rt->swizzle($cellSize, 'y'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float'));
+            $texAspect = $rt->metal_divide($rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'));
+            $ratio = $rt->metal_divide($cellAspect, $texAspect);
             if ($rt->binary('>', $ratio, $rt->f(1))) {
                 $texUv = $rt->assign_swizzle($texUv, 'x', $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->binary('-', $rt->swizzle($texUv, 'x'), $rt->f(0.5), 1, 'float'), $ratio, 1, 'float'), 1, 'float'));
             } else {
-                $texUv = $rt->assign_swizzle($texUv, 'y', $rt->binary('+', $rt->f(0.5), $rt->binary('/', $rt->binary('-', $rt->swizzle($texUv, 'y'), $rt->f(0.5), 1, 'float'), $ratio, 1, 'float'), 1, 'float'));
+                $texUv = $rt->assign_swizzle($texUv, 'y', $rt->binary('+', $rt->f(0.5), $rt->metal_divide($rt->binary('-', $rt->swizzle($texUv, 'y'), $rt->f(0.5), 1, 'float'), $ratio), 1, 'float'));
             }
-            @{$texUv} = map { $rt->f32($_) } @{($rt->binary('*', $texUv, $texScale, 2, 'float'))};
+            scalar do { @{$texUv} = map { $rt->f32($_) } @{($rt->binary('*', $texUv, $texScale, 2, 'float'))}; $texUv };
             $texUv = $rt->assign_swizzle($texUv, 'x', $rt->binary('+', $rt->swizzle($texUv, 'x'), $rt->binary('*', $rt->component_wise('mix', $cellRand__vec2_float_float_float->($cellMin, $rt->f(0), $rt->f(6), $curVisualTime), $cellRand__vec2_float_float_float->($cellMin, $rt->f(0), $rt->f(6), $nextVisualTime), $visualBlend), $rt->binary('-', $rt->f(1), $texScale, 1, 'float'), 1, 'float'), 1, 'float'));
             $texUv = $rt->assign_swizzle($texUv, 'y', $rt->binary('+', $rt->swizzle($texUv, 'y'), $rt->binary('*', $rt->component_wise('mix', $cellRand__vec2_float_float_float->($cellMin, $rt->f(0), $rt->f(7), $curVisualTime), $cellRand__vec2_float_float_float->($cellMin, $rt->f(0), $rt->f(7), $nextVisualTime), $visualBlend), $rt->binary('-', $rt->f(1), $texScale, 1, 'float'), 1, 'float'), 1, 'float'));
             $wrapMode = $rt->construct(1, $_u_wrap, 'int');
             if ($rt->binary('==', $wrapMode, $rt->i(0))) {
-                @{$texUv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $texUv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
+                scalar do { @{$texUv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $texUv, $rt->construct(2, $rt->binary('*', $rt->f(2), $rt->component_wise('floor', $rt->binary('*', $rt->binary('+', $texUv, $rt->f(1), 2, 'float'), $rt->f(0.5), 2, 'float')), 2, 'float')), 2, 'float'))))}; $texUv };
             } else {
                 if ($rt->binary('==', $wrapMode, $rt->i(1))) {
-                    @{$texUv} = map { $rt->f32($_) } @{($rt->component_wise('mod', $texUv, $rt->f(1)))};
+                    scalar do { @{$texUv} = map { $rt->f32($_) } @{($rt->component_wise('mod', $texUv, $rt->f(1)))}; $texUv };
                 } else {
-                    @{$texUv} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $texUv, $rt->f(0), $rt->f(1)))};
+                    scalar do { @{$texUv} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $texUv, $rt->f(0), $rt->f(1)))}; $texUv };
                 }
             }
             $inputColor = $rt->swizzle($rt->texture($_u_inputTex, $texUv), 'rgb');
-            @{$result} = map { $rt->f32($_) } @{($rt->component_wise('mix', $result, $inputColor, $blend))};
+            scalar do { @{$result} = map { $rt->f32($_) } @{($rt->component_wise('mix', $result, $inputColor, $blend))}; $result };
         }
         if ((($isOutline) && ($rt->binary('>', $_u_outline, $rt->f(0))) ? 1 : 0)) {
-            @{$result} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0)))};
+            scalar do { @{$result} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0)))}; $result };
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

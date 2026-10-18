@@ -134,8 +134,8 @@ my $run_pixel = sub {
                             return $rt->binary('*', $baseRotRand, $g->{TAU}, 1, 'float');
                         } else {
                             if ($rt->binary('==', $_u_BEHAVIOR, $rt->i(5))) {
-                                $quarterSize = $rt->component_wise('max', $rt->i(1), $rt->binary('/', $totalAgents, $rt->i(4), 1, 'int'));
-                                $band = $rt->binary('/', $agentIndex, $quarterSize, 1, 'int');
+                                $quarterSize = $rt->component_wise('max', $rt->i(1), $rt->binary('/', $totalAgents, $rt->i(4), 1, 'float'));
+                                $band = POSIX::trunc($rt->binary('/', $agentIndex, $quarterSize, 1, 'float'));
                                 if ($rt->binary('<=', $band, $rt->i(0))) {
                                     return $baseHeading;
                                 } else {
@@ -211,7 +211,7 @@ my $run_pixel = sub {
             $age = $rt->f(0);
             $initialized = $rt->f(1);
         }
-        $agentPhase = $rt->binary('/', $rt->construct(1, $agentIndex), $rt->construct(1, $rt->component_wise('max', $totalAgents, $rt->i(1))), 1, 'float');
+        $agentPhase = $rt->metal_divide($rt->construct(1, $agentIndex), $rt->construct(1, $rt->component_wise('max', $totalAgents, $rt->i(1))));
         $staggeredAge = $rt->binary('+', $age, $rt->binary('*', $agentPhase, $_u_lifetime, 1, 'float'), 1, 'float');
         $shouldRespawn = (($rt->binary('>', $_u_lifetime, $rt->f(0))) && ($rt->binary('>=', $staggeredAge, $_u_lifetime)) ? 1 : 0);
         if ($shouldRespawn) {
@@ -249,9 +249,9 @@ my $run_pixel = sub {
         $newY = $wrap_float__float_float->($newY, $volSizeF);
         $newZ = $wrap_float__float_float->($newZ, $volSizeF);
         $age = $rt->binary('+', $age, $rt->f(0.016), 1, 'float');
-        @{$g->{outState1}} = map { $rt->f32($_) } @{($rt->construct(4, $newX, $newY, $newZ, $rotRand))};
-        @{$g->{outState2}} = map { $rt->f32($_) } @{($rt->construct(4, $cr, $cg, $cb, $seed_f))};
-        @{$g->{outState3}} = map { $rt->f32($_) } @{($rt->construct(4, $age, $initialized, $strideRand, $rt->f(0)))};
+        scalar do { @{$g->{outState1}} = map { $rt->f32($_) } @{($rt->construct(4, $newX, $newY, $newZ, $rotRand))}; $g->{outState1} };
+        scalar do { @{$g->{outState2}} = map { $rt->f32($_) } @{($rt->construct(4, $cr, $cg, $cb, $seed_f))}; $g->{outState2} };
+        scalar do { @{$g->{outState3}} = map { $rt->f32($_) } @{($rt->construct(4, $age, $initialized, $strideRand, $rt->f(0)))}; $g->{outState3} };
     };
     $main__void->();
     my $_c0 = $g->{outState1};

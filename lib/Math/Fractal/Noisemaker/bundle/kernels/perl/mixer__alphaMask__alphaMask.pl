@@ -24,7 +24,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($AoverB, $BoverA, $background, $color, $color1, $color2, $maskVal, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex))));
         $color1 = $rt->texture($_u_inputTex, $uv);
         $color2 = $rt->texture($_u_tex, $uv);
         $background = $rt->construct(4, 0.0);
@@ -32,7 +32,7 @@ my $run_pixel = sub {
         if ($_u_maskMode) {
             $maskVal = $rt->dot($rt->swizzle($color2, 'rgb'), $rt->construct(3, $rt->f(0.29899999999999999), $rt->f(0.58699999999999997), $rt->f(0.114)));
             $background = $rt->texture($_u_baseTex, $uv);
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('mix', $background, $color1, $maskVal))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('mix', $background, $color1, $maskVal))}; $g->{fragColor} };
             return;
         }
         $color = $rt->construct(4, 0.0);
@@ -40,12 +40,12 @@ my $run_pixel = sub {
         $BoverA = $rt->construct(4, 0.0);
         if ($rt->binary('<', $_u_mixAmt, $rt->f(0))) {
             $AoverB = $rt->construct(4, $rt->binary('+', $rt->binary('*', $color2, $rt->binary('-', $rt->f(1), $rt->swizzle($color1, 'a'), 1, 'float'), 4, 'float'), $color1, 4, 'float'));
-            @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $color1, $AoverB, $map__float_float_float_float_float->($_u_mixAmt, $rt->unary('-', $rt->f(100)), $rt->f(0), $rt->f(0), $rt->f(1))))};
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $color1, $AoverB, $map__float_float_float_float_float->($_u_mixAmt, $rt->unary('-', $rt->f(100)), $rt->f(0), $rt->f(0), $rt->f(1))))}; $color };
         } else {
             $BoverA = $rt->construct(4, $rt->binary('+', $rt->binary('*', $color1, $rt->binary('-', $rt->f(1), $rt->swizzle($color2, 'a'), 1, 'float'), 4, 'float'), $color2, 4, 'float'));
-            @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $BoverA, $color2, $map__float_float_float_float_float->($_u_mixAmt, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(1))))};
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $BoverA, $color2, $map__float_float_float_float_float->($_u_mixAmt, $rt->f(0), $rt->f(100), $rt->f(0), $rt->f(1))))}; $color };
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

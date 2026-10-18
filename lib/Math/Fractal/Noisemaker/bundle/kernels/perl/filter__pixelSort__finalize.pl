@@ -26,12 +26,12 @@ my $run_pixel = sub {
         $uv = $rt->construct(2, $rt->binary('/', $coord, $size, 2, 'float'));
         $mode = $rt->construct(1, $_u_wrap, 'int');
         if ($rt->binary('==', $mode, $rt->i(0))) {
-            @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
+            scalar do { @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $uv, $rt->construct(2, $rt->binary('*', $rt->f(2), $rt->component_wise('floor', $rt->binary('*', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(0.5), 2, 'float')), 2, 'float')), 2, 'float'))))}; $uv };
         } else {
             if ($rt->binary('==', $mode, $rt->i(1))) {
-                @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('fract', $uv))};
+                scalar do { @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('fract', $uv))}; $uv };
             } else {
-                @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $uv, $rt->f(0), $rt->f(1)))};
+                scalar do { @{$uv} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $uv, $rt->f(0), $rt->f(1)))}; $uv };
             }
         }
         return $uv;
@@ -48,25 +48,25 @@ my $run_pixel = sub {
         $srcCoord = $rt->construct(2, 0.0);
         $srcCoord = $rt->assign_swizzle($srcCoord, 'x', $rt->binary('-', $rt->binary('*', $c, $rt->swizzle($pixelCoord, 'x'), 1, 'float'), $rt->binary('*', $s, $rt->swizzle($pixelCoord, 'y'), 1, 'float'), 1, 'float'));
         $srcCoord = $rt->assign_swizzle($srcCoord, 'y', $rt->binary('+', $rt->binary('*', $s, $rt->swizzle($pixelCoord, 'x'), 1, 'float'), $rt->binary('*', $c, $rt->swizzle($pixelCoord, 'y'), 1, 'float'), 1, 'float'));
-        @{$srcCoord} = map { $rt->f32($_) } @{($rt->binary('+', $srcCoord, $center, 2, 'float'))};
-        $originalColor = $rt->texture($_u_originalTex, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        scalar do { @{$srcCoord} = map { $rt->f32($_) } @{($rt->binary('+', $srcCoord, $center, 2, 'float'))}; $srcCoord };
+        $originalColor = $rt->texture($_u_originalTex, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $wrappedUV = $applyWrap__vec2_vec2->($srcCoord, $texSize);
         $sortedColor = $rt->texture($_u_inputTex, $wrappedUV);
         $working_source = $rt->fresh($originalColor);
         $working_sorted = $rt->fresh($sortedColor);
         if ($_u_darkest) {
-            @{$working_source} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->swizzle($working_source, 'rgb'), 3, 'float'), $rt->swizzle($working_source, 'a')))};
-            @{$working_sorted} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->swizzle($working_sorted, 'rgb'), 3, 'float'), $rt->swizzle($working_sorted, 'a')))};
+            scalar do { @{$working_source} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->swizzle($working_source, 'rgb'), 3, 'float'), $rt->swizzle($working_source, 'a')))}; $working_source };
+            scalar do { @{$working_sorted} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->swizzle($working_sorted, 'rgb'), 3, 'float'), $rt->swizzle($working_sorted, 'a')))}; $working_sorted };
         }
         $blended = $rt->component_wise('max', $rt->binary('*', $working_source, $_u_alpha, 4, 'float'), $working_sorted);
-        @{$blended} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $blended, $rt->f(0), $rt->f(1)))};
+        scalar do { @{$blended} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $blended, $rt->f(0), $rt->f(1)))}; $blended };
         $blended = $rt->assign_swizzle($blended, 'a', $rt->swizzle($working_source, 'a'));
         if ($_u_darkest) {
-            @{$blended} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->swizzle($blended, 'rgb'), 3, 'float'), $rt->swizzle($originalColor, 'a')))};
+            scalar do { @{$blended} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->swizzle($blended, 'rgb'), 3, 'float'), $rt->swizzle($originalColor, 'a')))}; $blended };
         } else {
             $blended = $rt->assign_swizzle($blended, 'a', $rt->swizzle($originalColor, 'a'));
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($blended)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($blended)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

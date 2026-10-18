@@ -34,9 +34,9 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($c00, $c01, $c10, $c11, $mx0, $mx1, $result, $st, $texSize, $uv, $wx, $wy);
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize))));
         $st = $rt->construct(2, $rt->binary('*', $uv, $_u_repeat, 2, 'float'));
-        @{$st} = map { $rt->f32($_) } @{($rt->component_wise('fract', $st))};
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rt->component_wise('fract', $st))}; $st };
         $wx = $edgeWeight__float_float->($rt->swizzle($st, 'x'), $_u_blend);
         $wy = $edgeWeight__float_float->($rt->swizzle($st, 'y'), $_u_blend);
         $c00 = $rt->texture($_u_inputTex, $st);
@@ -46,7 +46,7 @@ my $run_pixel = sub {
         $mx0 = $rt->component_wise('mix', $c00, $c10, $wx);
         $mx1 = $rt->component_wise('mix', $c01, $c11, $wx);
         $result = $rt->component_wise('mix', $mx0, $mx1, $wy);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($result, 'rgb'), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($result, 'rgb'), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

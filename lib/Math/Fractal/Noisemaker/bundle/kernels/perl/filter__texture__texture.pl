@@ -130,7 +130,7 @@ my $run_pixel = sub {
             $ridged = $rt->binary('-', $rt->f(1), $rt->component_wise('abs', $rt->binary('-', $rt->binary('*', $samp, $rt->f(2), 1, 'float'), $rt->f(1), 1, 'float')), 1, 'float');
             $accum = $rt->binary('+', $accum, $rt->binary('*', $ridged, $amplitude, 1, 'float'), 1, 'float');
             $total = $rt->binary('+', $total, $amplitude, 1, 'float');
-            @{$freq} = map { $rt->f32($_) } @{($rt->binary('*', $freq, $rt->f(2), 2, 'float'))};
+            scalar do { @{$freq} = map { $rt->f32($_) } @{($rt->binary('*', $freq, $rt->f(2), 2, 'float'))}; $freq };
             $amplitude = $rt->binary('*', $amplitude, $rt->f(0.55000000000000004), 1, 'float');
         }
         return (($rt->binary('>', $total, $rt->f(0))) ? ($clamp01__float->($rt->binary('/', $accum, $total, 1, 'float'))) : ($clamp01__float->($accum)));
@@ -158,7 +158,7 @@ my $run_pixel = sub {
             $samp = $value_noise__vec2_vec2_float_uint->($uv, $freq, $rt->binary('+', $motion, $rt->binary('*', $rt->construct(1, $octave), $rt->f(0.37), 1, 'float'), 1, 'float'), $salt);
             $accum = $rt->binary('+', $accum, $rt->binary('*', $samp, $amplitude, 1, 'float'), 1, 'float');
             $total = $rt->binary('+', $total, $amplitude, 1, 'float');
-            @{$freq} = map { $rt->f32($_) } @{($rt->binary('*', $freq, $rt->f(2), 2, 'float'))};
+            scalar do { @{$freq} = map { $rt->f32($_) } @{($rt->binary('*', $freq, $rt->f(2), 2, 'float'))}; $freq };
             $amplitude = $rt->binary('*', $amplitude, $rt->f(0.5), 1, 'float');
         }
         return (($rt->binary('>', $total, $rt->f(0))) ? ($clamp01__float->($rt->binary('/', $accum, $total, 1, 'float'))) : ($clamp01__float->($accum)));
@@ -403,10 +403,10 @@ my $run_pixel = sub {
         my ($a, $base_color, $base_factor, $base_freq, $dims, $factor, $freq_scale, $gain, $globalDims, $globalPixel, $gradient, $gx, $gy, $h_center, $h_down, $h_left, $h_right, $h_up, $highlight_mix, $material, $materialMotion, $motion, $pixel_step, $r, $scaled_rgb, $shade_base);
         $base_color = $rt->texture($_u_inputTex, $ctx->{uv});
         $dims = $rt->construct(2, $rt->texture_size($_u_inputTex));
-        $pixel_step = $rt->construct(2, $rt->binary('/', $rt->f(1), $dims, 2, 'float'));
+        $pixel_step = $rt->construct(2, $rt->metal_divide($rt->f(1), $dims));
         $a = $rt->component_wise('clamp', $_u_alpha, $rt->f(0), $rt->f(1));
         if ($rt->binary('<=', $a, $rt->f(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($base_color)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($base_color)}; $g->{fragColor} };
             return;
         }
         $globalDims = $rt->construct(2, 0.0);
@@ -424,7 +424,7 @@ my $run_pixel = sub {
                 $material = $rt->assign_swizzle($material, 'g', $shape_material__float->($material_value__vec2_vec2_vec2_float_uint->($globalPixel, $globalDims, $ctx->{uv}, $materialMotion, $rt->i(1757159915))));
                 $material = $rt->assign_swizzle($material, 'b', $shape_material__float->($material_value__vec2_vec2_vec2_float_uint->($globalPixel, $globalDims, $ctx->{uv}, $materialMotion, $rt->i(48610963))));
             }
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $rt->component_wise('mix', $rt->swizzle($base_color, 'rgb'), $material, $a), $rt->f(0), $rt->f(1)), $rt->swizzle($base_color, 'a')))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $rt->component_wise('mix', $rt->swizzle($base_color, 'rgb'), $material, $a), $rt->f(0), $rt->f(1)), $rt->swizzle($base_color, 'a')))}; $g->{fragColor} };
             return;
         }
         $freq_scale = $rt->f(0.0);
@@ -454,7 +454,7 @@ my $run_pixel = sub {
         $base_factor = $rt->binary('+', $rt->f(0.90000000000000002), $rt->binary('*', $h_center, $rt->f(0.34999999999999998), 1, 'float'), 1, 'float');
         $factor = $rt->component_wise('clamp', $rt->binary('+', $base_factor, $rt->binary('*', $highlight_mix, $rt->f(0.34999999999999998), 1, 'float'), 1, 'float'), $rt->f(0.84999999999999998), $rt->f(1.6000000000000001));
         $scaled_rgb = $rt->component_wise('clamp', $rt->binary('*', $rt->swizzle($base_color, 'rgb'), $factor, 3, 'float'), $rt->f(0), $rt->f(1));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('mix', $rt->swizzle($base_color, 'rgb'), $scaled_rgb, $a), $rt->swizzle($base_color, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('mix', $rt->swizzle($base_color, 'rgb'), $scaled_rgb, $a), $rt->swizzle($base_color, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

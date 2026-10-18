@@ -89,13 +89,13 @@ my $run_pixel = sub {
                 $majorRecords->[int($index)] = $packRecordMajor__vec4->($sampleColor);
                 $blueRecords->[int($index)] = $packRecordBlue__vec4->($sampleColor);
                 if ((($rt->binary('==', $x, $rt->i(0))) && ($rt->binary('==', $y, $rt->i(0))) ? 1 : 0)) {
-                    @{$originalRgb} = map { $rt->f32($_) } @{($rt->swizzle($sampleColor, 'rgb'))};
+                    scalar do { @{$originalRgb} = map { $rt->f32($_) } @{($rt->swizzle($sampleColor, 'rgb'))}; $originalRgb };
                     $centerAlpha = $rt->swizzle($sampleColor, 'a');
                 }
                 $index = $rt->binary('+', $index, $rt->i(1), 1, 'int');
             }
         }
-        $medianIndex = $rt->binary('/', $rt->i(49), $rt->i(2), 1, 'int');
+        $medianIndex = $rt->binary('/', $rt->i(49), $rt->i(2), 1, 'float');
         $left = $rt->i(0);
         $right = $rt->binary('-', $rt->i(49), $rt->i(1), 1, 'int');
         for my $_wh2 (0 .. 1048575) {
@@ -146,7 +146,7 @@ my $run_pixel = sub {
         $difference = $rt->component_wise('abs', $rt->binary('-', $originalRgb, $medianRgb, 3, 'float'));
         $maxDifference = $rt->component_wise('max', $rt->component_wise('max', $rt->swizzle($difference, 'r'), $rt->swizzle($difference, 'g')), $rt->swizzle($difference, 'b'));
         $replaceCenter = (($rt->binary('<=', $_u_threshold, $rt->f(0))) || ($rt->binary('>=', $maxDifference, $rt->binary('/', $_u_threshold, $rt->f(100), 1, 'float'))) ? 1 : 0);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, (($replaceCenter) ? ($medianRgb) : ($originalRgb)), $centerAlpha))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, (($replaceCenter) ? ($medianRgb) : ($originalRgb)), $centerAlpha))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

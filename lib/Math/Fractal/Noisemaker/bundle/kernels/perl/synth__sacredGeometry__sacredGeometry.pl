@@ -64,7 +64,7 @@ my $run_pixel = sub {
         my ($_for0_first, $_for1_first, $center, $circleR, $circleRadius, $d, $hexDist, $lineWidth, $m, $q, $r, $t_e, $vis);
         $lineWidth = $rt->binary('+', $rt->f(0.040000000000000001), $rt->binary('*', $_u_thickness, $rt->f(0.12), 1, 'float'), 1, 'float');
         $circleRadius = $rt->f(1);
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $figureScale, 2, 'float'))};
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $figureScale, 2, 'float'))}; $p };
         $m = $rt->f(0);
         $q = $rt->unary('-', $rt->i(6));
         $_for0_first = 1;
@@ -118,9 +118,9 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($_for2_first, $_for3_first, $_for4_first, $_for5_first, $_for6_first, $angle, $centers, $circleR, $circleUnfoldRange, $d, $dL, $distFromOrigin, $i, $j, $k, $lineVis, $lineWidth, $m, $maxCircleDist, $t_e, $vis);
         $lineWidth = $rt->binary('+', $rt->f(0.040000000000000001), $rt->binary('*', $_u_thickness, $rt->f(0.12), 1, 'float'), 1, 'float');
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(0.5), 2, 'float'))};
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(0.5), 2, 'float'))}; $p };
         $centers = $rt->new_array($rt->i(13), 2);
-        @{$centers->[int($rt->i(0))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(0)))};
+        scalar do { @{$centers->[int($rt->i(0))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(0)))}; $centers->[int($rt->i(0))] };
         $k = $rt->i(0);
         $_for2_first = 1;
         for my $_for2 (0 .. 1048575) {
@@ -132,7 +132,7 @@ my $run_pixel = sub {
                 last;
             }
             $angle = $rt->binary('/', $rt->binary('*', $rt->construct(1, $k), $rt->f(3.1415926535900001), 1, 'float'), $rt->f(3), 1, 'float');
-            @{$centers->[int($rt->binary('+', $rt->i(1), $k, 1, 'int'))]} = map { $rt->f32($_) } @{($rt->binary('*', $rt->f(2), $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), 2, 'float'))};
+            scalar do { @{$centers->[int($rt->binary('+', $rt->i(1), $k, 1, 'int'))]} = map { $rt->f32($_) } @{($rt->binary('*', $rt->f(2), $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), 2, 'float'))}; $centers->[int($rt->binary('+', $rt->i(1), $k, 1, 'int'))] };
         }
         $k = $rt->i(0);
         $_for3_first = 1;
@@ -145,7 +145,7 @@ my $run_pixel = sub {
                 last;
             }
             $angle = $rt->binary('+', $rt->binary('/', $rt->binary('*', $rt->construct(1, $k), $rt->f(3.1415926535900001), 1, 'float'), $rt->f(3), 1, 'float'), $rt->binary('/', $rt->f(3.1415926535900001), $rt->f(6), 1, 'float'), 1, 'float');
-            @{$centers->[int($rt->binary('+', $rt->i(7), $k, 1, 'int'))]} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('*', $rt->f(2), $rt->f(1.7320508075688772), 1, 'float'), $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), 2, 'float'))};
+            scalar do { @{$centers->[int($rt->binary('+', $rt->i(7), $k, 1, 'int'))]} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('*', $rt->f(2), $rt->f(1.7320508075688772), 1, 'float'), $rt->construct_raw(2, $rt->component_wise('cos', $angle), $rt->component_wise('sin', $angle)), 2, 'float'))}; $centers->[int($rt->binary('+', $rt->i(7), $k, 1, 'int'))] };
         }
         $maxCircleDist = $rt->binary('*', $rt->f(2), $rt->f(1.7320508075688772), 1, 'float');
         $circleUnfoldRange = (($drawLines) ? ($rt->f(0.59999999999999998)) : ($rt->f(1)));
@@ -215,7 +215,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($dA, $dB, $lineWidth, $m, $r, $rA, $rB, $sep, $visA, $visB);
         $lineWidth = $rt->binary('+', $rt->f(0.040000000000000001), $rt->binary('*', $_u_thickness, $rt->f(0.12), 1, 'float'), 1, 'float');
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(0.25), 2, 'float'))};
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(0.25), 2, 'float'))}; $p };
         $r = $rt->f(1.5);
         $sep = $rt->binary('*', $r, $rt->f(0.5), 1, 'float');
         $rA = $r;
@@ -242,7 +242,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($C0, $C1, $C2, $d0, $d1, $d2, $dist, $lineWidth, $m, $r, $r0, $r1, $r2, $v01, $v02, $v12);
         $lineWidth = $rt->binary('+', $rt->f(0.040000000000000001), $rt->binary('*', $_u_thickness, $rt->f(0.12), 1, 'float'), 1, 'float');
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(0.29999999999999999), 2, 'float'))};
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(0.29999999999999999), 2, 'float'))}; $p };
         $r = $rt->f(2.25);
         $dist = $rt->binary('/', $r, $rt->f(1.7320508075688772), 1, 'float');
         $C0 = $rt->construct(2, $rt->binary('*', $dist, $rt->construct_raw(2, $rt->component_wise('cos', $rt->binary('*', $rt->f(3.1415926535900001), $rt->f(0.5), 1, 'float')), $rt->component_wise('sin', $rt->binary('*', $rt->f(3.1415926535900001), $rt->f(0.5), 1, 'float'))), 2, 'float'));
@@ -278,7 +278,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($_for7_first, $angle, $c, $circleR, $d, $dist, $i, $lineWidth, $m, $r, $vis);
         $lineWidth = $rt->binary('+', $rt->f(0.040000000000000001), $rt->binary('*', $_u_thickness, $rt->f(0.12), 1, 'float'), 1, 'float');
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(0.32000000000000001), 2, 'float'))};
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(0.32000000000000001), 2, 'float'))}; $p };
         $r = $rt->f(1.5);
         $dist = $rt->f(1.3999999999999999);
         $m = $rt->f(0);
@@ -312,7 +312,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($_for8_first, $a, $angle1, $angle2, $b, $dL, $i, $j, $lineWidth, $m, $radius, $vis);
         $lineWidth = $rt->binary('+', $rt->f(0.040000000000000001), $rt->binary('*', $_u_thickness, $rt->f(0.12), 1, 'float'), 1, 'float');
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(0.32000000000000001), 2, 'float'))};
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(0.32000000000000001), 2, 'float'))}; $p };
         $radius = $rt->f(2.7999999999999998);
         if ($rt->binary('==', $_u_animation, $rt->i(4))) {
             $radius = $rt->binary('*', $radius, $ripplePulse__float->($rt->f(0)), 1, 'float');
@@ -331,7 +331,7 @@ my $run_pixel = sub {
             if ($rt->binary('>=', $i, $n)) {
                 last;
             }
-            $j = $rt->binary('-', $rt->binary('+', $i, $rt->i(2), 1, 'int'), $rt->binary('*', $rt->binary('/', $rt->binary('+', $i, $rt->i(2), 1, 'int'), $n, 1, 'int'), $n, 1, 'int'), 1, 'int');
+            $j = $rt->binary('-', $rt->binary('+', $i, $rt->i(2), 1, 'int'), $rt->binary('*', $rt->binary('/', $rt->binary('+', $i, $rt->i(2), 1, 'int'), $n, 1, 'float'), $n, 1, 'float'), 1, 'float');
             $angle1 = $rt->binary('+', $rt->binary('/', $rt->binary('*', $rt->construct(1, $i), $rt->f(6.2831853071800001), 1, 'float'), $rt->construct(1, $n), 1, 'float'), $rt->binary('*', $rt->f(3.1415926535900001), $rt->f(0.5), 1, 'float'), 1, 'float');
             $angle2 = $rt->binary('+', $rt->binary('/', $rt->binary('*', $rt->construct(1, $j), $rt->f(6.2831853071800001), 1, 'float'), $rt->construct(1, $n), 1, 'float'), $rt->binary('*', $rt->f(3.1415926535900001), $rt->f(0.5), 1, 'float'), 1, 'float');
             $a = $rt->construct(2, $rt->binary('*', $radius, $rt->construct_raw(2, $rt->component_wise('cos', $angle1), $rt->component_wise('sin', $angle1)), 2, 'float'));
@@ -348,13 +348,13 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($color, $globalCoord, $m, $p, $rad, $scaleFactor, $st);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $st = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
-        @{$st} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('-', $st, $rt->f(0.5), 2, 'float'), $rt->f(2), 2, 'float'))};
+        $st = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('-', $st, $rt->f(0.5), 2, 'float'), $rt->f(2), 2, 'float'))}; $st };
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('*', $rt->swizzle($st, 'x'), $_u_aspect, 1, 'float'));
         $rad = $rt->binary('/', $rt->binary('*', $_u_rotation, $rt->f(3.1415926535900001), 1, 'float'), $rt->f(180), 1, 'float');
-        @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $rad))};
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $rad))}; $st };
         if ($rt->binary('==', $_u_animation, $rt->i(1))) {
-            @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $rt->component_wise('floor', $_u_speed), 1, 'float')))};
+            scalar do { @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $rt->binary('*', $rt->binary('*', $_u_time, $rt->f(6.2831853071800001), 1, 'float'), $rt->component_wise('floor', $_u_speed), 1, 'float')))}; $st };
         }
         $scaleFactor = $rt->binary('-', $rt->f(21), $_u_scale, 1, 'float');
         if ($rt->binary('==', $_u_animation, $rt->i(2))) {
@@ -395,7 +395,7 @@ my $run_pixel = sub {
         }
         $m = $rt->component_wise('clamp', $m, $rt->f(0), $rt->f(1));
         $color = $rt->component_wise('mix', $_u_bgColor, $_u_fgColor, $m);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

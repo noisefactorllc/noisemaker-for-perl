@@ -25,7 +25,7 @@ my $run_pixel = sub {
     $toSampleUV__vec2 = sub {
         my ($globalPixelPos) = @_;
         $globalPixelPos = $rt->copy($globalPixelPos, 'float');
-        return $rt->component_wise('clamp', $rt->binary('/', $rt->binary('-', $globalPixelPos, $_u_tileOffset, 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
+        return $rt->component_wise('clamp', $rt->metal_divide($rt->binary('-', $globalPixelPos, $_u_tileOffset, 2, 'float'), $_u_resolution), $rt->f(0), $rt->f(1));
     };
     $cellAvgColor3x3__vec2 = sub {
         my ($centerPx) = @_;
@@ -54,7 +54,7 @@ my $run_pixel = sub {
                     last;
                 }
                 $p = $rt->construct(2, $rt->binary('+', $centerPx, $rt->binary('*', $rt->construct_raw(2, $rt->construct(1, $i), $rt->construct(1, $j)), $sp, 2, 'float'), 2, 'float'));
-                @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->texture($_u_inputTex, $toSampleUV__vec2->($p)), 4, 'float'))};
+                scalar do { @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->texture($_u_inputTex, $toSampleUV__vec2->($p)), 4, 'float'))}; $sum };
             }
         }
         return $rt->construct(4, $rt->binary('*', $sum, $rt->binary('/', $rt->f(1), $rt->f(9), 1, 'float'), 4, 'float'));
@@ -62,11 +62,11 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($a, $bevelMul, $cellCenter, $cellColor, $cellIdxF, $dBottom, $dLeft, $dMin, $dRight, $dTop, $dh, $edgeNormal, $globalCoord, $h, $hNeighbor, $imgCenter, $lightDir, $localPx, $neighborCenter, $neighborIdx, $relPx, $result, $rimPx, $signTerm, $srcOwn, $topFaceShade, $uv);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $srcOwn = $rt->texture($_u_inputTex, $uv);
         $imgCenter = $rt->construct(2, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'));
         $relPx = $rt->construct(2, $rt->binary('-', $globalCoord, $imgCenter, 2, 'float'));
-        $cellIdxF = $rt->component_wise('floor', $rt->binary('/', $relPx, $_u_squareSize, 2, 'float'));
+        $cellIdxF = $rt->component_wise('floor', $rt->metal_divide($relPx, $_u_squareSize));
         $localPx = $rt->construct(2, $rt->binary('-', $relPx, $rt->binary('*', $cellIdxF, $_u_squareSize, 2, 'float'), 2, 'float'));
         $cellCenter = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('+', $cellIdxF, $rt->f(0.5), 2, 'float'), $_u_squareSize, 2, 'float'), 2, 'float'));
         $cellColor = $rt->swizzle($cellAvgColor3x3__vec2->($cellCenter), 'rgb');
@@ -92,18 +92,18 @@ my $run_pixel = sub {
             $edgeNormal = $rt->construct(2, 0.0);
             if ($rt->binary('==', $dMin, $dLeft)) {
                 $neighborIdx = $rt->assign_swizzle($neighborIdx, 'x', $rt->binary('-', $rt->swizzle($neighborIdx, 'x'), $rt->f(1), 1, 'float'));
-                @{$edgeNormal} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(1)), $rt->f(0)))};
+                scalar do { @{$edgeNormal} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(1)), $rt->f(0)))}; $edgeNormal };
             } else {
                 if ($rt->binary('==', $dMin, $dRight)) {
                     $neighborIdx = $rt->assign_swizzle($neighborIdx, 'x', $rt->binary('+', $rt->swizzle($neighborIdx, 'x'), $rt->f(1), 1, 'float'));
-                    @{$edgeNormal} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(1), $rt->f(0)))};
+                    scalar do { @{$edgeNormal} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(1), $rt->f(0)))}; $edgeNormal };
                 } else {
                     if ($rt->binary('==', $dMin, $dBottom)) {
                         $neighborIdx = $rt->assign_swizzle($neighborIdx, 'y', $rt->binary('-', $rt->swizzle($neighborIdx, 'y'), $rt->f(1), 1, 'float'));
-                        @{$edgeNormal} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->unary('-', $rt->f(1))))};
+                        scalar do { @{$edgeNormal} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->unary('-', $rt->f(1))))}; $edgeNormal };
                     } else {
                         $neighborIdx = $rt->assign_swizzle($neighborIdx, 'y', $rt->binary('+', $rt->swizzle($neighborIdx, 'y'), $rt->f(1), 1, 'float'));
-                        @{$edgeNormal} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(1)))};
+                        scalar do { @{$edgeNormal} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(1)))}; $edgeNormal };
                     }
                 }
             }
@@ -116,7 +116,7 @@ my $run_pixel = sub {
             $bevelMul = $rt->binary('+', $rt->f(1), $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->f(0.34999999999999998), $rt->binary('/', $_u_relief, $rt->f(100), 1, 'float'), 1, 'float'), $rt->component_wise('sign', $dh), 1, 'float'), $signTerm, 1, 'float'), 1, 'float');
         }
         $result = $rt->component_wise('clamp', $rt->binary('*', $rt->binary('*', $cellColor, $topFaceShade, 3, 'float'), $bevelMul, 3, 'float'), $rt->f(0), $rt->f(1));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($srcOwn, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($srcOwn, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

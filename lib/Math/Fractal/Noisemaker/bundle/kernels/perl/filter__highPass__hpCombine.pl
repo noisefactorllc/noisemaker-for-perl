@@ -21,12 +21,12 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($blur, $diff, $hp, $src, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $src = $rt->texture($_u_inputTex, $uv);
         $blur = $rt->texture($_u_blurTex, $uv);
         $diff = $rt->construct(3, $rt->binary('-', $rt->swizzle($src, 'rgb'), $rt->swizzle($blur, 'rgb'), 3, 'float'));
         $hp = $rt->construct(3, (($_u_mono) ? ($rt->construct(3, $rt->binary('+', $lum__vec3->($diff), $rt->f(0.5), 1, 'float'))) : ($rt->binary('+', $diff, $rt->f(0.5), 3, 'float'))));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $hp, $rt->f(0), $rt->f(1)), $rt->swizzle($src, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $hp, $rt->f(0), $rt->f(1)), $rt->swizzle($src, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -21,7 +21,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($p3);
         $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
-        @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
+        scalar do { @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))}; $p3 };
         return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
     };
     $vnoise__vec2 = sub {
@@ -42,7 +42,7 @@ my $run_pixel = sub {
         my ($uv) = @_;
         $uv = $rt->copy($uv, 'float');
         my ($b, $bl, $br, $l, $px, $r, $t, $tl, $tr);
-        $px = $rt->construct(2, $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float'));
+        $px = $rt->construct(2, $rt->metal_divide($rt->f(1), $_u_resolution));
         $tl = $lum__vec3->($rt->swizzle($rt->texture($_u_simplifiedTex, $rt->binary('+', $uv, $rt->binary('*', $px, $rt->construct_raw(2, $rt->unary('-', $rt->f(1)), $rt->f(1)), 2, 'float'), 2, 'float')), 'rgb'));
         $l = $lum__vec3->($rt->swizzle($rt->texture($_u_simplifiedTex, $rt->binary('+', $uv, $rt->binary('*', $px, $rt->construct_raw(2, $rt->unary('-', $rt->f(1)), $rt->f(0)), 2, 'float'), 2, 'float')), 'rgb'));
         $bl = $lum__vec3->($rt->swizzle($rt->texture($_u_simplifiedTex, $rt->binary('+', $uv, $rt->binary('*', $px, $rt->construct_raw(2, $rt->unary('-', $rt->f(1)), $rt->unary('-', $rt->f(1))), 2, 'float'), 2, 'float')), 'rgb'));
@@ -55,19 +55,19 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($c, $edge, $flatness, $gc, $pool, $simplified, $src, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $src = $rt->texture($_u_inputTex, $uv);
         $simplified = $rt->swizzle($rt->texture($_u_simplifiedTex, $uv), 'rgb');
         $edge = $rt->length($lumGradientSimplified__vec2->($uv));
         $pool = $rt->binary('*', $rt->binary('*', $rt->binary('/', $_u_shadowIntensity, $rt->f(100), 1, 'float'), $rt->f(0.69999999999999996), 1, 'float'), $rt->component_wise('smoothstep', $rt->f(0.050000000000000003), $rt->f(0.40000000000000002), $edge), 1, 'float');
         $c = $rt->construct(3, $rt->binary('*', $simplified, $rt->binary('-', $rt->f(1), $pool, 1, 'float'), 3, 'float'));
         $gc = $rt->construct(2, $rt->binary('+', $rt->component_wise('floor', $rt->swizzle($ctx->{frag_coord}, 'xy')), $_u_tileOffset, 2, 'float'));
-        @{$c} = map { $rt->f32($_) } @{($rt->binary('*', $c, $rt->component_wise('mix', $rt->f(1), $rt->binary('+', $rt->f(0.92000000000000004), $rt->binary('*', $rt->f(0.080000000000000002), $vnoise__vec2->($rt->construct(2, $rt->binary('/', $gc, $rt->f(3.5), 2, 'float'))), 1, 'float'), 1, 'float'), $rt->binary('/', $rt->component_wise('clamp', $_u_paperTexture, $rt->f(0), $rt->f(100)), $rt->f(100), 1, 'float')), 3, 'float'))};
-        @{$c} = map { $rt->f32($_) } @{($rt->component_wise('mix', $c, $rt->binary('*', $c, $rt->construct_raw(3, $rt->f(1.02), $rt->f(1), $rt->f(0.94999999999999996)), 3, 'float'), $rt->binary('/', $_u_paperTexture, $rt->f(100), 1, 'float')))};
+        scalar do { @{$c} = map { $rt->f32($_) } @{($rt->binary('*', $c, $rt->component_wise('mix', $rt->f(1), $rt->binary('+', $rt->f(0.92000000000000004), $rt->binary('*', $rt->f(0.080000000000000002), $vnoise__vec2->($rt->construct(2, $rt->binary('/', $gc, $rt->f(3.5), 2, 'float'))), 1, 'float'), 1, 'float'), $rt->binary('/', $rt->component_wise('clamp', $_u_paperTexture, $rt->f(0), $rt->f(100)), $rt->f(100), 1, 'float')), 3, 'float'))}; $c };
+        scalar do { @{$c} = map { $rt->f32($_) } @{($rt->component_wise('mix', $c, $rt->binary('*', $c, $rt->construct_raw(3, $rt->f(1.02), $rt->f(1), $rt->f(0.94999999999999996)), 3, 'float'), $rt->binary('/', $_u_paperTexture, $rt->f(100), 1, 'float')))}; $c };
         $flatness = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $rt->f(0), $rt->f(0.14999999999999999), $edge), 1, 'float');
-        @{$c} = map { $rt->f32($_) } @{($rt->component_wise('mix', $c, $rt->construct(3, $lum__vec3->($c)), $rt->binary('*', $flatness, $rt->f(0.12), 1, 'float')))};
-        @{$c} = map { $rt->f32($_) } @{($rt->binary('*', $c, $rt->binary('+', $rt->f(1), $rt->binary('*', $flatness, $rt->f(0.050000000000000003), 1, 'float'), 1, 'float'), 3, 'float'))};
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $c, $rt->f(0), $rt->f(1)), $rt->swizzle($src, 'a')))};
+        scalar do { @{$c} = map { $rt->f32($_) } @{($rt->component_wise('mix', $c, $rt->construct(3, $lum__vec3->($c)), $rt->binary('*', $flatness, $rt->f(0.12), 1, 'float')))}; $c };
+        scalar do { @{$c} = map { $rt->f32($_) } @{($rt->binary('*', $c, $rt->binary('+', $rt->f(1), $rt->binary('*', $flatness, $rt->f(0.050000000000000003), 1, 'float'), 1, 'float'), 3, 'float'))}; $c };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $c, $rt->f(0), $rt->f(1)), $rt->swizzle($src, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

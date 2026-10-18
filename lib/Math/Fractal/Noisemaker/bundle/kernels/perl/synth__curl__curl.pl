@@ -42,7 +42,7 @@ my $run_pixel = sub {
         my ($C, $D, $_g, $a0, $a1, $b0, $b1, $h, $i, $i1, $i2, $j, $l, $m, $n_, $norm, $ns, $p, $p0, $p1, $p2, $p3, $s0, $s1, $sh, $x, $x0, $x1, $x2, $x3, $x_, $y, $y_);
         $C = $rt->construct(2, $rt->binary('/', $rt->f(1), $rt->f(6), 1, 'float'), $rt->binary('/', $rt->f(1), $rt->f(3), 1, 'float'));
         $D = $rt->construct(4, $rt->f(0), $rt->f(0.5), $rt->f(1), $rt->f(2));
-        @{$v} = map { $rt->f32($_) } @{($rt->binary('+', $v, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.12709999999999999), 1, 'float'), 3, 'float'))};
+        scalar do { @{$v} = map { $rt->f32($_) } @{($rt->binary('+', $v, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.12709999999999999), 1, 'float'), 3, 'float'))}; $v };
         $i = $rt->component_wise('floor', $rt->binary('+', $v, $rt->dot($v, $rt->swizzle($C, 'yyy')), 3, 'float'));
         $x0 = $rt->construct(3, $rt->binary('+', $rt->binary('-', $v, $i, 3, 'float'), $rt->dot($i, $rt->swizzle($C, 'xxx')), 3, 'float'));
         $_g = $rt->component_wise('step', $rt->swizzle($x0, 'yzx'), $rt->swizzle($x0, 'xyz'));
@@ -52,7 +52,7 @@ my $run_pixel = sub {
         $x1 = $rt->construct(3, $rt->binary('+', $rt->binary('-', $x0, $i1, 3, 'float'), $rt->swizzle($C, 'xxx'), 3, 'float'));
         $x2 = $rt->construct(3, $rt->binary('+', $rt->binary('-', $x0, $i2, 3, 'float'), $rt->swizzle($C, 'yyy'), 3, 'float'));
         $x3 = $rt->construct(3, $rt->binary('-', $x0, $rt->swizzle($D, 'yyy'), 3, 'float'));
-        @{$i} = map { $rt->f32($_) } @{($rt->component_wise('mod', $i, $rt->f(289)))};
+        scalar do { @{$i} = map { $rt->f32($_) } @{($rt->component_wise('mod', $i, $rt->f(289)))}; $i };
         $p = $permute__vec4->($rt->construct(4, $rt->binary('+', $rt->construct(4, $rt->binary('+', $permute__vec4->($rt->construct(4, $rt->binary('+', $rt->construct(4, $rt->binary('+', $permute__vec4->($rt->construct(4, $rt->binary('+', $rt->swizzle($i, 'z'), $rt->construct_raw(4, $rt->f(0), $rt->swizzle($i1, 'z'), $rt->swizzle($i2, 'z'), $rt->f(1)), 4, 'float'))), $rt->swizzle($i, 'y'), 4, 'float')), $rt->construct(4, $rt->f(0), $rt->swizzle($i1, 'y'), $rt->swizzle($i2, 'y'), $rt->f(1)), 4, 'float'))), $rt->swizzle($i, 'x'), 4, 'float')), $rt->construct(4, $rt->f(0), $rt->swizzle($i1, 'x'), $rt->swizzle($i2, 'x'), $rt->f(1)), 4, 'float')));
         $n_ = $rt->f(0.14285714285699999);
         $ns = $rt->construct(3, $rt->binary('-', $rt->binary('*', $n_, $rt->swizzle($D, 'wyz'), 3, 'float'), $rt->swizzle($D, 'xzx'), 3, 'float'));
@@ -74,12 +74,12 @@ my $run_pixel = sub {
         $p2 = $rt->construct(3, $rt->swizzle($a1, 'xy'), $rt->swizzle($h, 'z'));
         $p3 = $rt->construct(3, $rt->swizzle($a1, 'zw'), $rt->swizzle($h, 'w'));
         $norm = $taylorInvSqrt__vec4->($rt->construct(4, $rt->dot($p0, $p0), $rt->dot($p1, $p1), $rt->dot($p2, $p2), $rt->dot($p3, $p3)));
-        @{$p0} = map { $rt->f32($_) } @{($rt->binary('*', $p0, $rt->swizzle($norm, 'x'), 3, 'float'))};
-        @{$p1} = map { $rt->f32($_) } @{($rt->binary('*', $p1, $rt->swizzle($norm, 'y'), 3, 'float'))};
-        @{$p2} = map { $rt->f32($_) } @{($rt->binary('*', $p2, $rt->swizzle($norm, 'z'), 3, 'float'))};
-        @{$p3} = map { $rt->f32($_) } @{($rt->binary('*', $p3, $rt->swizzle($norm, 'w'), 3, 'float'))};
+        scalar do { @{$p0} = map { $rt->f32($_) } @{($rt->binary('*', $p0, $rt->swizzle($norm, 'x'), 3, 'float'))}; $p0 };
+        scalar do { @{$p1} = map { $rt->f32($_) } @{($rt->binary('*', $p1, $rt->swizzle($norm, 'y'), 3, 'float'))}; $p1 };
+        scalar do { @{$p2} = map { $rt->f32($_) } @{($rt->binary('*', $p2, $rt->swizzle($norm, 'z'), 3, 'float'))}; $p2 };
+        scalar do { @{$p3} = map { $rt->f32($_) } @{($rt->binary('*', $p3, $rt->swizzle($norm, 'w'), 3, 'float'))}; $p3 };
         $m = $rt->component_wise('max', $rt->binary('-', $rt->f(0.59999999999999998), $rt->construct_raw(4, $rt->dot($x0, $x0), $rt->dot($x1, $x1), $rt->dot($x2, $x2), $rt->dot($x3, $x3)), 4, 'float'), $rt->f(0));
-        @{$m} = map { $rt->f32($_) } @{($rt->binary('*', $m, $m, 4, 'float'))};
+        scalar do { @{$m} = map { $rt->f32($_) } @{($rt->binary('*', $m, $m, 4, 'float'))}; $m };
         return $rt->binary('*', $rt->f(42), $rt->dot($rt->binary('*', $m, $m, 4, 'float'), $rt->construct(4, $rt->dot($p0, $x0), $rt->dot($p1, $x1), $rt->dot($p2, $x2), $rt->dot($p3, $x3))), 1, 'float');
     };
     $fbmSimplex3D__vec3 = sub {
@@ -141,36 +141,36 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($aspect, $centered, $color, $curl, $curlCentered, $globalCoord, $mag, $p, $uv);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
-        $aspect = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
+        $uv = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
+        $aspect = $rt->metal_divide($rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'));
         $centered = $rt->construct(2, $rt->binary('*', $rt->binary('-', $uv, $rt->f(0.5), 2, 'float'), $rt->construct_raw(2, $aspect, $rt->f(1)), 2, 'float'));
         $p = $rt->construct(3, $rt->binary('*', $centered, $rt->binary('-', $rt->f(21), $_u_scale, 1, 'float'), 2, 'float'), $rt->f(0.5));
         $curl = $curlNoise3D__vec3->($p);
-        @{$curl} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->construct(3, $rt->binary('*', $rt->component_wise('tanh', $rt->binary('*', $curl, $_u_intensity, 3, 'float')), $rt->f(0.5), 3, 'float')), $rt->f(0.5), 3, 'float')))};
+        scalar do { @{$curl} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $rt->construct(3, $rt->binary('*', $rt->component_wise('tanh', $rt->binary('*', $curl, $_u_intensity, 3, 'float')), $rt->f(0.5), 3, 'float')), $rt->f(0.5), 3, 'float')))}; $curl };
         $color = $rt->construct(3, 0.0);
         if ($rt->binary('==', $_u_OUTPUT_MODE, $rt->i(0))) {
-            @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($curl, 'x')))};
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($curl, 'x')))}; $color };
         } else {
             if ($rt->binary('==', $_u_OUTPUT_MODE, $rt->i(1))) {
-                @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($curl, 'y')))};
+                scalar do { @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($curl, 'y')))}; $color };
             } else {
                 if ($rt->binary('==', $_u_OUTPUT_MODE, $rt->i(2))) {
-                    @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($curl, 'z')))};
+                    scalar do { @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($curl, 'z')))}; $color };
                 } else {
                     if ($rt->binary('==', $_u_OUTPUT_MODE, $rt->i(3))) {
-                        @{$color} = map { $rt->f32($_) } @{($curl)};
+                        scalar do { @{$color} = map { $rt->f32($_) } @{($curl)}; $color };
                     } else {
                         $curlCentered = $rt->construct(3, $rt->binary('-', $rt->binary('*', $curl, $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'));
                         $mag = $rt->length($curlCentered);
-                        @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $mag))};
+                        scalar do { @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $mag))}; $color };
                     }
                 }
             }
         }
         if ($_u_RIDGES) {
-            @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('-', $rt->f(1), $rt->component_wise('abs', $rt->binary('-', $rt->binary('*', $color, $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float')), 3, 'float')))};
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('-', $rt->f(1), $rt->component_wise('abs', $rt->binary('-', $rt->binary('*', $color, $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float')), 3, 'float')))}; $color };
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

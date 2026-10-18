@@ -44,7 +44,7 @@ my $run_pixel = sub {
         my ($advected, $backUv, $dDecay, $dt, $fragCoord, $here, $newDye, $newVel, $texSize, $u, $uv, $vDecay);
         $texSize = $rt->texture_size($_u_bufTex);
         $fragCoord = $rt->swizzle($ctx->{frag_coord}, 'xy');
-        $uv = $rt->construct(2, $rt->binary('/', $fragCoord, $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($fragCoord, $rt->construct_raw(2, $rt->construct(2, $texSize))));
         $here = $rt->texel_fetch($_u_bufTex, $rt->component_wise('clamp', $rt->construct(2, $fragCoord, 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $texSize, $rt->construct(2, $rt->i(1), 'int'), 2, 'int')), $rt->i(0));
         $u = $rt->swizzle($here, 'rg');
         $dt = $rt->binary('*', $rt->component_wise('clamp', $_u_speed, $rt->f(0), $rt->f(200)), $rt->f(0.0001), 1, 'float');
@@ -54,9 +54,9 @@ my $run_pixel = sub {
         $newDye = $rt->swizzle($advected, 'b');
         $vDecay = $rt->component_wise('pow', $rt->binary('*', $rt->component_wise('clamp', $_u_velocityDecay, $rt->f(0), $rt->f(100)), $rt->f(0.01), 1, 'float'), $rt->binary('*', $dt, $rt->f(60), 1, 'float'));
         $dDecay = $rt->component_wise('pow', $rt->binary('*', $rt->component_wise('clamp', $_u_dyeDecay, $rt->f(0), $rt->f(100)), $rt->f(0.01), 1, 'float'), $rt->binary('*', $dt, $rt->f(60), 1, 'float'));
-        @{$newVel} = map { $rt->f32($_) } @{($rt->binary('*', $newVel, $vDecay, 2, 'float'))};
+        scalar do { @{$newVel} = map { $rt->f32($_) } @{($rt->binary('*', $newVel, $vDecay, 2, 'float'))}; $newVel };
         $newDye = $rt->binary('*', $newDye, $dDecay, 1, 'float');
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $newVel, $newDye, $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $newVel, $newDye, $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

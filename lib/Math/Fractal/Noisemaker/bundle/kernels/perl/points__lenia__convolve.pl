@@ -26,8 +26,8 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_U, $_for0_first, $_for1_first, $_for2_first, $density, $densitySize, $dr, $dx, $dy, $i, $iRadius, $kVal, $numSamples, $r, $sampleUV, $texelSize, $uv, $wK);
         $densitySize = $rt->construct(2, $rt->texture_size($_u_densityTex));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $densitySize, 2, 'float'));
-        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $densitySize, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $densitySize));
+        $texelSize = $rt->construct(2, $rt->metal_divide($rt->f(1), $densitySize));
         $wK = $rt->f(0);
         $numSamples = $rt->i(64);
         $dr = $rt->binary('/', $_u_searchRadius, $rt->construct(1, $numSamples), 1, 'float');
@@ -77,7 +77,7 @@ my $run_pixel = sub {
                 $_U = $rt->binary('+', $_U, $rt->binary('*', $density, $kVal, 1, 'float'), 1, 'float');
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $_U, $rt->f(0), $rt->f(0), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $_U, $rt->f(0), $rt->f(0), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

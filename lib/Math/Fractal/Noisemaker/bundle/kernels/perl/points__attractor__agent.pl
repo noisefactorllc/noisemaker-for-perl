@@ -101,24 +101,24 @@ my $run_pixel = sub {
         my ($dp);
         $dp = $rt->construct(3, 0.0);
         if ($rt->binary('==', $type, $rt->i(0))) {
-            @{$dp} = map { $rt->f32($_) } @{($lorenz__vec3->($p))};
+            scalar do { @{$dp} = map { $rt->f32($_) } @{($lorenz__vec3->($p))}; $dp };
         } else {
             if ($rt->binary('==', $type, $rt->i(1))) {
-                @{$dp} = map { $rt->f32($_) } @{($rossler__vec3->($p))};
+                scalar do { @{$dp} = map { $rt->f32($_) } @{($rossler__vec3->($p))}; $dp };
             } else {
                 if ($rt->binary('==', $type, $rt->i(2))) {
-                    @{$dp} = map { $rt->f32($_) } @{($aizawa__vec3->($p))};
+                    scalar do { @{$dp} = map { $rt->f32($_) } @{($aizawa__vec3->($p))}; $dp };
                 } else {
                     if ($rt->binary('==', $type, $rt->i(3))) {
-                        @{$dp} = map { $rt->f32($_) } @{($thomas__vec3->($p))};
+                        scalar do { @{$dp} = map { $rt->f32($_) } @{($thomas__vec3->($p))}; $dp };
                     } else {
                         if ($rt->binary('==', $type, $rt->i(4))) {
-                            @{$dp} = map { $rt->f32($_) } @{($halvorsen__vec3->($p))};
+                            scalar do { @{$dp} = map { $rt->f32($_) } @{($halvorsen__vec3->($p))}; $dp };
                         } else {
                             if ($rt->binary('==', $type, $rt->i(5))) {
-                                @{$dp} = map { $rt->f32($_) } @{($chen__vec3->($p))};
+                                scalar do { @{$dp} = map { $rt->f32($_) } @{($chen__vec3->($p))}; $dp };
                             } else {
-                                @{$dp} = map { $rt->f32($_) } @{($dadras__vec3->($p))};
+                                scalar do { @{$dp} = map { $rt->f32($_) } @{($dadras__vec3->($p))}; $dp };
                             }
                         }
                     }
@@ -143,15 +143,15 @@ my $run_pixel = sub {
             $pos = $rt->assign_swizzle($pos, 'x', $rt->binary('*', $rt->binary('-', $hash__uint->($initSeed), $rt->f(0.5), 1, 'float'), $rt->f(20), 1, 'float'));
             $pos = $rt->assign_swizzle($pos, 'y', $rt->binary('*', $rt->binary('-', $hash__uint->($rt->binary('+', $initSeed, $rt->i(1), 1, 'uint')), $rt->f(0.5), 1, 'float'), $rt->f(20), 1, 'float'));
             $pos = $rt->assign_swizzle($pos, 'z', $rt->binary('+', $rt->binary('*', $hash__uint->($rt->binary('+', $initSeed, $rt->i(2), 1, 'uint')), $rt->f(30), 1, 'float'), $rt->f(10), 1, 'float'));
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($pos, 'xyz'), $rt->f(1)))};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($pos, 'xyz'), $rt->f(1)))}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)}; $g->{outRGBA} };
             return;
         }
         if ($rt->binary('<', $rt->swizzle($pos, 'w'), $rt->f(0.5))) {
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($pos)};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($pos)}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)}; $g->{outRGBA} };
             return;
         }
         $dt = $rt->binary('*', $_u_speed, $rt->f(0.01), 1, 'float');
@@ -163,9 +163,9 @@ my $run_pixel = sub {
             $newPos = $rt->assign_swizzle($newPos, 'y', $rt->binary('*', $rt->binary('-', $hash__uint->($rt->binary('+', $respawnSeed, $rt->i(1), 1, 'uint')), $rt->f(0.5), 1, 'float'), $rt->f(20), 1, 'float'));
             $newPos = $rt->assign_swizzle($newPos, 'z', $rt->binary('+', $rt->binary('*', $hash__uint->($rt->binary('+', $respawnSeed, $rt->i(2), 1, 'uint')), $rt->f(30), 1, 'float'), $rt->f(10), 1, 'float'));
         }
-        @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPos, $rt->f(1)))};
-        @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)};
-        @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)};
+        scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPos, $rt->f(1)))}; $g->{outXYZ} };
+        scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
+        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)}; $g->{outRGBA} };
     };
     $main__void->();
     my $_c0 = $g->{outXYZ};

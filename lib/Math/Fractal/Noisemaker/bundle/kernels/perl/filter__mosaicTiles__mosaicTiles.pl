@@ -26,7 +26,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($p3);
         $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
-        @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
+        scalar do { @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))}; $p3 };
         return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
     };
     $hash22__vec2 = sub {
@@ -34,7 +34,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($p3);
         $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->construct_raw(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float'));
-        @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
+        scalar do { @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))}; $p3 };
         return $rt->component_wise('fract', $rt->construct(2, $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')), $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'z'), 1, 'float')), $rt->swizzle($p3, 'y'), 1, 'float'))));
     };
     $vnoise__vec2 = sub {
@@ -74,7 +74,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($cellCenterGc, $cellFrac, $cellId, $cellSpace, $centerWarp, $darkened, $edgeDistPx, $flatShade, $gapAA, $gapColor, $gapMask, $gapWidthPx, $globalCoord, $gradK, $hC, $hR, $hT, $kB, $kC, $kL, $kR, $kT, $offsetPx, $result, $sampleGc, $sampleUV, $seedF, $shade, $shadeMul, $shadeStrength, $shiftedGc, $shiftedUV, $srcHome, $tileColor, $uv, $warp, $warpedCenter, $warpedCoord);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $srcHome = $rt->texture($_u_inputTex, $uv);
         $seedF = $rt->construct(1, $_u_seed);
         $result = $rt->construct(3, 0.0);
@@ -114,12 +114,12 @@ my $run_pixel = sub {
         if ($rt->binary('==', $_u_MODE, $rt->i(0))) {
             $warp = $mosaicWarp__vec2_float_float->($globalCoord, $_u_tileSize, $seedF);
             $warpedCoord = $rt->construct(2, $rt->binary('+', $globalCoord, $rt->construct_raw(2, $warp), 2, 'float'));
-            $cellSpace = $rt->construct(2, $rt->binary('/', $warpedCoord, $_u_tileSize, 2, 'float'));
+            $cellSpace = $rt->construct(2, $rt->metal_divide($warpedCoord, $_u_tileSize));
             $cellId = $rt->component_wise('floor', $cellSpace);
             $warpedCenter = $rt->construct(2, $rt->binary('*', $rt->binary('+', $cellId, $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'), $_u_tileSize, 2, 'float'));
             $centerWarp = $mosaicWarp__vec2_float_float->($warpedCenter, $_u_tileSize, $seedF);
             $sampleGc = $rt->construct(2, $rt->binary('-', $warpedCenter, $rt->construct_raw(2, $centerWarp), 2, 'float'));
-            $sampleUV = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('-', $sampleGc, $_u_tileOffset, 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
+            $sampleUV = $rt->component_wise('clamp', $rt->metal_divide($rt->binary('-', $sampleGc, $_u_tileOffset, 2, 'float'), $_u_resolution), $rt->f(0), $rt->f(1));
             $tileColor = $rt->swizzle($rt->texture($_u_inputTex, $sampleUV), 'rgb');
             $kC = $mosaicGroutMask__vec2_float_float_float->($globalCoord, $_u_tileSize, $_u_groutWidth, $seedF);
             $kR = $mosaicGroutMask__vec2_float_float_float->($rt->construct(2, $rt->binary('+', $globalCoord, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float')), $_u_tileSize, $_u_groutWidth, $seedF);
@@ -135,10 +135,10 @@ my $run_pixel = sub {
             $flatShade = $rt->f(0.59999999999999998);
             $darkened = $rt->construct(3, $rt->binary('*', $tileColor, $rt->component_wise('mix', $rt->f(1), $rt->f(0.34999999999999998), $kC), 3, 'float'));
             $shadeMul = $rt->binary('+', $rt->f(1), $rt->binary('*', $rt->binary('*', $rt->binary('-', $shade, $flatShade, 1, 'float'), $rt->f(2), 1, 'float'), $rt->binary('/', $_u_relief, $rt->f(100), 1, 'float'), 1, 'float'), 1, 'float');
-            @{$result} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('*', $darkened, $shadeMul, 3, 'float'), $rt->f(0), $rt->f(1)))};
+            scalar do { @{$result} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('*', $darkened, $shadeMul, 3, 'float'), $rt->f(0), $rt->f(1)))}; $result };
         } else {
             if ($rt->binary('==', $_u_MODE, $rt->i(1))) {
-                $cellSpace = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_tileSize, 2, 'float'));
+                $cellSpace = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_tileSize));
                 $cellId = $rt->component_wise('floor', $cellSpace);
                 $cellFrac = $rt->component_wise('fract', $cellSpace);
                 $edgeDistPx = $rt->binary('*', $rt->component_wise('min', $rt->component_wise('min', $rt->swizzle($cellFrac, 'x'), $rt->binary('-', $rt->f(1), $rt->swizzle($cellFrac, 'x'), 1, 'float')), $rt->component_wise('min', $rt->swizzle($cellFrac, 'y'), $rt->binary('-', $rt->f(1), $rt->swizzle($cellFrac, 'y'), 1, 'float'))), $_u_tileSize, 1, 'float');
@@ -148,22 +148,22 @@ my $run_pixel = sub {
                 $offsetPx = $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('-', $hash22__vec2->($rt->construct(2, $rt->binary('+', $cellId, $rt->binary('*', $seedF, $rt->f(101.7), 1, 'float'), 2, 'float'))), $rt->f(0.5), 2, 'float')), $rt->f(2), 2, 'float')), $rt->binary('/', $_u_maxOffset, $rt->f(100), 1, 'float'), 2, 'float')), $_u_tileSize, 2, 'float'));
                 $cellCenterGc = $rt->construct(2, $rt->binary('*', $rt->binary('+', $cellId, $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'), $_u_tileSize, 2, 'float'));
                 $shiftedGc = $rt->construct(2, $rt->binary('+', $cellCenterGc, $offsetPx, 2, 'float'));
-                $shiftedUV = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('-', $shiftedGc, $_u_tileOffset, 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
+                $shiftedUV = $rt->component_wise('clamp', $rt->metal_divide($rt->binary('-', $shiftedGc, $_u_tileOffset, 2, 'float'), $_u_resolution), $rt->f(0), $rt->f(1));
                 $tileColor = $rt->swizzle($rt->texture($_u_inputTex, $shiftedUV), 'rgb');
                 $gapColor = $rt->construct(3, 0.0);
                 if ($rt->binary('==', $_u_gapFill, $rt->i(0))) {
-                    @{$gapColor} = map { $rt->f32($_) } @{($_u_backgroundColor)};
+                    scalar do { @{$gapColor} = map { $rt->f32($_) } @{($_u_backgroundColor)}; $gapColor };
                 } else {
                     if ($rt->binary('==', $_u_gapFill, $rt->i(1))) {
-                        @{$gapColor} = map { $rt->f32($_) } @{($rt->binary('-', $rt->f(1), $rt->swizzle($srcHome, 'rgb'), 3, 'float'))};
+                        scalar do { @{$gapColor} = map { $rt->f32($_) } @{($rt->binary('-', $rt->f(1), $rt->swizzle($srcHome, 'rgb'), 3, 'float'))}; $gapColor };
                     } else {
-                        @{$gapColor} = map { $rt->f32($_) } @{($rt->swizzle($srcHome, 'rgb'))};
+                        scalar do { @{$gapColor} = map { $rt->f32($_) } @{($rt->swizzle($srcHome, 'rgb'))}; $gapColor };
                     }
                 }
-                @{$result} = map { $rt->f32($_) } @{($rt->component_wise('mix', $tileColor, $gapColor, $gapMask))};
+                scalar do { @{$result} = map { $rt->f32($_) } @{($rt->component_wise('mix', $tileColor, $gapColor, $gapMask))}; $result };
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($srcHome, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($srcHome, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

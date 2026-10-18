@@ -23,8 +23,8 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($H, $L, $V, $controlledLight, $curv, $defaultHalf, $defaultL, $flatSpec, $gloss, $grad, $hB, $hC, $hL, $hR, $hT, $halfLengthSq, $halfVector, $lightLengthSq, $n, $operatorLight, $outc, $rawSpec, $ridge, $spec, $specColor, $src, $strength, $texel, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
-        $texel = $rt->construct(2, $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
+        $texel = $rt->construct(2, $rt->metal_divide($rt->f(1), $_u_resolution));
         $src = $rt->texture($_u_inputTex, $uv);
         $hC = $lum__vec3->($rt->swizzle($rt->texture($_u_blurTex, $uv), 'rgb'));
         $hL = $lum__vec3->($rt->swizzle($rt->texture($_u_blurTex, $rt->binary('-', $uv, $rt->construct_raw(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float')), 'rgb'));
@@ -47,13 +47,13 @@ my $run_pixel = sub {
         $gloss = $rt->component_wise('mix', $rt->f(24), $rt->f(6), $rt->binary('/', $_u_smoothness, $rt->f(100), 1, 'float'));
         $flatSpec = $rt->component_wise('pow', $rt->swizzle($H, 'z'), $gloss);
         $rawSpec = $rt->component_wise('pow', $rt->component_wise('clamp', $rt->dot($n, $H), $rt->f(0), $rt->f(1)), $gloss);
-        $spec = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('-', $rawSpec, $flatSpec, 1, 'float'), $rt->component_wise('max', $rt->binary('-', $rt->f(1), $flatSpec, 1, 'float'), $rt->f(0.0001)), 1, 'float'), $rt->f(0), $rt->f(1));
+        $spec = $rt->component_wise('clamp', $rt->metal_divide($rt->binary('-', $rawSpec, $flatSpec, 1, 'float'), $rt->component_wise('max', $rt->binary('-', $rt->f(1), $flatSpec, 1, 'float'), $rt->f(0.0001))), $rt->f(0), $rt->f(1));
         $curv = $rt->binary('-', $rt->binary('-', $rt->binary('-', $rt->binary('-', $rt->binary('*', $rt->f(4), $hC, 1, 'float'), $hL, 1, 'float'), $hR, 1, 'float'), $hB, 1, 'float'), $hT, 1, 'float');
         $ridge = $rt->component_wise('clamp', $rt->binary('*', $rt->binary('*', $curv, $strength, 1, 'float'), $rt->f(2), 1, 'float'), $rt->f(0), $rt->f(1));
         $spec = $rt->component_wise('clamp', $rt->binary('+', $rt->binary('*', $spec, $rt->f(1.3500000000000001), 1, 'float'), $rt->binary('*', $ridge, $rt->f(0.75), 1, 'float'), 1, 'float'), $rt->f(0), $rt->f(1));
         $specColor = $rt->component_wise('clamp', $rt->binary('*', $rt->construct_raw(3, $spec), $rt->binary('/', $_u_highlight, $rt->f(100), 1, 'float'), 3, 'float'), $rt->f(0), $rt->f(1));
         $outc = $rt->construct(3, $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->binary('*', $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $rt->swizzle($src, 'rgb'), 3, 'float'), $rt->binary('-', $rt->construct_raw(3, $rt->f(1)), $specColor, 3, 'float'), 3, 'float'), 3, 'float'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outc, $rt->swizzle($src, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outc, $rt->swizzle($src, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -147,7 +147,7 @@ my $run_pixel = sub {
         $y_value = $rt->component_wise('clamp', $rt->binary('+', $rt->binary('*', $dy, $rt->f(0.5), 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->f(0), $rt->f(1));
         $z_value = $rt->component_wise('clamp', $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('+', $rt->component_wise('abs', $dx), $rt->component_wise('abs', $dy), 1, 'float'), $rt->f(0.5), 1, 'float'), 1, 'float'), $rt->f(0), $rt->f(1));
         $texel = $rt->texel_fetch($_u_inputTex, $rt->construct(2, $rt->swizzle($global_id, 'xy'), 'int'), $rt->i(0));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $x_value, $y_value, $z_value, $rt->swizzle($texel, 'w')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $x_value, $y_value, $z_value, $rt->swizzle($texel, 'w')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

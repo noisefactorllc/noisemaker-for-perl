@@ -56,14 +56,14 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($blendB, $blendFactor, $blendG, $blendR, $colorA, $colorB, $globalCoord, $lum, $mapColor, $result, $uv);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
-        $colorA = $rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
-        $colorB = $rt->texture($_u_tex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float')));
+        $uv = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
+        $colorA = $rt->texture($_u_inputTex, $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)))));
+        $colorB = $rt->texture($_u_tex, $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)))));
         $mapColor = $rt->construct(3, 0.0);
         if ($rt->binary('==', $_u_mapSource, $rt->i(0))) {
-            @{$mapColor} = map { $rt->f32($_) } @{($rt->swizzle($colorA, 'rgb'))};
+            scalar do { @{$mapColor} = map { $rt->f32($_) } @{($rt->swizzle($colorA, 'rgb'))}; $mapColor };
         } else {
-            @{$mapColor} = map { $rt->f32($_) } @{($rt->swizzle($colorB, 'rgb'))};
+            scalar do { @{$mapColor} = map { $rt->f32($_) } @{($rt->swizzle($colorB, 'rgb'))}; $mapColor };
         }
         if ($rt->binary('>', $_u_quantize, $rt->i(0))) {
             $mapColor = $rt->assign_swizzle($mapColor, 'r', $quantizeValue__float_int->($rt->swizzle($mapColor, 'r'), $_u_quantize));
@@ -79,7 +79,7 @@ my $run_pixel = sub {
         if ($rt->binary('==', $_u_mode, $rt->i(0))) {
             $lum = $getLuminosity__vec3->($mapColor);
             $blendFactor = $calculateBlendFactor__float_float_float->($lum, $_u_threshold, $_u_range);
-            @{$result} = map { $rt->f32($_) } @{($rt->component_wise('mix', $colorA, $colorB, $blendFactor))};
+            scalar do { @{$result} = map { $rt->f32($_) } @{($rt->component_wise('mix', $colorA, $colorB, $blendFactor))}; $result };
         } else {
             $blendR = $calculateBlendFactor__float_float_float->($rt->swizzle($mapColor, 'r'), $_u_thresholdR, $_u_rangeR);
             $blendG = $calculateBlendFactor__float_float_float->($rt->swizzle($mapColor, 'g'), $_u_thresholdG, $_u_rangeG);
@@ -89,7 +89,7 @@ my $run_pixel = sub {
             $result = $rt->assign_swizzle($result, 'b', $rt->component_wise('mix', $rt->swizzle($colorA, 'b'), $rt->swizzle($colorB, 'b'), $blendB));
             $result = $rt->assign_swizzle($result, 'a', $rt->component_wise('mix', $rt->swizzle($colorA, 'a'), $rt->swizzle($colorB, 'a'), $rt->binary('/', $rt->binary('+', $rt->binary('+', $blendR, $blendG, 1, 'float'), $blendB, 1, 'float'), $rt->f(3), 1, 'float')));
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($result)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($result)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

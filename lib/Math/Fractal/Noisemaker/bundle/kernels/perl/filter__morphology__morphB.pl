@@ -17,12 +17,12 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($_for0_first, $acc, $hi, $i, $lo, $o, $r, $sD, $sU, $texel, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $acc = $rt->texture($_u_inputTex, $uv);
         $r = $rt->f(0.0);
         $texel = $rt->construct(2, 0.0);
         if ($rt->binary('==', $_u_SHAPE, $rt->i(0))) {
-            $texel = $rt->construct(2, $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float'));
+            $texel = $rt->construct(2, $rt->metal_divide($rt->f(1), $_u_resolution));
             $r = $rt->component_wise('min', $_u_radius, $rt->f(32));
             $i = $rt->i(1);
             $_for0_first = 1;
@@ -42,10 +42,10 @@ my $run_pixel = sub {
                 $sU = $rt->texture($_u_inputTex, $rt->binary('+', $uv, $o, 2, 'float'));
                 $hi = $rt->component_wise('max', $acc, $rt->component_wise('max', $sD, $sU));
                 $lo = $rt->component_wise('min', $acc, $rt->component_wise('min', $sD, $sU));
-                @{$acc} = map { $rt->f32($_) } @{($rt->component_wise('mix', $hi, $lo, $rt->construct(1, $_u_mode)))};
+                scalar do { @{$acc} = map { $rt->f32($_) } @{($rt->component_wise('mix', $hi, $lo, $rt->construct(1, $_u_mode)))}; $acc };
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($acc)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($acc)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

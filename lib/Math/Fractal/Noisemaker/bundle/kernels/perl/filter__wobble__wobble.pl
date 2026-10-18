@@ -21,11 +21,11 @@ my $run_pixel = sub {
     $pcg__uvec3 = sub {
         my ($v) = @_;
         $v = $rt->copy($v, 'uint');
-        @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
-        @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
@@ -44,7 +44,7 @@ my $run_pixel = sub {
         my ($f, $i, $n000, $n001, $n010, $n011, $n100, $n101, $n110, $n111, $x0, $x1, $x2, $x3, $y0, $y1);
         $i = $rt->component_wise('floor', $p);
         $f = $rt->component_wise('fract', $p);
-        @{$f} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('*', $f, $f, 3, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 3, 'float'), 3, 'float'), 3, 'float'))};
+        scalar do { @{$f} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('*', $f, $f, 3, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 3, 'float'), 3, 'float'), 3, 'float'))}; $f };
         $n000 = $hash31__vec3->($i);
         $n100 = $hash31__vec3->($rt->construct(3, $rt->binary('+', $i, $rt->construct_raw(3, $rt->f(1), $rt->f(0), $rt->f(0)), 3, 'float')));
         $n010 = $hash31__vec3->($rt->construct(3, $rt->binary('+', $i, $rt->construct_raw(3, $rt->f(0), $rt->f(1), $rt->f(0)), 3, 'float')));
@@ -77,7 +77,7 @@ my $run_pixel = sub {
         my ($mode);
         $mode = $rt->construct(1, $_u_wrap, 'int');
         if ($rt->binary('==', $mode, $rt->i(0))) {
-            return $rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float')));
+            return $rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $uv, $rt->construct(2, $rt->binary('*', $rt->f(2), $rt->component_wise('floor', $rt->binary('*', $rt->binary('+', $uv, $rt->f(1), 2, 'float'), $rt->f(0.5), 2, 'float')), 2, 'float')), 2, 'float')));
         } else {
             if ($rt->binary('==', $mode, $rt->i(1))) {
                 return $rt->component_wise('fract', $uv);
@@ -94,9 +94,9 @@ my $run_pixel = sub {
         $offsetScale = $rt->binary('*', $r, $rt->binary('+', $rt->f(0.01), $rt->binary('*', $_u_speed, $rt->f(0.02), 1, 'float'), 1, 'float'), 1, 'float');
         $offset = $rt->construct(2, $rt->binary('*', $rt->binary('-', $rt->construct_raw(2, $xRandom, $yRandom), $rt->f(0.5), 2, 'float'), $offsetScale, 2, 'float'));
         $sampleCoord = $rt->construct(2, $rt->binary('+', $ctx->{uv}, $offset, 2, 'float'));
-        @{$sampleCoord} = map { $rt->f32($_) } @{($applyWrap__vec2->($sampleCoord))};
+        scalar do { @{$sampleCoord} = map { $rt->f32($_) } @{($applyWrap__vec2->($sampleCoord))}; $sampleCoord };
         $sampled = $rt->texture($_u_inputTex, $sampleCoord);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($sampled)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($sampled)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

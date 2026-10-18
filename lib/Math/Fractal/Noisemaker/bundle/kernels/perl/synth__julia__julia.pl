@@ -165,14 +165,14 @@ my $run_pixel = sub {
         $reDF = $rt->copy($reDF, 'float');
         $imDF = $rt->copy($imDF, 'float');
         my ($angle, $cs, $scale, $sn, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'))));
         $angle = $rt->binary('/', $rt->binary('*', $rt->unary('-', $_u_rotation), $g->{TAU}, 1, 'float'), $rt->f(360), 1, 'float');
         $cs = $rt->component_wise('cos', $angle);
         $sn = $rt->component_wise('sin', $angle);
-        @{$uv} = map { $rt->f32($_) } @{($rt->matrix_mult($rt->construct(4, $cs, $rt->unary('-', $sn), $sn, $cs), $uv, 2))};
+        scalar do { @{$uv} = map { $rt->f32($_) } @{($rt->matrix_mult($rt->construct(4, $cs, $rt->unary('-', $sn), $sn, $cs), $uv, 2))}; $uv };
         $scale = $rt->binary('/', $rt->f(2.5), $zm, 1, 'float');
-        @{$reDF} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_mul_f__vec2_float->($df64_from__float->($rt->swizzle($uv, 'x')), $scale), $df64_from__float->($_u_centerX)))};
-        @{$imDF} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_mul_f__vec2_float->($df64_from__float->($rt->swizzle($uv, 'y')), $scale), $df64_from__float->($_u_centerY)))};
+        scalar do { @{$reDF} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_mul_f__vec2_float->($df64_from__float->($rt->swizzle($uv, 'x')), $scale), $df64_from__float->($_u_centerX)))}; $reDF };
+        scalar do { @{$imDF} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_mul_f__vec2_float->($df64_from__float->($rt->swizzle($uv, 'y')), $scale), $df64_from__float->($_u_centerY)))}; $imDF };
         return (undef, $reDF, $imDF);
     };
     $juliaIterate__vec2_vec2_vec2_int_float_int = sub {
@@ -207,12 +207,12 @@ my $run_pixel = sub {
                 last;
             }
             $zF = $rt->construct(2, $rt->swizzle($zRe, 'x'), $rt->swizzle($zIm, 'x'));
-            @{$dz} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('*', $rt->f(2), $cmul__vec2_vec2->($zF, $dz), 2, 'float')))};
+            scalar do { @{$dz} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('*', $rt->f(2), $cmul__vec2_vec2->($zF, $dz), 2, 'float')))}; $dz };
             $zRe2 = $df64_mul__vec2_vec2->($zRe, $zRe);
             $zIm2 = $df64_mul__vec2_vec2->($zIm, $zIm);
             $zReIm = $df64_mul__vec2_vec2->($zRe, $zIm);
-            @{$zRe} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_sub__vec2_vec2->($zRe2, $zIm2), $df64_from__float->($rt->swizzle($c, 'x'))))};
-            @{$zIm} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_mul_f__vec2_float->($zReIm, $rt->f(2)), $df64_from__float->($rt->swizzle($c, 'y'))))};
+            scalar do { @{$zRe} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_sub__vec2_vec2->($zRe2, $zIm2), $df64_from__float->($rt->swizzle($c, 'x'))))}; $zRe };
+            scalar do { @{$zIm} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_mul_f__vec2_float->($zReIm, $rt->f(2)), $df64_from__float->($rt->swizzle($c, 'y'))))}; $zIm };
             $zMag2 = $rt->binary('+', $rt->binary('*', $rt->swizzle($zRe, 'x'), $rt->swizzle($zRe, 'x'), 1, 'float'), $rt->binary('*', $rt->swizzle($zIm, 'x'), $rt->swizzle($zIm, 'x'), 1, 'float'), 1, 'float');
             if ($rt->binary('>', $zMag2, $bail2)) {
                 last;
@@ -238,7 +238,7 @@ my $run_pixel = sub {
             $period = $rt->binary('+', $period, $rt->i(1), 1, 'int');
             if ($rt->binary('==', $period, $rt->i(20))) {
                 $period = $rt->i(0);
-                @{$zSlow} = map { $rt->f32($_) } @{($zHi)};
+                scalar do { @{$zSlow} = map { $rt->f32($_) } @{($zHi)}; $zSlow };
             } else {
                 if ($rt->binary('<', $rt->distance($zHi, $zSlow), $rt->f(1e-10))) {
                     $i = $rt->construct(1, $maxIter);
@@ -330,8 +330,8 @@ my $run_pixel = sub {
             $zRe2 = $df64_mul__vec2_vec2->($zRe, $zRe);
             $zIm2 = $df64_mul__vec2_vec2->($zIm, $zIm);
             $zReIm = $df64_mul__vec2_vec2->($zRe, $zIm);
-            @{$zRe} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_sub__vec2_vec2->($zRe2, $zIm2), $df64_from__float->($rt->swizzle($c, 'x'))))};
-            @{$zIm} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_mul_f__vec2_float->($zReIm, $rt->f(2)), $df64_from__float->($rt->swizzle($c, 'y'))))};
+            scalar do { @{$zRe} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_sub__vec2_vec2->($zRe2, $zIm2), $df64_from__float->($rt->swizzle($c, 'x'))))}; $zRe };
+            scalar do { @{$zIm} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_mul_f__vec2_float->($zReIm, $rt->f(2)), $df64_from__float->($rt->swizzle($c, 'y'))))}; $zIm };
             $zMag2 = $rt->binary('+', $rt->binary('*', $rt->swizzle($zRe, 'x'), $rt->swizzle($zRe, 'x'), 1, 'float'), $rt->binary('*', $rt->swizzle($zIm, 'x'), $rt->swizzle($zIm, 'x'), 1, 'float'), 1, 'float');
             if ($rt->binary('>', $zMag2, $bail2)) {
                 last;
@@ -403,7 +403,7 @@ my $run_pixel = sub {
         if ($_u_invert) {
             $value = $rt->binary('-', $rt->f(1), $value, 1, 'float');
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $value), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $value), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

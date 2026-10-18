@@ -14,7 +14,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($coord);
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texel_fetch($_u_inputTex, $coord, $rt->i(0)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texel_fetch($_u_inputTex, $coord, $rt->i(0)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -23,7 +23,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($dist, $edge0, $edge1, $globalCoord, $halfBand, $match, $outA, $outRgb, $src, $st);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $st = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->component_wise('max', $rt->texture_size($_u_inputTex), $rt->construct(2, $rt->i(1), 'int'))), 2, 'float'));
+        $st = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->component_wise('max', $rt->texture_size($_u_inputTex), $rt->construct(2, $rt->i(1), 'int')))));
         $src = $rt->texture($_u_inputTex, $st);
         $dist = $rt->binary('/', $rt->length($rt->binary('-', $rt->swizzle($src, 'rgb'), $_u_targetColor, 3, 'float')), $rt->f(1.7320507999999999), 1, 'float');
         $halfBand = $rt->binary('*', $_u_smoothing, $rt->f(0.5), 1, 'float');
@@ -32,7 +32,7 @@ my $run_pixel = sub {
         $match = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $edge0, $edge1, $dist), 1, 'float');
         $outRgb = $rt->component_wise('mix', $rt->swizzle($src, 'rgb'), $_u_replaceColor, $rt->binary('*', $match, $_u_colorMix, 1, 'float'));
         $outA = $rt->binary('*', $rt->swizzle($src, 'a'), $rt->component_wise('mix', $_u_keepAlpha, $_u_replaceAlpha, $match), 1, 'float');
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outRgb, $outA))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outRgb, $outA))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

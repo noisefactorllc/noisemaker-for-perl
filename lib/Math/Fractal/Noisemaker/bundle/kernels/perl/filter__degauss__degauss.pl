@@ -246,7 +246,7 @@ my $run_pixel = sub {
         $dirRad = $rt->binary('/', $rt->binary('*', $_u_direction, $g->{TAU}, 1, 'float'), $rt->f(360), 1, 'float');
         $dc = $rt->component_wise('cos', $dirRad);
         $ds = $rt->component_wise('sin', $dirRad);
-        @{$offset} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->swizzle($offset, 'x'), $dc, 1, 'float'), $rt->binary('*', $rt->swizzle($offset, 'y'), $ds, 1, 'float'), 1, 'float'), $rt->binary('+', $rt->binary('*', $rt->swizzle($offset, 'x'), $ds, 1, 'float'), $rt->binary('*', $rt->swizzle($offset, 'y'), $dc, 1, 'float'), 1, 'float')))};
+        scalar do { @{$offset} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->swizzle($offset, 'x'), $dc, 1, 'float'), $rt->binary('*', $rt->swizzle($offset, 'y'), $ds, 1, 'float'), 1, 'float'), $rt->binary('+', $rt->binary('*', $rt->swizzle($offset, 'x'), $ds, 1, 'float'), $rt->binary('*', $rt->swizzle($offset, 'y'), $dc, 1, 'float'), 1, 'float')))}; $offset };
         $sample_pos = $rt->construct(2, $rt->binary('+', $base_pos, $offset, 2, 'float'));
         $sampled = $sample_bilinear__vec2_float_float->($sample_pos, $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($_u_resolution, 'y'));
         if ($rt->binary('==', $channel, $rt->i(0))) {
@@ -271,22 +271,22 @@ my $run_pixel = sub {
         $coords = $rt->construct(2, $rt->construct(1, $rt->swizzle($global_id, 'x'), 'int'), $rt->construct(1, $rt->swizzle($global_id, 'y'), 'int'));
         $original = $rt->texel_fetch($_u_inputTex, $rt->construct(2, $coords, 'int'), $rt->i(0));
         if ($rt->binary('==', $_u_displacement, $rt->f(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($original)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($original)}; $g->{fragColor} };
             return;
         }
         $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
         $width_f = $rt->swizzle($fullRes, 'x');
         $height_f = $rt->swizzle($fullRes, 'y');
-        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->construct_raw(2, $rt->binary('+', $rt->construct(1, $rt->swizzle($global_id, 'x')), $rt->swizzle($_u_tileOffset, 'x'), 1, 'float'), $rt->binary('+', $rt->construct(1, $rt->swizzle($global_id, 'y')), $rt->swizzle($_u_tileOffset, 'y'), 1, 'float')), $rt->construct_raw(2, $rt->f(0.5), $rt->f(0.5)), 2, 'float'), $rt->construct_raw(2, $rt->component_wise('max', $width_f, $rt->f(1)), $rt->component_wise('max', $height_f, $rt->f(1))), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->binary('+', $rt->construct_raw(2, $rt->binary('+', $rt->construct(1, $rt->swizzle($global_id, 'x')), $rt->swizzle($_u_tileOffset, 'x'), 1, 'float'), $rt->binary('+', $rt->construct(1, $rt->swizzle($global_id, 'y')), $rt->swizzle($_u_tileOffset, 'y'), 1, 'float')), $rt->construct_raw(2, $rt->f(0.5), $rt->f(0.5)), 2, 'float'), $rt->construct_raw(2, $rt->component_wise('max', $width_f, $rt->f(1)), $rt->component_wise('max', $height_f, $rt->f(1)))));
         $mask = $singularity_mask__vec2_float_float->($uv, $width_f, $height_f);
         if ($rt->binary('<=', $mask, $rt->f(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($original)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($original)}; $g->{fragColor} };
             return;
         }
-        $renderScale = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->component_wise('max', $rt->swizzle($_u_resolution, 'x'), $rt->f(1)), 1, 'float')) : ($rt->f(1)));
+        $renderScale = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($rt->metal_divide($rt->swizzle($_u_fullResolution, 'x'), $rt->component_wise('max', $rt->swizzle($_u_resolution, 'x'), $rt->f(1)))) : ($rt->f(1)));
         $isTiling = $rt->binary('>', $renderScale, $rt->f(1.01));
         $maxOffsetPixels = (($isTiling) ? ($rt->f(256)) : ($rt->component_wise('max', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($_u_resolution, 'y'))));
-        $maxAllowedDisplacement = (($isTiling) ? ($rt->binary('/', $maxOffsetPixels, $rt->component_wise('max', $width_f, $height_f), 1, 'float')) : ($rt->binary('/', $maxOffsetPixels, $rt->component_wise('max', $rt->swizzle($_u_resolution, 'x'), $rt->f(1)), 1, 'float')));
+        $maxAllowedDisplacement = (($isTiling) ? ($rt->metal_divide($maxOffsetPixels, $rt->component_wise('max', $width_f, $height_f))) : ($rt->metal_divide($maxOffsetPixels, $rt->component_wise('max', $rt->swizzle($_u_resolution, 'x'), $rt->f(1)))));
         $clampedDisplacement = $rt->component_wise('min', $_u_displacement, $maxAllowedDisplacement);
         $freq = $freq_for_shape__float_float_float->($rt->f(2), $width_f, $height_f);
         $base_pos = $rt->construct(2, $rt->construct(1, $rt->swizzle($global_id, 'x')), $rt->construct(1, $rt->swizzle($global_id, 'y')));
@@ -296,7 +296,7 @@ my $run_pixel = sub {
         $green = $warped_channel_value__uint_uvec2_vec2_float_float_vec2_float_float_float_float->($rt->i(1), $coord, $base_pos, $width_f, $height_f, $freq, $clampedDisplacement, $mask, $_u_time, $_u_speed);
         $blue = $warped_channel_value__uint_uvec2_vec2_float_float_vec2_float_float_float_float->($rt->i(2), $coord, $base_pos, $width_f, $height_f, $freq, $clampedDisplacement, $mask, $_u_time, $_u_speed);
         $alpha = $clamp01__float->($rt->swizzle($original, 'w'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $red, $green, $blue, $alpha))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $red, $green, $blue, $alpha))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

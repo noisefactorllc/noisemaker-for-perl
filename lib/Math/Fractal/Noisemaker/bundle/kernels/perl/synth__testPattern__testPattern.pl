@@ -58,7 +58,7 @@ my $run_pixel = sub {
                 last;
             }
             $digits->[int($i)] = $rt->binary('%', $temp, $rt->i(10), 1, 'int');
-            $temp = $rt->binary('/', $temp, $rt->i(10), 1, 'int');
+            $temp = $rt->binary('/', $temp, $rt->i(10), 1, 'float');
         }
         $d = $rt->i(0);
         $_for1_first = 1;
@@ -129,7 +129,7 @@ my $run_pixel = sub {
         $n = $rt->component_wise('max', $_u_gridSize, $rt->i(1));
         $cellUV = $rt->component_wise('fract', $rt->binary('*', $uv, $rt->construct(1, $n), 2, 'float'));
         $edge = $rt->component_wise('min', $cellUV, $rt->binary('-', $rt->f(1), $cellUV, 2, 'float'));
-        $fw = $rt->construct(2, $rt->binary('*', $rt->binary('/', $rt->construct_raw(2, $rt->f(1)), $_u_fullResolution, 2, 'float'), $rt->construct(1, $n), 2, 'float'));
+        $fw = $rt->construct(2, $rt->binary('*', $rt->metal_divide($rt->construct_raw(2, $rt->f(1)), $_u_fullResolution), $rt->construct(1, $n), 2, 'float'));
         $line = $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->component_wise('smoothstep', $rt->f(0), $rt->binary('*', $rt->f(2), $rt->swizzle($fw, 'x'), 1, 'float'), $rt->swizzle($edge, 'x')), $rt->component_wise('smoothstep', $rt->f(0), $rt->binary('*', $rt->f(2), $rt->swizzle($fw, 'y'), 1, 'float'), $rt->swizzle($edge, 'y')), 1, 'float'), 1, 'float');
         return $rt->construct(4, $rt->construct(3, $line), $rt->f(1));
     };
@@ -166,26 +166,26 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($globalCoord, $uv);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
         if ($rt->binary('==', $_u_pattern, $rt->i(1))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($colorBars__vec2->($uv))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($colorBars__vec2->($uv))}; $g->{fragColor} };
         } else {
             if ($rt->binary('==', $_u_pattern, $rt->i(2))) {
-                @{$g->{fragColor}} = map { $rt->f32($_) } @{($gradient__vec2->($uv))};
+                scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($gradient__vec2->($uv))}; $g->{fragColor} };
             } else {
                 if ($rt->binary('==', $_u_pattern, $rt->i(3))) {
-                    @{$g->{fragColor}} = map { $rt->f32($_) } @{($uvMap__vec2->($uv))};
+                    scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($uvMap__vec2->($uv))}; $g->{fragColor} };
                 } else {
                     if ($rt->binary('==', $_u_pattern, $rt->i(4))) {
-                        @{$g->{fragColor}} = map { $rt->f32($_) } @{($gridLines__vec2->($uv))};
+                        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($gridLines__vec2->($uv))}; $g->{fragColor} };
                     } else {
                         if ($rt->binary('==', $_u_pattern, $rt->i(5))) {
-                            @{$g->{fragColor}} = map { $rt->f32($_) } @{($colorGrid__vec2->($uv))};
+                            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($colorGrid__vec2->($uv))}; $g->{fragColor} };
                         } else {
                             if ($rt->binary('==', $_u_pattern, $rt->i(6))) {
-                                @{$g->{fragColor}} = map { $rt->f32($_) } @{($dotGrid__vec2->($uv))};
+                                scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($dotGrid__vec2->($uv))}; $g->{fragColor} };
                             } else {
-                                @{$g->{fragColor}} = map { $rt->f32($_) } @{($checkerboard__vec2->($uv))};
+                                scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($checkerboard__vec2->($uv))}; $g->{fragColor} };
                             }
                         }
                     }

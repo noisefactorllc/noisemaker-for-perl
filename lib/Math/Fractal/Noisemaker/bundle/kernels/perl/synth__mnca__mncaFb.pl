@@ -170,8 +170,8 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($alive, $animSpeed, $bufState, $bufferIsEmpty, $currentState, $n1, $n2, $newState, $nextState, $prevFrame, $prevLum, $r, $state, $texSize, $texelSize, $uv);
         $texSize = $rt->construct(2, $rt->texture_size($_u_bufTex));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float'));
-        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $texSize, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize));
+        $texelSize = $rt->construct(2, $rt->metal_divide($rt->f(1), $texSize));
         $state = $rt->swizzle($rt->texture($_u_bufTex, $uv), 'r');
         $bufState = $rt->texture($_u_bufTex, $uv);
         $bufferIsEmpty = (((((($rt->binary('==', $rt->swizzle($bufState, 'r'), $rt->f(0))) && ($rt->binary('==', $rt->swizzle($bufState, 'g'), $rt->f(0))) ? 1 : 0)) && ($rt->binary('==', $rt->swizzle($bufState, 'b'), $rt->f(0))) ? 1 : 0)) && ($rt->binary('==', $rt->swizzle($bufState, 'a'), $rt->f(0))) ? 1 : 0);
@@ -180,7 +180,7 @@ my $run_pixel = sub {
         if ((($_u_resetState) || ($bufferIsEmpty) ? 1 : 0)) {
             $r = $random__vec2->($rt->construct(2, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->construct(1, $_u_seed)), 2, 'float')));
             $alive = $rt->component_wise('step', $rt->f(0.5), $r);
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $alive, $alive, $alive, $rt->f(1)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $alive, $alive, $alive, $rt->f(1)))}; $g->{fragColor} };
             return;
         }
         $prevFrame = $rt->swizzle($rt->texture($_u_seedTex, $uv), 'rgb');
@@ -195,7 +195,7 @@ my $run_pixel = sub {
         $animSpeed = $map__float_float_float_float_float->($_u_speed, $rt->f(1), $rt->f(100), $rt->f(0.10000000000000001), $rt->f(100));
         $currentState = $rt->construct(4, $state, $state, $state, $rt->f(1));
         $nextState = $rt->construct(4, $newState, $newState, $newState, $rt->f(1));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('mix', $currentState, $nextState, $rt->component_wise('min', $rt->f(1), $rt->binary('*', $_u_deltaTime, $animSpeed, 1, 'float'))))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('mix', $currentState, $nextState, $rt->component_wise('min', $rt->f(1), $rt->binary('*', $_u_deltaTime, $animSpeed, 1, 'float'))))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

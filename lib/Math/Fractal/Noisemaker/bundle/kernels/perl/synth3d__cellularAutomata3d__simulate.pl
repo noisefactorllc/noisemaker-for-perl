@@ -24,10 +24,11 @@ my $run_pixel = sub {
     $hash3__vec3 = sub {
         my ($p) = @_;
         $p = $rt->copy($p, 'float');
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.10000000000000001), 1, 'float'), 3, 'float'))};
-        @{$p} = map { $rt->f32($_) } @{($rt->component_wise('fract', $rt->binary('*', $p, $rt->construct_raw(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float')))};
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $rt->dot($p, $rt->binary('+', $rt->swizzle($p, 'yxz'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
-        return $rt->component_wise('fract', $rt->binary('*', $rt->binary('+', $rt->swizzle($p, 'x'), $rt->swizzle($p, 'y'), 1, 'float'), $rt->swizzle($p, 'z'), 1, 'float'));
+        my ($cpuHashDot);
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $p, $rt->construct(1, $rt->binary('*', $_u_seed, $rt->f(0.10000000000000001), 1, 'float')), 3, 'float')))}; $p };
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->component_wise('fract', $rt->binary('*', $p, $rt->construct_raw(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float')))}; $p };
+        $cpuHashDot = $rt->dot($p, $rt->binary('+', $rt->swizzle($p, 'yxz'), $rt->f(33.329999999999998), 3, 'float'));
+        return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->construct(1, $rt->binary('+', $rt->swizzle($p, 'x'), $rt->swizzle($p, 'y'), 1, 'float')), $rt->construct(1, $rt->binary('+', $cpuHashDot, $cpuHashDot, 1, 'float')), 1, 'float')), $rt->construct(1, $rt->binary('+', $rt->swizzle($p, 'z'), $cpuHashDot, 1, 'float')), 1, 'float')));
     };
     $atlasTexel__ivec3_int = sub {
         my ($p, $volSize) = @_;
@@ -205,10 +206,10 @@ my $run_pixel = sub {
         $pixelCoord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $x = $rt->swizzle($pixelCoord, 'x');
         $y = $rt->binary('%', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'int');
-        $z = $rt->binary('/', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'int');
+        $z = POSIX::trunc($rt->binary('/', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'float'));
         $voxel = $rt->construct(3, $x, $y, $z, 'int');
         if ((((($rt->binary('>=', $x, $volSize)) || ($rt->binary('>=', $y, $volSize)) ? 1 : 0)) || ($rt->binary('>=', $z, $volSize)) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
             return;
         }
         $state = $sampleState__ivec3_int->($voxel, $volSize);
@@ -246,7 +247,7 @@ my $run_pixel = sub {
                     $age = $rt->f(0);
                 }
             }
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $alive, $alive, $alive, $rt->f(1)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $alive, $alive, $alive, $rt->f(1)))}; $g->{fragColor} };
             return;
         }
         $neighbors = 0;
@@ -283,7 +284,7 @@ my $run_pixel = sub {
             $seedLum = $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->f(0.29899999999999999), $rt->swizzle($seedVal, 'r'), 1, 'float'), $rt->binary('*', $rt->f(0.58699999999999997), $rt->swizzle($seedVal, 'g'), 1, 'float'), 1, 'float'), $rt->binary('*', $rt->f(0.114), $rt->swizzle($seedVal, 'b'), 1, 'float'), 1, 'float');
             $finalAlive = $rt->component_wise('mix', $finalAlive, $seedLum, $rt->binary('*', $_u_weight, $rt->f(0.01), 1, 'float'));
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $finalAlive, $finalAlive, $finalAlive, $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $finalAlive, $finalAlive, $finalAlive, $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

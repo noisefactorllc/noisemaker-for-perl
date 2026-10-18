@@ -17,13 +17,13 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($persistence, $trailColor, $uv);
         if ($_u_resetState) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
             return;
         }
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $trailColor = $rt->texture($_u_trailTex, $uv);
         $persistence = $rt->component_wise('clamp', $rt->binary('-', $rt->f(1), $_u_decay, 1, 'float'), $rt->f(0), $rt->f(1));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('*', $trailColor, $persistence, 4, 'float'))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('*', $trailColor, $persistence, 4, 'float'))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

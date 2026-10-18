@@ -20,15 +20,15 @@ my $run_pixel = sub {
         my ($hi, $lo);
         $lo = $rt->component_wise('min', $a, $b);
         $hi = $rt->component_wise('max', $a, $b);
-        @{$a} = map { $rt->f32($_) } @{($lo)};
-        @{$b} = map { $rt->f32($_) } @{($hi)};
+        scalar do { @{$a} = map { $rt->f32($_) } @{($lo)}; $a };
+        scalar do { @{$b} = map { $rt->f32($_) } @{($hi)}; $b };
         return (undef, $a, $b);
     };
     $main__void = sub {
         my ($p0, $p1, $p2, $p3, $p4, $p5, $p6, $p7, $p8, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $s8, $stride, $texel, $uv);
         $stride = $rt->component_wise('mix', $rt->f(3), $rt->f(1), $rt->binary('/', $rt->component_wise('clamp', $_u_detail, $rt->f(0), $rt->f(100)), $rt->f(100), 1, 'float'));
-        $texel = $rt->construct(2, $rt->binary('/', $stride, $_u_resolution, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $texel = $rt->construct(2, $rt->metal_divide($stride, $_u_resolution));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $s0 = $rt->texture($_u_inputTex, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->unary('-', $rt->swizzle($texel, 'x')), $rt->unary('-', $rt->swizzle($texel, 'y'))), 2, 'float'));
         $s1 = $rt->texture($_u_inputTex, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->f(0), $rt->unary('-', $rt->swizzle($texel, 'y'))), 2, 'float'));
         $s2 = $rt->texture($_u_inputTex, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->swizzle($texel, 'x'), $rt->unary('-', $rt->swizzle($texel, 'y'))), 2, 'float'));
@@ -66,7 +66,7 @@ my $run_pixel = sub {
         do { ($_retc, $p4, $p2) = $sort2__vec3_vec3->($p4, $p2); };
         do { ($_retc, $p6, $p4) = $sort2__vec3_vec3->($p6, $p4); };
         do { ($_retc, $p4, $p2) = $sort2__vec3_vec3->($p4, $p2); };
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $p4, $rt->swizzle($s4, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $p4, $rt->swizzle($s4, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

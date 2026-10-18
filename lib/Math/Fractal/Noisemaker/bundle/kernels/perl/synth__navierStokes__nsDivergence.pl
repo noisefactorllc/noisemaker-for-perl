@@ -16,8 +16,8 @@ my $run_pixel = sub {
         my ($div, $fragCoord, $texSize, $texel, $uB, $uL, $uR, $uT, $uv);
         $texSize = $rt->texture_size($_u_velTex);
         $fragCoord = $rt->swizzle($ctx->{frag_coord}, 'xy');
-        $texel = $rt->construct(2, $rt->binary('/', $rt->f(1), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $fragCoord, $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $texel = $rt->construct(2, $rt->metal_divide($rt->f(1), $rt->construct_raw(2, $rt->construct(2, $texSize))));
+        $uv = $rt->construct(2, $rt->metal_divide($fragCoord, $rt->construct_raw(2, $rt->construct(2, $texSize))));
         $uR = $rt->swizzle($rt->texture($_u_velTex, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float')), 'rg');
         $uL = $rt->swizzle($rt->texture($_u_velTex, $rt->binary('-', $uv, $rt->construct_raw(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float')), 'rg');
         $uT = $rt->swizzle($rt->texture($_u_velTex, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->f(0), $rt->swizzle($texel, 'y')), 2, 'float')), 'rg');
@@ -35,7 +35,7 @@ my $run_pixel = sub {
             $uT = $rt->assign_swizzle($uT, 'y', $rt->unary('-', $rt->swizzle($uB, 'y')));
         }
         $div = $rt->binary('*', $rt->f(0.5), $rt->binary('+', $rt->binary('-', $rt->swizzle($uR, 'x'), $rt->swizzle($uL, 'x'), 1, 'float'), $rt->binary('-', $rt->swizzle($uT, 'y'), $rt->swizzle($uB, 'y'), 1, 'float'), 1, 'float'), 1, 'float');
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $div, $rt->f(0), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $div, $rt->f(0), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -86,10 +86,10 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_g, $aFlare, $aMirror, $aspectRatio, $d0, $dc, $delta0, $flare, $flarePos, $globalCoord, $localUV, $mirrorPos, $outFlare, $p, $src, $streakVal, $uv);
-        $aspectRatio = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
+        $aspectRatio = $rt->metal_divide($rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'));
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
-        $localUV = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
+        $localUV = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $src = $rt->texture($_u_inputTex, $localUV);
         $flarePos = $rt->construct(2, $_u_centerX, $_u_centerY);
         $mirrorPos = $rt->construct(2, $rt->binary('-', $rt->construct_raw(2, $rt->f(1)), $flarePos, 2, 'float'));
@@ -99,56 +99,56 @@ my $run_pixel = sub {
         $delta0 = $rt->construct(2, $rt->binary('-', $p, $aFlare, 2, 'float'));
         $d0 = $rt->length($delta0);
         $flare = $rt->construct(3, $rt->f(0));
-        @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->construct(3, $coreGlow__float->($d0)), 3, 'float'))};
+        scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->construct(3, $coreGlow__float->($d0)), 3, 'float'))}; $flare };
         $streakVal = $anamorphicStreak__vec2->($delta0);
         if ($rt->binary('==', $_u_LENS_TYPE, $rt->i(3))) {
             $streakVal = $rt->binary('*', $streakVal, $rt->f(2), 1, 'float');
         }
-        @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->construct(3, $streakVal), 3, 'float'))};
+        scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->construct(3, $streakVal), 3, 'float'))}; $flare };
         if ((($rt->binary('==', $_u_LENS_TYPE, $rt->i(0))) || ($rt->binary('==', $_u_LENS_TYPE, $rt->i(3))) ? 1 : 0)) {
-            @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->construct(3, $sixPointStar__vec2_float->($delta0, $d0)), 3, 'float'))};
+            scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->construct(3, $sixPointStar__vec2_float->($delta0, $d0)), 3, 'float'))}; $flare };
         }
         $aMirror = $flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(1), $aspectRatio);
         $dc = $rt->length($rt->binary('-', $p, $aMirror, 2, 'float'));
-        @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->construct(3, $rt->binary('*', $haloRainbow__float->($dc), $haloBand__float->($dc), 3, 'float')), 3, 'float'))};
+        scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->construct(3, $rt->binary('*', $haloRainbow__float->($dc), $haloBand__float->($dc), 3, 'float')), 3, 'float'))}; $flare };
         $_g = $rt->construct(2, $rt->f(0));
         if ((($rt->binary('==', $_u_LENS_TYPE, $rt->i(0))) || ($rt->binary('==', $_u_LENS_TYPE, $rt->i(3))) ? 1 : 0)) {
-            @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.25), $aspectRatio))};
-            @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(1), $rt->f(0.84999999999999998), $rt->f(0.59999999999999998)), $circleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.059999999999999998)), 3, 'float'), $rt->f(0.34999999999999998), 3, 'float'), 3, 'float'))};
-            @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.40000000000000002), $aspectRatio))};
-            @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.40000000000000002), $rt->f(0.90000000000000002), $rt->f(0.84999999999999998)), $circleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.10000000000000001)), 3, 'float'), $rt->f(0.25), 3, 'float'), 3, 'float'))};
-            @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.59999999999999998), $aspectRatio))};
-            @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.65000000000000002), $rt->f(0.40000000000000002), $rt->f(0.94999999999999996)), $circleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.044999999999999998)), 3, 'float'), $rt->f(0.45000000000000001), 3, 'float'), 3, 'float'))};
-            @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.84999999999999998), $aspectRatio))};
-            @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.45000000000000001), $rt->f(0.90000000000000002), $rt->f(0.5)), $circleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.14000000000000001)), 3, 'float'), $rt->f(0.17999999999999999), 3, 'float'), 3, 'float'))};
-            @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(1.2), $aspectRatio))};
-            @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(1), $rt->f(0.55000000000000004), $rt->f(0.20000000000000001)), $circleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.080000000000000002)), 3, 'float'), $rt->f(0.29999999999999999), 3, 'float'), 3, 'float'))};
-            @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(1.55), $aspectRatio))};
-            @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.40000000000000002), $rt->f(0.55000000000000004), $rt->f(1)), $ringGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.20000000000000001)), 3, 'float'), $rt->f(0.12), 3, 'float'), 3, 'float'))};
+            scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.25), $aspectRatio))}; $_g };
+            scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(1), $rt->f(0.84999999999999998), $rt->f(0.59999999999999998)), $circleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.059999999999999998)), 3, 'float'), $rt->f(0.34999999999999998), 3, 'float'), 3, 'float'))}; $flare };
+            scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.40000000000000002), $aspectRatio))}; $_g };
+            scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.40000000000000002), $rt->f(0.90000000000000002), $rt->f(0.84999999999999998)), $circleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.10000000000000001)), 3, 'float'), $rt->f(0.25), 3, 'float'), 3, 'float'))}; $flare };
+            scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.59999999999999998), $aspectRatio))}; $_g };
+            scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.65000000000000002), $rt->f(0.40000000000000002), $rt->f(0.94999999999999996)), $circleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.044999999999999998)), 3, 'float'), $rt->f(0.45000000000000001), 3, 'float'), 3, 'float'))}; $flare };
+            scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.84999999999999998), $aspectRatio))}; $_g };
+            scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.45000000000000001), $rt->f(0.90000000000000002), $rt->f(0.5)), $circleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.14000000000000001)), 3, 'float'), $rt->f(0.17999999999999999), 3, 'float'), 3, 'float'))}; $flare };
+            scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(1.2), $aspectRatio))}; $_g };
+            scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(1), $rt->f(0.55000000000000004), $rt->f(0.20000000000000001)), $circleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.080000000000000002)), 3, 'float'), $rt->f(0.29999999999999999), 3, 'float'), 3, 'float'))}; $flare };
+            scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(1.55), $aspectRatio))}; $_g };
+            scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.40000000000000002), $rt->f(0.55000000000000004), $rt->f(1)), $ringGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.20000000000000001)), 3, 'float'), $rt->f(0.12), 3, 'float'), 3, 'float'))}; $flare };
         } else {
             if ($rt->binary('==', $_u_LENS_TYPE, $rt->i(1))) {
-                @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.29999999999999999), $aspectRatio))};
-                @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(1), $rt->f(0.80000000000000004), $rt->f(0.55000000000000004)), $hexGhost__vec2_float->($rt->construct(2, $rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.040000000000000001)), 3, 'float'), $rt->f(0.34999999999999998), 3, 'float'), 3, 'float'))};
-                @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.55000000000000004), $aspectRatio))};
-                @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.84999999999999998), $rt->f(0.84999999999999998), $rt->f(0.92000000000000004)), $hexGhost__vec2_float->($rt->construct(2, $rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.055)), 3, 'float'), $rt->f(0.29999999999999999), 3, 'float'), 3, 'float'))};
-                @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.80000000000000004), $aspectRatio))};
-                @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.94999999999999996), $rt->f(0.69999999999999996), $rt->f(0.5)), $hexGhost__vec2_float->($rt->construct(2, $rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.065000000000000002)), 3, 'float'), $rt->f(0.25), 3, 'float'), 3, 'float'))};
-                @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(1.3), $aspectRatio))};
-                @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.80000000000000004), $rt->f(0.84999999999999998), $rt->f(0.94999999999999996)), $hexGhost__vec2_float->($rt->construct(2, $rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.080000000000000002)), 3, 'float'), $rt->f(0.20000000000000001), 3, 'float'), 3, 'float'))};
+                scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.29999999999999999), $aspectRatio))}; $_g };
+                scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(1), $rt->f(0.80000000000000004), $rt->f(0.55000000000000004)), $hexGhost__vec2_float->($rt->construct(2, $rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.040000000000000001)), 3, 'float'), $rt->f(0.34999999999999998), 3, 'float'), 3, 'float'))}; $flare };
+                scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.55000000000000004), $aspectRatio))}; $_g };
+                scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.84999999999999998), $rt->f(0.84999999999999998), $rt->f(0.92000000000000004)), $hexGhost__vec2_float->($rt->construct(2, $rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.055)), 3, 'float'), $rt->f(0.29999999999999999), 3, 'float'), 3, 'float'))}; $flare };
+                scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.80000000000000004), $aspectRatio))}; $_g };
+                scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.94999999999999996), $rt->f(0.69999999999999996), $rt->f(0.5)), $hexGhost__vec2_float->($rt->construct(2, $rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.065000000000000002)), 3, 'float'), $rt->f(0.25), 3, 'float'), 3, 'float'))}; $flare };
+                scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(1.3), $aspectRatio))}; $_g };
+                scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.80000000000000004), $rt->f(0.84999999999999998), $rt->f(0.94999999999999996)), $hexGhost__vec2_float->($rt->construct(2, $rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.080000000000000002)), 3, 'float'), $rt->f(0.20000000000000001), 3, 'float'), 3, 'float'))}; $flare };
             } else {
-                @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.45000000000000001), $aspectRatio))};
-                @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.92000000000000004), $rt->f(0.84999999999999998), $rt->f(0.78000000000000003)), $softCircleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.12)), 3, 'float'), $rt->f(0.25), 3, 'float'), 3, 'float'))};
-                @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.90000000000000002), $aspectRatio))};
-                @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.84999999999999998), $rt->f(0.88), $rt->f(0.94999999999999996)), $softCircleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.16)), 3, 'float'), $rt->f(0.20000000000000001), 3, 'float'), 3, 'float'))};
-                @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(1.5), $aspectRatio))};
-                @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.94999999999999996), $rt->f(0.88), $rt->f(0.80000000000000004)), $softCircleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.20000000000000001)), 3, 'float'), $rt->f(0.14999999999999999), 3, 'float'), 3, 'float'))};
+                scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.45000000000000001), $aspectRatio))}; $_g };
+                scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.92000000000000004), $rt->f(0.84999999999999998), $rt->f(0.78000000000000003)), $softCircleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.12)), 3, 'float'), $rt->f(0.25), 3, 'float'), 3, 'float'))}; $flare };
+                scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(0.90000000000000002), $aspectRatio))}; $_g };
+                scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.84999999999999998), $rt->f(0.88), $rt->f(0.94999999999999996)), $softCircleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.16)), 3, 'float'), $rt->f(0.20000000000000001), 3, 'float'), 3, 'float'))}; $flare };
+                scalar do { @{$_g} = map { $rt->f32($_) } @{($flareAxis__vec2_vec2_float_float->($flarePos, $mirrorPos, $rt->f(1.5), $aspectRatio))}; $_g };
+                scalar do { @{$flare} = map { $rt->f32($_) } @{($rt->binary('+', $flare, $rt->binary('*', $rt->binary('*', $rt->construct_raw(3, $rt->f(0.94999999999999996), $rt->f(0.88), $rt->f(0.80000000000000004)), $softCircleGhost__float_float->($rt->length($rt->binary('-', $p, $_g, 2, 'float')), $rt->f(0.20000000000000001)), 3, 'float'), $rt->f(0.14999999999999999), 3, 'float'), 3, 'float'))}; $flare };
             }
         }
         $outFlare = $rt->construct(3, $rt->binary('*', $rt->binary('*', $flare, $_u_tint, 3, 'float'), $rt->binary('/', $_u_brightness, $rt->f(100), 1, 'float'), 3, 'float'));
         if ($rt->binary('==', $_u_LENS_TYPE, $rt->i(3))) {
-            @{$outFlare} = map { $rt->f32($_) } @{($rt->binary('*', $outFlare, $rt->construct(3, $rt->f(0.90000000000000002), $rt->f(0.94999999999999996), $rt->f(1.1000000000000001)), 3, 'float'))};
+            scalar do { @{$outFlare} = map { $rt->f32($_) } @{($rt->binary('*', $outFlare, $rt->construct(3, $rt->f(0.90000000000000002), $rt->f(0.94999999999999996), $rt->f(1.1000000000000001)), 3, 'float'))}; $outFlare };
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $rt->binary('+', $rt->swizzle($src, 'rgb'), $outFlare, 3, 'float'), $rt->f(0), $rt->f(1)), $rt->swizzle($src, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $rt->binary('+', $rt->swizzle($src, 'rgb'), $outFlare, 3, 'float'), $rt->f(0), $rt->f(1)), $rt->swizzle($src, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

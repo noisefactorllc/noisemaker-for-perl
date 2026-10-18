@@ -138,12 +138,12 @@ my $run_pixel = sub {
         my ($rgb) = @_;
         $rgb = $rt->copy($rgb, 'float');
         my ($l);
-        @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rgb, $rt->f(0.94999999999999996), 3, 'float'), $rt->f(0.050000000000000003), 3, 'float'))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rgb, $rt->f(0.94999999999999996), 3, 'float'), $rt->f(0.050000000000000003), 3, 'float'))}; $rgb };
         $rgb = $rt->assign_swizzle($rgb, 'r', $rt->component_wise('pow', $rt->swizzle($rgb, 'r'), $rt->f(0.94999999999999996)));
         $rgb = $rt->assign_swizzle($rgb, 'b', $rt->component_wise('pow', $rt->swizzle($rgb, 'b'), $rt->f(1.05)));
         $l = $luma__vec3->($rgb);
         $rgb = $rt->assign_swizzle($rgb, 'g', $rt->component_wise('mix', $rt->binary('*', $rt->swizzle($rgb, 'g'), $rt->f(0.94999999999999996), 1, 'float'), $rt->swizzle($rgb, 'g'), $l));
-        @{$rgb} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('*', $rgb, $rgb, 3, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $rgb, 3, 'float'), 3, 'float'), 3, 'float'))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('*', $rgb, $rgb, 3, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $rgb, 3, 'float'), 3, 'float'), 3, 'float'))}; $rgb };
         return $rgb;
     };
     $lutCoolShadows__vec3 = sub {
@@ -153,7 +153,7 @@ my $run_pixel = sub {
         $l = $luma__vec3->($rgb);
         $coolBlue = $rt->construct(3, $rt->f(0.40000000000000002), $rt->f(0.5), $rt->f(0.69999999999999996));
         $shadowMask = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $rt->f(0), $rt->f(0.5), $l), 1, 'float');
-        @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rgb, $rt->binary('*', $rt->binary('*', $coolBlue, $l, 3, 'float'), $rt->f(2), 3, 'float'), $rt->binary('*', $shadowMask, $rt->f(0.40000000000000002), 1, 'float')))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rgb, $rt->binary('*', $rt->binary('*', $coolBlue, $l, 3, 'float'), $rt->f(2), 3, 'float'), $rt->binary('*', $shadowMask, $rt->f(0.40000000000000002), 1, 'float')))}; $rgb };
         return $rgb;
     };
     $lutBleachBypass__vec3 = sub {
@@ -162,8 +162,8 @@ my $run_pixel = sub {
         my ($desat, $l);
         $l = $luma__vec3->($rgb);
         $desat = $rt->construct(3, $l);
-        @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rgb, $desat, $rt->f(0.5)))};
-        @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rt->binary('-', $rgb, $rt->f(0.5), 3, 'float'), $rt->f(1.3), 3, 'float'), $rt->f(0.5), 3, 'float'))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rgb, $desat, $rt->f(0.5)))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rt->binary('-', $rgb, $rt->f(0.5), 3, 'float'), $rt->f(1.3), 3, 'float'), $rt->f(0.5), 3, 'float'))}; $rgb };
         $rgb = $rt->assign_swizzle($rgb, 'r', $rt->binary('*', $rt->swizzle($rgb, 'r'), $rt->f(1.02), 1, 'float'));
         $rgb = $rt->assign_swizzle($rgb, 'b', $rt->binary('*', $rt->swizzle($rgb, 'b'), $rt->f(0.97999999999999998), 1, 'float'));
         return $rt->component_wise('clamp', $rgb, $rt->f(0), $rt->f(1));
@@ -181,7 +181,7 @@ my $run_pixel = sub {
         $rgb = $rt->assign_swizzle($rgb, 'b', $rt->binary('+', $rt->swizzle($rgb, 'b'), $rt->binary('+', $rt->binary('*', $rt->binary('-', $rt->f(1), $l, 1, 'float'), $rt->f(0.10000000000000001), 1, 'float'), $rt->binary('*', $l, $rt->unary('-', $rt->f(0.14999999999999999)), 1, 'float'), 1, 'float'), 1, 'float'));
         $hsl = $rgbToHsl__vec3->($rgb);
         $hsl = $rt->assign_swizzle($hsl, 'y', $rt->binary('*', $rt->swizzle($hsl, 'y'), $rt->f(1.2), 1, 'float'));
-        @{$rgb} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))}; $rgb };
         return $rt->component_wise('clamp', $rgb, $rt->f(0), $rt->f(1));
     };
     $lutCinematic__vec3 = sub {
@@ -189,11 +189,11 @@ my $run_pixel = sub {
         $rgb = $rt->copy($rgb, 'float');
         my ($highlightTint, $l, $shadowTint);
         $l = $luma__vec3->($rgb);
-        @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rgb, $rt->f(0.90000000000000002), 3, 'float'), $rt->f(0.029999999999999999), 3, 'float'))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rgb, $rt->f(0.90000000000000002), 3, 'float'), $rt->f(0.029999999999999999), 3, 'float'))}; $rgb };
         $shadowTint = $rt->construct(3, $rt->f(0.94999999999999996), $rt->f(1), $rt->f(1.05));
         $highlightTint = $rt->construct(3, $rt->f(1.05), $rt->f(1), $rt->f(0.94999999999999996));
-        @{$rgb} = map { $rt->f32($_) } @{($rt->binary('*', $rgb, $rt->component_wise('mix', $shadowTint, $highlightTint, $l), 3, 'float'))};
-        @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('pow', $rgb, $rt->construct(3, $rt->f(1.1000000000000001))))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->binary('*', $rgb, $rt->component_wise('mix', $shadowTint, $highlightTint, $l), 3, 'float'))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('pow', $rgb, $rt->construct(3, $rt->f(1.1000000000000001))))}; $rgb };
         return $rt->component_wise('clamp', $rgb, $rt->f(0), $rt->f(1));
     };
     $lutDayForNight__vec3 = sub {
@@ -204,20 +204,20 @@ my $run_pixel = sub {
         $rgb = $rt->assign_swizzle($rgb, 'r', $rt->binary('*', $rt->swizzle($rgb, 'r'), $rt->f(0.5), 1, 'float'));
         $rgb = $rt->assign_swizzle($rgb, 'g', $rt->binary('*', $rt->swizzle($rgb, 'g'), $rt->f(0.59999999999999998), 1, 'float'));
         $rgb = $rt->assign_swizzle($rgb, 'b', $rt->binary('*', $rt->swizzle($rgb, 'b'), $rt->f(1), 1, 'float'));
-        @{$rgb} = map { $rt->f32($_) } @{($rt->binary('*', $rgb, $rt->f(0.40000000000000002), 3, 'float'))};
-        @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rt->construct(3, $luma__vec3->($rgb)), $rgb, $rt->f(0.69999999999999996)))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->binary('*', $rgb, $rt->f(0.40000000000000002), 3, 'float'))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rt->construct(3, $luma__vec3->($rgb)), $rgb, $rt->f(0.69999999999999996)))}; $rgb };
         return $rgb;
     };
     $lutVintage__vec3 = sub {
         my ($rgb) = @_;
         $rgb = $rt->copy($rgb, 'float');
         my ($hsl);
-        @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rgb, $rt->f(0.84999999999999998), 3, 'float'), $rt->f(0.080000000000000002), 3, 'float'))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rgb, $rt->f(0.84999999999999998), 3, 'float'), $rt->f(0.080000000000000002), 3, 'float'))}; $rgb };
         $rgb = $rt->assign_swizzle($rgb, 'r', $rt->component_wise('pow', $rt->swizzle($rgb, 'r'), $rt->f(0.94999999999999996)));
         $rgb = $rt->assign_swizzle($rgb, 'b', $rt->component_wise('pow', $rt->swizzle($rgb, 'b'), $rt->f(1.1000000000000001)));
         $hsl = $rgbToHsl__vec3->($rgb);
         $hsl = $rt->assign_swizzle($hsl, 'y', $rt->binary('*', $rt->swizzle($hsl, 'y'), $rt->f(0.69999999999999996), 1, 'float'));
-        @{$rgb} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))}; $rgb };
         return $rt->component_wise('clamp', $rgb, $rt->f(0), $rt->f(1));
     };
     $lutNoir__vec3 = sub {
@@ -238,7 +238,7 @@ my $run_pixel = sub {
         $l = $luma__vec3->($rgb);
         $sepia = $rt->construct(3, $rt->f(1), $rt->f(0.89000000000000001), $rt->f(0.70999999999999996));
         $result = $rt->construct(3, $rt->binary('*', $l, $sepia, 3, 'float'));
-        @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $result, $rt->f(0.90000000000000002), 3, 'float'), $rt->f(0.050000000000000003), 3, 'float'))};
+        scalar do { @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $result, $rt->f(0.90000000000000002), 3, 'float'), $rt->f(0.050000000000000003), 3, 'float'))}; $result };
         return $rt->component_wise('clamp', $result, $rt->f(0), $rt->f(1));
     };
     $lutInfrared__vec3 = sub {
@@ -263,8 +263,8 @@ my $run_pixel = sub {
         $rgb = $rt->assign_swizzle($rgb, 'b', $rt->binary('*', $rt->component_wise('pow', $rt->swizzle($rgb, 'b'), $rt->f(0.90000000000000002)), $rt->f(1.05), 1, 'float'));
         $hsl = $rgbToHsl__vec3->($rgb);
         $hsl = $rt->assign_swizzle($hsl, 'y', $rt->component_wise('min', $rt->binary('*', $rt->swizzle($hsl, 'y'), $rt->f(1.3999999999999999), 1, 'float'), $rt->f(1)));
-        @{$rgb} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))};
-        @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rt->binary('-', $rgb, $rt->f(0.5), 3, 'float'), $rt->f(1.1499999999999999), 3, 'float'), $rt->f(0.5), 3, 'float'))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rt->binary('-', $rgb, $rt->f(0.5), 3, 'float'), $rt->f(1.1499999999999999), 3, 'float'), $rt->f(0.5), 3, 'float'))}; $rgb };
         return $rt->component_wise('clamp', $rgb, $rt->f(0), $rt->f(1));
     };
     $lutNeon__vec3 = sub {
@@ -274,8 +274,8 @@ my $run_pixel = sub {
         $hsl = $rgbToHsl__vec3->($rgb);
         $hsl = $rt->assign_swizzle($hsl, 'x', $rt->component_wise('mod', $rt->binary('+', $rt->swizzle($hsl, 'x'), $rt->f(0.050000000000000003), 1, 'float'), $rt->f(1)));
         $hsl = $rt->assign_swizzle($hsl, 'y', $rt->component_wise('min', $rt->binary('*', $rt->swizzle($hsl, 'y'), $rt->f(1.8), 1, 'float'), $rt->f(1)));
-        @{$rgb} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))};
-        @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rt->binary('-', $rgb, $rt->f(0.5), 3, 'float'), $rt->f(1.3999999999999999), 3, 'float'), $rt->f(0.5), 3, 'float'))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rt->binary('-', $rgb, $rt->f(0.5), 3, 'float'), $rt->f(1.3999999999999999), 3, 'float'), $rt->f(0.5), 3, 'float'))}; $rgb };
         $rgb = $rt->assign_swizzle($rgb, 'r', $rt->component_wise('pow', $rt->component_wise('max', $rt->swizzle($rgb, 'r'), $rt->f(0)), $rt->f(0.90000000000000002)));
         $rgb = $rt->assign_swizzle($rgb, 'b', $rt->component_wise('pow', $rt->component_wise('max', $rt->swizzle($rgb, 'b'), $rt->f(0)), $rt->f(0.84999999999999998)));
         return $rt->component_wise('clamp', $rgb, $rt->f(0), $rt->f(1));
@@ -287,7 +287,7 @@ my $run_pixel = sub {
         $l = $luma__vec3->($rgb);
         $boosted = $rt->component_wise('pow', $l, $rt->f(0.80000000000000004));
         $result = $rt->construct(3, $rt->binary('*', $boosted, $rt->f(0.20000000000000001), 1, 'float'), $boosted, $rt->binary('*', $boosted, $rt->f(0.14999999999999999), 1, 'float'));
-        @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $result, $rt->construct(3, $rt->f(0), $rt->f(0.02), $rt->f(0)), 3, 'float'))};
+        scalar do { @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $result, $rt->construct(3, $rt->f(0), $rt->f(0.02), $rt->f(0)), 3, 'float'))}; $result };
         return $rt->component_wise('clamp', $result, $rt->f(0), $rt->f(1));
     };
     $lutUnderwater__vec3 = sub {
@@ -298,7 +298,7 @@ my $run_pixel = sub {
         $rgb = $rt->assign_swizzle($rgb, 'g', $rt->binary('*', $rt->component_wise('pow', $rt->swizzle($rgb, 'g'), $rt->f(0.90000000000000002)), $rt->f(0.90000000000000002), 1, 'float'));
         $rgb = $rt->assign_swizzle($rgb, 'b', $rt->binary('*', $rt->component_wise('pow', $rt->swizzle($rgb, 'b'), $rt->f(0.84999999999999998)), $rt->f(1.1000000000000001), 1, 'float'));
         $depth = $rt->binary('-', $rt->f(1), $rt->binary('*', $luma__vec3->($rgb), $rt->f(0.29999999999999999), 1, 'float'), 1, 'float');
-        @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rgb, $rt->binary('*', $rgb, $rt->construct_raw(3, $rt->f(0.40000000000000002), $rt->f(0.69999999999999996), $rt->f(1)), 3, 'float'), $rt->binary('*', $rt->f(0.29999999999999999), $depth, 1, 'float')))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rgb, $rt->binary('*', $rgb, $rt->construct_raw(3, $rt->f(0.40000000000000002), $rt->f(0.69999999999999996), $rt->f(1)), 3, 'float'), $rt->binary('*', $rt->f(0.29999999999999999), $depth, 1, 'float')))}; $rgb };
         return $rt->component_wise('clamp', $rgb, $rt->f(0), $rt->f(1));
     };
     $lutSunset__vec3 = sub {
@@ -308,7 +308,7 @@ my $run_pixel = sub {
         $l = $luma__vec3->($rgb);
         $warmth = $rt->component_wise('smoothstep', $rt->f(0.29999999999999999), $rt->f(0.69999999999999996), $l);
         $sunset = $rt->component_wise('mix', $rt->construct(3, $rt->f(1), $rt->f(0.29999999999999999), $rt->f(0.5)), $rt->construct(3, $rt->f(1), $rt->f(0.80000000000000004), $rt->f(0.40000000000000002)), $warmth);
-        @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rt->binary('*', $rgb, $sunset, 3, 'float'), $rgb, $rt->f(0.40000000000000002)))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rt->binary('*', $rgb, $sunset, 3, 'float'), $rgb, $rt->f(0.40000000000000002)))}; $rgb };
         $rgb = $rt->assign_swizzle($rgb, 'r', $rt->component_wise('pow', $rt->swizzle($rgb, 'r'), $rt->f(0.90000000000000002)));
         return $rt->component_wise('clamp', $rgb, $rt->f(0), $rt->f(1));
     };
@@ -328,7 +328,7 @@ my $run_pixel = sub {
         $hsl = $rt->assign_swizzle($hsl, 'x', $rt->component_wise('mod', $rt->binary('+', $rt->binary('*', $rt->swizzle($hsl, 'x'), $rt->f(3), 1, 'float'), $rt->binary('*', $rt->swizzle($hsl, 'z'), $rt->f(0.5), 1, 'float'), 1, 'float'), $rt->f(1)));
         $hsl = $rt->assign_swizzle($hsl, 'y', $rt->component_wise('min', $rt->binary('*', $rt->swizzle($hsl, 'y'), $rt->f(2), 1, 'float'), $rt->f(1)));
         $hsl = $rt->assign_swizzle($hsl, 'z', $rt->binary('+', $rt->binary('*', $rt->binary('-', $rt->swizzle($hsl, 'z'), $rt->f(0.5), 1, 'float'), $rt->f(1.3), 1, 'float'), $rt->f(0.5), 1, 'float'));
-        @{$rgb} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))}; $rgb };
         return $rt->component_wise('clamp', $rgb, $rt->f(0), $rt->f(1));
     };
     $lutHardLight__vec3 = sub {
@@ -353,7 +353,7 @@ my $run_pixel = sub {
                 $result->[int($i)] = $rt->f32($rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('*', $rt->f(2), $rt->binary('-', $rt->f(1), $rgb->[int($i)], 1, 'float'), 1, 'float'), $rt->binary('-', $rt->f(1), $l, 1, 'float'), 1, 'float'), 1, 'float'));
             }
         }
-        @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rt->binary('-', $result, $rt->f(0.5), 3, 'float'), $rt->f(1.3999999999999999), 3, 'float'), $rt->f(0.5), 3, 'float'))};
+        scalar do { @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rt->binary('-', $result, $rt->f(0.5), 3, 'float'), $rt->f(1.3999999999999999), 3, 'float'), $rt->f(0.5), 3, 'float'))}; $result };
         $highlightMask = $rt->component_wise('smoothstep', $rt->f(0.5), $rt->f(1), $l);
         $result = $rt->assign_swizzle($result, 'b', $rt->binary('+', $rt->swizzle($result, 'b'), $rt->binary('*', $highlightMask, $rt->f(0.050000000000000003), 1, 'float'), 1, 'float'));
         return $rt->component_wise('clamp', $result, $rt->f(0), $rt->f(1));
@@ -367,18 +367,18 @@ my $run_pixel = sub {
         $quantized = $rt->binary('/', $rt->component_wise('floor', $rt->binary('+', $rt->binary('*', $l, $levels, 1, 'float'), $rt->f(0.5), 1, 'float')), $levels, 1, 'float');
         $ramp = $rt->construct(3, 0.0);
         if ($rt->binary('<', $quantized, $rt->f(0.20000000000000001))) {
-            @{$ramp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0.10000000000000001), $rt->f(0.050000000000000003), $rt->f(0.14999999999999999)))};
+            scalar do { @{$ramp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0.10000000000000001), $rt->f(0.050000000000000003), $rt->f(0.14999999999999999)))}; $ramp };
         } else {
             if ($rt->binary('<', $quantized, $rt->f(0.40000000000000002))) {
-                @{$ramp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0.29999999999999999), $rt->f(0.20000000000000001), $rt->f(0.40000000000000002)))};
+                scalar do { @{$ramp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0.29999999999999999), $rt->f(0.20000000000000001), $rt->f(0.40000000000000002)))}; $ramp };
             } else {
                 if ($rt->binary('<', $quantized, $rt->f(0.59999999999999998))) {
-                    @{$ramp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0.5), $rt->f(0.40000000000000002), $rt->f(0.59999999999999998)))};
+                    scalar do { @{$ramp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0.5), $rt->f(0.40000000000000002), $rt->f(0.59999999999999998)))}; $ramp };
                 } else {
                     if ($rt->binary('<', $quantized, $rt->f(0.80000000000000004))) {
-                        @{$ramp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0.80000000000000004), $rt->f(0.59999999999999998), $rt->f(0.5)))};
+                        scalar do { @{$ramp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0.80000000000000004), $rt->f(0.59999999999999998), $rt->f(0.5)))}; $ramp };
                     } else {
-                        @{$ramp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(1), $rt->f(0.90000000000000002), $rt->f(0.80000000000000004)))};
+                        scalar do { @{$ramp} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(1), $rt->f(0.90000000000000002), $rt->f(0.80000000000000004)))}; $ramp };
                     }
                 }
             }
@@ -413,8 +413,8 @@ my $run_pixel = sub {
         }
         $hsl = $rgbToHsl__vec3->($result);
         $hsl = $rt->assign_swizzle($hsl, 'y', $rt->component_wise('min', $rt->binary('*', $rt->swizzle($hsl, 'y'), $rt->f(1.5), 1, 'float'), $rt->f(1)));
-        @{$result} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))};
-        @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rt->binary('-', $result, $rt->f(0.5), 3, 'float'), $rt->f(1.1000000000000001), 3, 'float'), $rt->f(0.5), 3, 'float'))};
+        scalar do { @{$result} = map { $rt->f32($_) } @{($hslToRgb__vec3->($hsl))}; $result };
+        scalar do { @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $rt->binary('-', $result, $rt->f(0.5), 3, 'float'), $rt->f(1.1000000000000001), 3, 'float'), $rt->f(0.5), 3, 'float'))}; $result };
         return $rt->component_wise('clamp', $result, $rt->f(0), $rt->f(1));
     };
     $main__void = sub {
@@ -423,73 +423,73 @@ my $run_pixel = sub {
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         if ((($rt->binary('==', $_u_preset, $rt->i(0))) || ($rt->binary('<=', $_u_alpha, $rt->f(0))) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)}; $g->{fragColor} };
             return;
         }
         $rgb = $srgbToLinear__vec3->($rt->swizzle($color, 'rgb'));
         $graded = $rt->fresh($rgb);
         if ($rt->binary('==', $_u_preset, $rt->i(1))) {
-            @{$graded} = map { $rt->f32($_) } @{($lutTealOrange__vec3->($rgb))};
+            scalar do { @{$graded} = map { $rt->f32($_) } @{($lutTealOrange__vec3->($rgb))}; $graded };
         } else {
             if ($rt->binary('==', $_u_preset, $rt->i(2))) {
-                @{$graded} = map { $rt->f32($_) } @{($lutWarmFilm__vec3->($rgb))};
+                scalar do { @{$graded} = map { $rt->f32($_) } @{($lutWarmFilm__vec3->($rgb))}; $graded };
             } else {
                 if ($rt->binary('==', $_u_preset, $rt->i(3))) {
-                    @{$graded} = map { $rt->f32($_) } @{($lutCoolShadows__vec3->($rgb))};
+                    scalar do { @{$graded} = map { $rt->f32($_) } @{($lutCoolShadows__vec3->($rgb))}; $graded };
                 } else {
                     if ($rt->binary('==', $_u_preset, $rt->i(4))) {
-                        @{$graded} = map { $rt->f32($_) } @{($lutBleachBypass__vec3->($rgb))};
+                        scalar do { @{$graded} = map { $rt->f32($_) } @{($lutBleachBypass__vec3->($rgb))}; $graded };
                     } else {
                         if ($rt->binary('==', $_u_preset, $rt->i(5))) {
-                            @{$graded} = map { $rt->f32($_) } @{($lutCrossProcess__vec3->($rgb))};
+                            scalar do { @{$graded} = map { $rt->f32($_) } @{($lutCrossProcess__vec3->($rgb))}; $graded };
                         } else {
                             if ($rt->binary('==', $_u_preset, $rt->i(6))) {
-                                @{$graded} = map { $rt->f32($_) } @{($lutCinematic__vec3->($rgb))};
+                                scalar do { @{$graded} = map { $rt->f32($_) } @{($lutCinematic__vec3->($rgb))}; $graded };
                             } else {
                                 if ($rt->binary('==', $_u_preset, $rt->i(7))) {
-                                    @{$graded} = map { $rt->f32($_) } @{($lutDayForNight__vec3->($rgb))};
+                                    scalar do { @{$graded} = map { $rt->f32($_) } @{($lutDayForNight__vec3->($rgb))}; $graded };
                                 } else {
                                     if ($rt->binary('==', $_u_preset, $rt->i(8))) {
-                                        @{$graded} = map { $rt->f32($_) } @{($lutVintage__vec3->($rgb))};
+                                        scalar do { @{$graded} = map { $rt->f32($_) } @{($lutVintage__vec3->($rgb))}; $graded };
                                     } else {
                                         if ($rt->binary('==', $_u_preset, $rt->i(9))) {
-                                            @{$graded} = map { $rt->f32($_) } @{($lutNoir__vec3->($rgb))};
+                                            scalar do { @{$graded} = map { $rt->f32($_) } @{($lutNoir__vec3->($rgb))}; $graded };
                                         } else {
                                             if ($rt->binary('==', $_u_preset, $rt->i(10))) {
-                                                @{$graded} = map { $rt->f32($_) } @{($lutSepia__vec3->($rgb))};
+                                                scalar do { @{$graded} = map { $rt->f32($_) } @{($lutSepia__vec3->($rgb))}; $graded };
                                             } else {
                                                 if ($rt->binary('==', $_u_preset, $rt->i(11))) {
-                                                    @{$graded} = map { $rt->f32($_) } @{($lutInfrared__vec3->($rgb))};
+                                                    scalar do { @{$graded} = map { $rt->f32($_) } @{($lutInfrared__vec3->($rgb))}; $graded };
                                                 } else {
                                                     if ($rt->binary('==', $_u_preset, $rt->i(12))) {
-                                                        @{$graded} = map { $rt->f32($_) } @{($lutTechnicolor__vec3->($rgb))};
+                                                        scalar do { @{$graded} = map { $rt->f32($_) } @{($lutTechnicolor__vec3->($rgb))}; $graded };
                                                     } else {
                                                         if ($rt->binary('==', $_u_preset, $rt->i(13))) {
-                                                            @{$graded} = map { $rt->f32($_) } @{($lutNeon__vec3->($rgb))};
+                                                            scalar do { @{$graded} = map { $rt->f32($_) } @{($lutNeon__vec3->($rgb))}; $graded };
                                                         } else {
                                                             if ($rt->binary('==', $_u_preset, $rt->i(14))) {
-                                                                @{$graded} = map { $rt->f32($_) } @{($lutMatrix__vec3->($rgb))};
+                                                                scalar do { @{$graded} = map { $rt->f32($_) } @{($lutMatrix__vec3->($rgb))}; $graded };
                                                             } else {
                                                                 if ($rt->binary('==', $_u_preset, $rt->i(15))) {
-                                                                    @{$graded} = map { $rt->f32($_) } @{($lutUnderwater__vec3->($rgb))};
+                                                                    scalar do { @{$graded} = map { $rt->f32($_) } @{($lutUnderwater__vec3->($rgb))}; $graded };
                                                                 } else {
                                                                     if ($rt->binary('==', $_u_preset, $rt->i(16))) {
-                                                                        @{$graded} = map { $rt->f32($_) } @{($lutSunset__vec3->($rgb))};
+                                                                        scalar do { @{$graded} = map { $rt->f32($_) } @{($lutSunset__vec3->($rgb))}; $graded };
                                                                     } else {
                                                                         if ($rt->binary('==', $_u_preset, $rt->i(17))) {
-                                                                            @{$graded} = map { $rt->f32($_) } @{($lutMonochrome__vec3->($rgb))};
+                                                                            scalar do { @{$graded} = map { $rt->f32($_) } @{($lutMonochrome__vec3->($rgb))}; $graded };
                                                                         } else {
                                                                             if ($rt->binary('==', $_u_preset, $rt->i(18))) {
-                                                                                @{$graded} = map { $rt->f32($_) } @{($lutPsychedelic__vec3->($rgb))};
+                                                                                scalar do { @{$graded} = map { $rt->f32($_) } @{($lutPsychedelic__vec3->($rgb))}; $graded };
                                                                             } else {
                                                                                 if ($rt->binary('==', $_u_preset, $rt->i(20))) {
-                                                                                    @{$graded} = map { $rt->f32($_) } @{($lutHardLight__vec3->($rgb))};
+                                                                                    scalar do { @{$graded} = map { $rt->f32($_) } @{($lutHardLight__vec3->($rgb))}; $graded };
                                                                                 } else {
                                                                                     if ($rt->binary('==', $_u_preset, $rt->i(21))) {
-                                                                                        @{$graded} = map { $rt->f32($_) } @{($lutPosterize__vec3->($rgb))};
+                                                                                        scalar do { @{$graded} = map { $rt->f32($_) } @{($lutPosterize__vec3->($rgb))}; $graded };
                                                                                     } else {
                                                                                         if ($rt->binary('==', $_u_preset, $rt->i(22))) {
-                                                                                            @{$graded} = map { $rt->f32($_) } @{($lutSolarize__vec3->($rgb))};
+                                                                                            scalar do { @{$graded} = map { $rt->f32($_) } @{($lutSolarize__vec3->($rgb))}; $graded };
                                                                                         }
                                                                                     }
                                                                                 }
@@ -511,9 +511,9 @@ my $run_pixel = sub {
                 }
             }
         }
-        @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rgb, $graded, $_u_alpha))};
-        @{$rgb} = map { $rt->f32($_) } @{($linearToSrgb__vec3->($rt->component_wise('max', $rgb, $rt->construct(3, $rt->f(0)))))};
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rgb, $rt->swizzle($color, 'a')))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rgb, $graded, $_u_alpha))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($linearToSrgb__vec3->($rt->component_wise('max', $rgb, $rt->construct(3, $rt->f(0)))))}; $rgb };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rgb, $rt->swizzle($color, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

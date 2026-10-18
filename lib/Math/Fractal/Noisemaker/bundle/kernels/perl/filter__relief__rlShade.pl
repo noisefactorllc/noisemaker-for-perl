@@ -31,7 +31,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($p3);
         $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
-        @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
+        scalar do { @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))}; $p3 };
         return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
     };
     $reliefShade__float_float_float_float_float = sub {
@@ -51,8 +51,8 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($bandHeight, $beveled, $edge, $globalCoord, $glossy, $gradMag, $grain, $hC, $hR, $hT, $hhC, $hhR, $hhT, $m, $outColor, $shade, $sheet, $sheetOut, $src, $strength, $texel, $threshold, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
-        $texel = $rt->construct(2, $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
+        $texel = $rt->construct(2, $rt->metal_divide($rt->f(1), $_u_resolution));
         $src = $rt->texture($_u_inputTex, $uv);
         $hC = $lum__vec3->($rt->swizzle($rt->texture($_u_blurTex, $uv), 'rgb'));
         $hR = $lum__vec3->($rt->swizzle($rt->texture($_u_blurTex, $rt->binary('+', $uv, $rt->construct_raw(2, $rt->swizzle($texel, 'x'), $rt->f(0)), 2, 'float')), 'rgb'));
@@ -76,7 +76,7 @@ my $run_pixel = sub {
         $threshold = $rt->f(0.0);
         if ($rt->binary('==', $_u_MODE, $rt->i(0))) {
             $shade = $reliefShade__float_float_float_float_float->($hC, $hR, $hT, $strength, $_u_lightAngle);
-            @{$outColor} = map { $rt->f32($_) } @{($tonemap2__float_vec3_vec3->($rt->component_wise('mix', $hC, $shade, $rt->f(0.75)), $_u_inkColor, $_u_paperColor))};
+            scalar do { @{$outColor} = map { $rt->f32($_) } @{($tonemap2__float_vec3_vec3->($rt->component_wise('mix', $hC, $shade, $rt->f(0.75)), $_u_inkColor, $_u_paperColor))}; $outColor };
         } else {
             if ($rt->binary('==', $_u_MODE, $rt->i(1))) {
                 $hhC = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $rt->f(0.34999999999999998), $rt->f(0.65000000000000002), $hC), 1, 'float');
@@ -84,7 +84,7 @@ my $run_pixel = sub {
                 $hhT = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $rt->f(0.34999999999999998), $rt->f(0.65000000000000002), $hT), 1, 'float');
                 $shade = $reliefShade__float_float_float_float_float->($hhC, $hhR, $hhT, $strength, $_u_lightAngle);
                 $glossy = $rt->component_wise('pow', $shade, $rt->f(2));
-                @{$outColor} = map { $rt->f32($_) } @{($tonemap2__float_vec3_vec3->($rt->component_wise('mix', $hhC, $glossy, $rt->f(0.75)), $_u_inkColor, $_u_paperColor))};
+                scalar do { @{$outColor} = map { $rt->f32($_) } @{($tonemap2__float_vec3_vec3->($rt->component_wise('mix', $hhC, $glossy, $rt->f(0.75)), $_u_inkColor, $_u_paperColor))}; $outColor };
             } else {
                 if ($rt->binary('==', $_u_MODE, $rt->i(2))) {
                     $threshold = $rt->binary('/', $_u_balance, $rt->f(100), 1, 'float');
@@ -98,11 +98,11 @@ my $run_pixel = sub {
                     $sheetOut = $rt->component_wise('mix', $sheet, $beveled, $edge);
                     $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
                     $grain = $rt->binary('*', $rt->binary('*', $rt->binary('-', $hash12__vec2->($rt->component_wise('floor', $globalCoord)), $rt->f(0.5), 1, 'float'), $rt->binary('/', $_u_graininess, $rt->f(100), 1, 'float'), 1, 'float'), $rt->f(0.14999999999999999), 1, 'float');
-                    @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('+', $sheetOut, $rt->construct_raw(3, $grain), 3, 'float'), $rt->f(0), $rt->f(1)))};
+                    scalar do { @{$outColor} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('+', $sheetOut, $rt->construct_raw(3, $grain), 3, 'float'), $rt->f(0), $rt->f(1)))}; $outColor };
                 }
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outColor, $rt->swizzle($src, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outColor, $rt->swizzle($src, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

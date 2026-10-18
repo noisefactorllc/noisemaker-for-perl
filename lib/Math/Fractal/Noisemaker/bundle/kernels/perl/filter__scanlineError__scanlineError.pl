@@ -172,11 +172,11 @@ my $run_pixel = sub {
     $pcg__uvec3 = sub {
         my ($v) = @_;
         $v = $rt->copy($v, 'uint');
-        @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
-        @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
@@ -246,10 +246,10 @@ my $run_pixel = sub {
         $tile_width = $rt->construct(1, $rt->swizzle($input_size, 'x'), 'uint');
         $tile_height = $rt->construct(1, $rt->swizzle($input_size, 'y'), 'uint');
         if ((((((($rt->binary('==', $tile_width, $rt->i(0))) || ($rt->binary('==', $tile_height, $rt->i(0))) ? 1 : 0)) || ($rt->binary('>=', $rt->swizzle($gid, 'x'), $tile_width)) ? 1 : 0)) || ($rt->binary('>=', $rt->swizzle($gid, 'y'), $tile_height)) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
             return;
         }
-        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($rt->binary('/', $_u_fullResolution, $_u_renderScale, 2, 'float')) : ($rt->construct(2, $input_size))));
+        $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($rt->metal_divide($_u_fullResolution, $_u_renderScale)) : ($rt->construct(2, $input_size))));
         $width_f = $rt->swizzle($fullRes, 'x');
         $height_f = $rt->swizzle($fullRes, 'y');
         $dims = $rt->construct(2, $width_f, $height_f);
@@ -296,16 +296,16 @@ my $run_pixel = sub {
         $xNorm = $rt->f(0.0);
         $yNorm = $rt->f(0.0);
         if ($rt->binary('==', $m, $rt->i(1))) {
-            $yNorm = $rt->binary('/', $rt->binary('+', $rt->construct(1, $rt->swizzle($globalGid, 'y')), $rt->f(0.5), 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
-            $xNorm = $rt->binary('/', $rt->binary('+', $rt->construct(1, $rt->swizzle($globalGid, 'x')), $rt->f(0.5), 1, 'float'), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float');
+            $yNorm = $rt->metal_divide($rt->binary('+', $rt->construct(1, $rt->swizzle($globalGid, 'y')), $rt->f(0.5), 1, 'float'), $rt->swizzle($_u_fullResolution, 'y'));
+            $xNorm = $rt->metal_divide($rt->binary('+', $rt->construct(1, $rt->swizzle($globalGid, 'x')), $rt->f(0.5), 1, 'float'), $rt->swizzle($_u_fullResolution, 'x'));
             $destCoord = $rt->construct(2, $xNorm, $yNorm);
             $gradDest = $vhs_gradValue__float_float_float_float->($yNorm, $rt->f(5), $time_value, $speed_value);
             $scanBase = $rt->binary('+', $rt->component_wise('floor', $rt->binary('*', $height_f, $rt->f(0.5), 1, 'float')), $rt->f(1), 1, 'float');
             $scanFreq = $rt->construct(2, 0.0);
             if ($rt->binary('<', $height_f, $width_f)) {
-                @{$scanFreq} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('*', $scanBase, $rt->binary('/', $height_f, $width_f, 1, 'float'), 1, 'float'), $scanBase))};
+                scalar do { @{$scanFreq} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('*', $scanBase, $rt->metal_divide($height_f, $width_f), 1, 'float'), $scanBase))}; $scanFreq };
             } else {
-                @{$scanFreq} = map { $rt->f32($_) } @{($rt->construct(2, $scanBase, $rt->binary('*', $scanBase, $rt->binary('/', $width_f, $height_f, 1, 'float'), 1, 'float')))};
+                scalar do { @{$scanFreq} = map { $rt->f32($_) } @{($rt->construct(2, $scanBase, $rt->binary('*', $scanBase, $rt->metal_divide($width_f, $height_f), 1, 'float')))}; $scanFreq };
             }
             $scanDest = $vhs_scanNoise__vec2_vec2_float_float->($destCoord, $scanFreq, $time_value, $rt->binary('*', $speed_value, $rt->f(100), 1, 'float'));
             $fullWidth = (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($rt->swizzle($_u_fullResolution, 'x')) : ($width_f));
@@ -318,12 +318,12 @@ my $run_pixel = sub {
             }
             $localSampleX = $rt->component_wise('clamp', $localSampleX, $rt->i(0), $rt->binary('-', $rt->construct(1, $tile_width, 'int'), $rt->i(1), 1, 'int'));
             $srcTexel = $rt->texel_fetch($_u_inputTex, $rt->construct(2, $localSampleX, $rt->construct(1, $rt->swizzle($gid, 'y'), 'int'), 'int'), $rt->i(0));
-            $srcXNorm = $rt->binary('/', $rt->binary('+', $rt->construct(1, $wrappedGlobalX), $rt->f(0.5), 1, 'float'), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float');
+            $srcXNorm = $rt->metal_divide($rt->binary('+', $rt->construct(1, $wrappedGlobalX), $rt->f(0.5), 1, 'float'), $rt->swizzle($_u_fullResolution, 'x'));
             $scanSource = $vhs_scanNoise__vec2_vec2_float_float->($rt->construct(2, $srcXNorm, $yNorm), $scanFreq, $time_value, $rt->binary('*', $speed_value, $rt->f(100), 1, 'float'));
             $gradSource = $vhs_gradValue__float_float_float_float->($yNorm, $rt->f(5), $time_value, $speed_value);
             $noiseColor = $rt->construct(3, $scanSource);
             $blended = $rt->component_wise('mix', $rt->swizzle($srcTexel, 'rgb'), $noiseColor, $rt->binary('*', $gradSource, $_u_noise, 1, 'float'));
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $blended, $rt->swizzle($srcTexel, 'a')))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $blended, $rt->swizzle($srcTexel, 'a')))}; $g->{fragColor} };
         } else {
             $base_coord = $rt->construct(2, $rt->construct(1, $rt->swizzle($gid, 'x'), 'int'), $rt->construct(1, $rt->swizzle($gid, 'y'), 'int'), 'int');
             $input_texel = $rt->texel_fetch($_u_inputTex, $base_coord, $rt->i(0));
@@ -354,7 +354,7 @@ my $run_pixel = sub {
             $texel = $rt->texel_fetch($_u_inputTex, $rt->construct(2, $localSampleX, $rt->construct(1, $rt->swizzle($gid, 'y'), 'int'), 'int'), $rt->i(0));
             $additive = $rt->component_wise('clamp', $rt->binary('*', $rt->binary('*', $rt->binary('*', $line_weighted, $white_weighted, 1, 'float'), $rt->f(4), 1, 'float'), $_u_noise, 1, 'float'), $rt->f(0), $rt->f(4));
             $boosted = $rt->component_wise('clamp', $rt->binary('+', $rt->swizzle($texel, 'rgb'), $rt->construct_raw(3, $additive), 3, 'float'), $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1)));
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $boosted, $rt->swizzle($texel, 'a')))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $boosted, $rt->swizzle($texel, 'a')))}; $g->{fragColor} };
         }
     };
     $main__void->();

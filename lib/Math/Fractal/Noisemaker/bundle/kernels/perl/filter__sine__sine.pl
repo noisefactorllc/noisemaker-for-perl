@@ -23,7 +23,7 @@ my $run_pixel = sub {
         my ($color, $globalCoord, $lum, $result, $texSize, $use_rgb, $uv);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize))));
         $color = $rt->texture($_u_inputTex, $uv);
         $use_rgb = $rt->binary('>', $_u_colorMode, $rt->f(0.5));
         $lum = $rt->f(0.0);
@@ -37,7 +37,7 @@ my $run_pixel = sub {
             $result = $normalized_sine__float->($rt->binary('*', $lum, $_u_amount, 1, 'float'));
             $color = $rt->assign_swizzle($color, 'rgb', $rt->construct(3, $result));
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

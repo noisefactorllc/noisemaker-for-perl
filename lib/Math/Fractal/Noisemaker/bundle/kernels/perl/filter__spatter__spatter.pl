@@ -22,11 +22,11 @@ my $run_pixel = sub {
     $pcg3__uvec3 = sub {
         my ($v) = @_;
         $v = $rt->copy($v, 'uint');
-        @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
-        @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
@@ -136,11 +136,11 @@ my $run_pixel = sub {
         my ($aspect, $base, $colored, $combined, $dims, $disp, $dotFreq, $dots, $fullRes, $globalCoord, $globalUV, $mask, $nUV, $result, $ridge, $ridgeFreq, $s, $smear, $smearFreq, $speckFreq, $specks, $uv, $warpFreqX, $warpFreqY, $warpX, $warpY, $warpedUV);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $dims = $rt->texture_size($_u_inputTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $dims)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $dims))));
         $base = $rt->texture($_u_inputTex, $uv);
         $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($rt->construct(2, $dims))));
-        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
-        $aspect = $rt->binary('/', $rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y'), 1, 'float');
+        $globalUV = $rt->construct(2, $rt->metal_divide($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes));
+        $aspect = $rt->metal_divide($rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y'));
         $nUV = $rt->construct(2, $rt->binary('*', $globalUV, $rt->construct_raw(2, $aspect, $rt->f(1)), 2, 'float'));
         $s = $rt->binary('*', $rt->construct(1, $_u_seed, 'uint'), $rt->i(17), 1, 'uint');
         $smearFreq = $rt->component_wise('mix', $rt->f(3), $rt->f(6), $hashf__uint->($pcg__uint->($rt->binary('+', $s, $rt->i(10), 1, 'uint'))));
@@ -165,7 +165,7 @@ my $run_pixel = sub {
         $mask = $rt->component_wise('step', $rt->f(0.5), $combined);
         $colored = $rt->construct(3, $rt->binary('*', $rt->swizzle($base, 'rgb'), $_u_color, 3, 'float'));
         $result = $rt->component_wise('mix', $rt->swizzle($base, 'rgb'), $rt->component_wise('mix', $rt->swizzle($base, 'rgb'), $colored, $mask), $_u_alpha);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($base, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($base, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

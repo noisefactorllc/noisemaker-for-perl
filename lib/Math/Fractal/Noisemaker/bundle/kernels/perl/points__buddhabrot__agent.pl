@@ -59,9 +59,9 @@ my $run_pixel = sub {
         $vel = $rt->texel_fetch($_u_velTex, $coord, $rt->i(0));
         $col = $rt->texel_fetch($_u_rgbaTex, $coord, $rt->i(0));
         if ($rt->binary('<', $rt->swizzle($pos, 'w'), $rt->f(0.5))) {
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($pos)};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($pos)}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)}; $g->{outRGBA} };
             return;
         }
         $agentSeed = $rt->binary('^', $rt->binary('^', $rt->hash_uint_lcg($rt->construct(1, $rt->binary('+', $rt->swizzle($coord, 'x'), $rt->binary('*', $rt->swizzle($coord, 'y'), $stateSize, 1, 'int'), 1, 'int'), 'uint')), $rt->construct(1, $rt->binary('*', $_u_time, $rt->f(65536), 1, 'float'), 'uint'), 1, 'uint'), $rt->construct(1, $rt->binary('*', $rt->swizzle($vel, 'z'), $rt->f(137), 1, 'float'), 'uint'), 1, 'uint');
@@ -79,9 +79,9 @@ my $run_pixel = sub {
             $cRe = $rt->binary('-', $rt->binary('*', $hash__uint->($agentSeed), $rt->f(3.5), 1, 'float'), $rt->f(2.5), 1, 'float');
             $cIm = $rt->binary('-', $rt->binary('*', $hash__uint->($rt->binary('+', $agentSeed, $rt->i(1), 1, 'uint')), $rt->f(3), 1, 'float'), $rt->f(1.5), 1, 'float');
             if ((($rt->binary('==', $_u_mode, $rt->i(0))) && ($inMandelbrotInterior__float_float->($cRe, $cIm)) ? 1 : 0)) {
-                @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($pos, 'xy'), $rt->f(0), $rt->f(0)))};
-                @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)};
-                @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(0)))};
+                scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($pos, 'xy'), $rt->f(0), $rt->f(0)))}; $g->{outXYZ} };
+                scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
+                scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(0)))}; $g->{outRGBA} };
                 return;
             }
             $z = $rt->construct(2, $rt->f(0));
@@ -102,7 +102,7 @@ my $run_pixel = sub {
                 }
                 $zr = $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->swizzle($z, 'x'), $rt->swizzle($z, 'x'), 1, 'float'), $rt->binary('*', $rt->swizzle($z, 'y'), $rt->swizzle($z, 'y'), 1, 'float'), 1, 'float'), $cRe, 1, 'float');
                 $zi = $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->f(2), $rt->swizzle($z, 'x'), 1, 'float'), $rt->swizzle($z, 'y'), 1, 'float'), $cIm, 1, 'float');
-                @{$z} = map { $rt->f32($_) } @{($rt->construct(2, $zr, $zi))};
+                scalar do { @{$z} = map { $rt->f32($_) } @{($rt->construct(2, $zr, $zi))}; $z };
                 if ($rt->binary('>', $rt->dot($z, $z), $rt->f(4))) {
                     $escapeAt = $rt->binary('+', $i, $rt->i(1), 1, 'int');
                     last;
@@ -123,15 +123,15 @@ my $run_pixel = sub {
                 }
             }
             if ($rt->binary('==', $brightness, $rt->f(0))) {
-                @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($pos, 'xy'), $rt->f(0), $rt->f(0)))};
-                @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)};
-                @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(0)))};
+                scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($pos, 'xy'), $rt->f(0), $rt->f(0)))}; $g->{outXYZ} };
+                scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
+                scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(0)))}; $g->{outRGBA} };
                 return;
             }
             $screen = $complexToScreen__vec2->($rt->construct(2, $cRe, $cIm));
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $screen, $rt->f(0.5), $rt->f(1)))};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $cRe, $cIm, $rt->f(1), $escapeStep))};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->construct(4, $brightness, $brightness, $brightness, $rt->f(1)))};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $screen, $rt->f(0.5), $rt->f(1)))}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $cRe, $cIm, $rt->f(1), $escapeStep))}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->construct(4, $brightness, $brightness, $brightness, $rt->f(1)))}; $g->{outRGBA} };
             return;
         }
         $cRe = $rt->swizzle($vel, 'x');
@@ -155,7 +155,7 @@ my $run_pixel = sub {
             }
             $zr = $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->swizzle($z, 'x'), $rt->swizzle($z, 'x'), 1, 'float'), $rt->binary('*', $rt->swizzle($z, 'y'), $rt->swizzle($z, 'y'), 1, 'float'), 1, 'float'), $cRe, 1, 'float');
             $zi = $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->f(2), $rt->swizzle($z, 'x'), 1, 'float'), $rt->swizzle($z, 'y'), 1, 'float'), $cIm, 1, 'float');
-            @{$z} = map { $rt->f32($_) } @{($rt->construct(2, $zr, $zi))};
+            scalar do { @{$z} = map { $rt->f32($_) } @{($rt->construct(2, $zr, $zi))}; $z };
         }
         $s = $rt->i(0);
         $_for2_first = 1;
@@ -169,19 +169,19 @@ my $run_pixel = sub {
             }
             $step = $rt->binary('+', $step, $rt->f(1), 1, 'float');
             if ($rt->binary('>=', $step, $escapeStep)) {
-                @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($pos, 'xy'), $rt->f(0), $rt->f(0)))};
-                @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $step, $rt->f(0)))};
-                @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(0)))};
+                scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($pos, 'xy'), $rt->f(0), $rt->f(0)))}; $g->{outXYZ} };
+                scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $step, $rt->f(0)))}; $g->{outVel} };
+                scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->f(0)))}; $g->{outRGBA} };
                 return;
             }
             $zr = $rt->binary('+', $rt->binary('-', $rt->binary('*', $rt->swizzle($z, 'x'), $rt->swizzle($z, 'x'), 1, 'float'), $rt->binary('*', $rt->swizzle($z, 'y'), $rt->swizzle($z, 'y'), 1, 'float'), 1, 'float'), $cRe, 1, 'float');
             $zi = $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->f(2), $rt->swizzle($z, 'x'), 1, 'float'), $rt->swizzle($z, 'y'), 1, 'float'), $cIm, 1, 'float');
-            @{$z} = map { $rt->f32($_) } @{($rt->construct(2, $zr, $zi))};
+            scalar do { @{$z} = map { $rt->f32($_) } @{($rt->construct(2, $zr, $zi))}; $z };
         }
         $screen = $complexToScreen__vec2->($z);
-        @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $screen, $rt->f(0.5), $rt->f(1)))};
-        @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $cRe, $cIm, $step, $escapeStep))};
-        @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)};
+        scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $screen, $rt->f(0.5), $rt->f(1)))}; $g->{outXYZ} };
+        scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $cRe, $cIm, $step, $escapeStep))}; $g->{outVel} };
+        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)}; $g->{outRGBA} };
     };
     $main__void->();
     my $_c0 = $g->{outXYZ};

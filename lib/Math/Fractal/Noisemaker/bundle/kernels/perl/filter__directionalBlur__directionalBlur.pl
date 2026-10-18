@@ -20,7 +20,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($p3);
         $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
-        @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
+        scalar do { @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))}; $p3 };
         return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
     };
     $main__void = sub {
@@ -41,9 +41,9 @@ my $run_pixel = sub {
             }
             $t = $rt->binary('+', $rt->binary('*', $rt->binary('-', $rt->binary('/', $rt->construct(1, $i), $rt->construct(1, $rt->binary('-', $g->{N}, $rt->i(1), 1, 'int')), 1, 'float'), $rt->f(0.5), 1, 'float'), $_u_blurDistance, 1, 'float'), $jitter, 1, 'float');
             $offset = $rt->construct(2, $rt->binary('*', $dir, $t, 2, 'float'));
-            @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->texture($_u_inputTex, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $offset, 2, 'float'), $_u_resolution, 2, 'float')), 4, 'float'))};
+            scalar do { @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->texture($_u_inputTex, $rt->metal_divide($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $offset, 2, 'float'), $_u_resolution)), 4, 'float'))}; $sum };
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('/', $sum, $rt->construct(1, $g->{N}), 4, 'float'))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('/', $sum, $rt->construct(1, $g->{N}), 4, 'float'))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

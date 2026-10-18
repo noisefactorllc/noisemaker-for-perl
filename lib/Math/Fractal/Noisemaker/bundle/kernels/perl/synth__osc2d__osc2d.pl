@@ -79,13 +79,13 @@ my $run_pixel = sub {
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $res = $rt->fresh($_u_fullResolution);
         if ($rt->binary('<', $rt->swizzle($res, 'x'), $rt->f(1))) {
-            @{$res} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(1024), $rt->f(1024)))};
+            scalar do { @{$res} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(1024), $rt->f(1024)))}; $res };
         }
-        $st = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $res, 2, 'float'));
-        @{$st} = map { $rt->f32($_) } @{($rt->binary('-', $st, $rt->f(0.5), 2, 'float'))};
+        $st = $rt->construct(2, $rt->metal_divide($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $res));
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('-', $st, $rt->f(0.5), 2, 'float'))}; $st };
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('*', $rt->swizzle($st, 'x'), $_u_aspect, 1, 'float'));
         $rotRad = $rt->binary('/', $rt->binary('*', $_u_rotation, $g->{PI}, 1, 'float'), $rt->f(180), 1, 'float');
-        @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $rotRad))};
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $rotRad))}; $st };
         $spatialPos = $rt->binary('+', $rt->swizzle($st, 'y'), $rt->f(0.5), 1, 'float');
         $freq = $rt->construct(1, $_u_frequency);
         $spatialPhase = $rt->binary('*', $rt->swizzle($st, 'y'), $freq, 1, 'float');
@@ -130,7 +130,7 @@ my $run_pixel = sub {
                 }
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $val), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $val), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

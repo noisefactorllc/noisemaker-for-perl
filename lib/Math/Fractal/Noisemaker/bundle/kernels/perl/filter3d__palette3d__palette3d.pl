@@ -36,21 +36,21 @@ my $run_pixel = sub {
         $m = $rt->binary('-', $v, $c, 1, 'float');
         $rgb = $rt->construct(3, 0.0);
         if ($rt->binary('<', $hp, $rt->f(1))) {
-            @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $c, $x, $rt->f(0)))};
+            scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $c, $x, $rt->f(0)))}; $rgb };
         } else {
             if ($rt->binary('<', $hp, $rt->f(2))) {
-                @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $x, $c, $rt->f(0)))};
+                scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $x, $c, $rt->f(0)))}; $rgb };
             } else {
                 if ($rt->binary('<', $hp, $rt->f(3))) {
-                    @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $c, $x))};
+                    scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $c, $x))}; $rgb };
                 } else {
                     if ($rt->binary('<', $hp, $rt->f(4))) {
-                        @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $x, $c))};
+                        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $x, $c))}; $rgb };
                     } else {
                         if ($rt->binary('<', $hp, $rt->f(5))) {
-                            @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $x, $rt->f(0), $c))};
+                            scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $x, $rt->f(0), $c))}; $rgb };
                         } else {
-                            @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $c, $rt->f(0), $x))};
+                            scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $c, $rt->f(0), $x))}; $rgb };
                         }
                     }
                 }
@@ -101,10 +101,10 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($blendedColor, $entry, $finalColor, $inputColor, $lum, $mode, $paletteColor, $t, $texSize, $uv);
         $texSize = $rt->construct(2, $rt->texture_size($_u_inputTex3d));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize));
         $inputColor = $rt->texture($_u_inputTex3d, $uv);
         if ((($rt->binary('<=', $_u_paletteIndex, $rt->i(0))) || ($rt->binary('>', $_u_paletteIndex, $g->{PALETTE_COUNT})) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($inputColor)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($inputColor)}; $g->{fragColor} };
             return;
         }
         $lum = $rt->dot($rt->swizzle($inputColor, 'rgb'), $rt->construct(3, $rt->f(0.29899999999999999), $rt->f(0.58699999999999997), $rt->f(0.114)));
@@ -121,16 +121,16 @@ my $run_pixel = sub {
         $paletteColor = $cosinePalette__float_vec3_vec3_vec3_vec3->($t, $rt->construct(3, $rt->swizzle($entry->[0], 'xyz')), $rt->construct(3, $rt->swizzle($entry->[1], 'xyz')), $rt->construct(3, $rt->swizzle($entry->[2], 'xyz')), $rt->construct(3, $rt->swizzle($entry->[3], 'xyz')));
         $finalColor = $rt->construct(3, 0.0);
         if ($rt->binary('==', $mode, $g->{MODE_HSV})) {
-            @{$finalColor} = map { $rt->f32($_) } @{($hsv2rgb__vec3->($paletteColor))};
+            scalar do { @{$finalColor} = map { $rt->f32($_) } @{($hsv2rgb__vec3->($paletteColor))}; $finalColor };
         } else {
             if ($rt->binary('==', $mode, $g->{MODE_OKLAB})) {
-                @{$finalColor} = map { $rt->f32($_) } @{($oklab2rgb__vec3->($paletteColor))};
+                scalar do { @{$finalColor} = map { $rt->f32($_) } @{($oklab2rgb__vec3->($paletteColor))}; $finalColor };
             } else {
-                @{$finalColor} = map { $rt->f32($_) } @{($paletteColor)};
+                scalar do { @{$finalColor} = map { $rt->f32($_) } @{($paletteColor)}; $finalColor };
             }
         }
         $blendedColor = $rt->component_wise('mix', $rt->swizzle($inputColor, 'rgb'), $finalColor, $_u_alpha);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $blendedColor, $rt->swizzle($inputColor, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $blendedColor, $rt->swizzle($inputColor, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

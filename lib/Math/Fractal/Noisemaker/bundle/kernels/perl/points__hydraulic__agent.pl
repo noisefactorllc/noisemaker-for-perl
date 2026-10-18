@@ -119,9 +119,9 @@ my $run_pixel = sub {
         $x = $rt->binary('*', $px, $rt->swizzle($_u_resolution, 'x'), 1, 'float');
         $y = $rt->binary('*', $py, $rt->swizzle($_u_resolution, 'y'), 1, 'float');
         if ($rt->binary('<', $alive, $rt->f(0.5))) {
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($xyz)};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($xyz)}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
             return;
         }
         if ($rt->binary('==', $seed_f, $rt->f(0))) {
@@ -153,7 +153,7 @@ my $run_pixel = sub {
         $targetVy = $rt->f(0);
         $scale = $rt->f(0.0);
         if ($rt->binary('>', $glen, $rt->f(9.9999999999999995e-07))) {
-            $scale = $rt->binary('/', $rt->binary('*', $_u_stride, $rt->f(0.10000000000000001), 1, 'float'), $glen, 1, 'float');
+            $scale = $rt->metal_divide($rt->binary('*', $_u_stride, $rt->f(0.10000000000000001), 1, 'float'), $glen);
             $targetVx = $rt->binary('*', $gx, $scale, 1, 'float');
             $targetVy = $rt->binary('*', $gy, $scale, 1, 'float');
         }
@@ -163,13 +163,13 @@ my $run_pixel = sub {
         $vy = $rt->component_wise('mix', $vy, $targetVy, $blendFactor);
         $x = $wrap_float__float_float->($rt->binary('+', $x, $vx, 1, 'float'), $rt->swizzle($_u_resolution, 'x'));
         $y = $wrap_float__float_float->($rt->binary('+', $y, $vy, 1, 'float'), $rt->swizzle($_u_resolution, 'y'));
-        $newPx = $rt->binary('/', $x, $rt->swizzle($_u_resolution, 'x'), 1, 'float');
-        $newPy = $rt->binary('/', $y, $rt->swizzle($_u_resolution, 'y'), 1, 'float');
-        $normVx = $rt->binary('/', $vx, $rt->swizzle($_u_resolution, 'x'), 1, 'float');
-        $normVy = $rt->binary('/', $vy, $rt->swizzle($_u_resolution, 'y'), 1, 'float');
-        @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPx, $newPy, $rt->swizzle($xyz, 'z'), $alive))};
-        @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $normVx, $normVy, $vz, $seed_f))};
-        @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+        $newPx = $rt->metal_divide($x, $rt->swizzle($_u_resolution, 'x'));
+        $newPy = $rt->metal_divide($y, $rt->swizzle($_u_resolution, 'y'));
+        $normVx = $rt->metal_divide($vx, $rt->swizzle($_u_resolution, 'x'));
+        $normVy = $rt->metal_divide($vy, $rt->swizzle($_u_resolution, 'y'));
+        scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPx, $newPy, $rt->swizzle($xyz, 'z'), $alive))}; $g->{outXYZ} };
+        scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $normVx, $normVy, $vz, $seed_f))}; $g->{outVel} };
+        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
     };
     $main__void->();
     my $_c0 = $g->{outXYZ};

@@ -20,7 +20,7 @@ my $run_pixel = sub {
         $overlay = $rt->texel_fetch($_u_overlayTex, $coord, $rt->i(0));
         $scratchStrength = $rt->binary('*', $rt->swizzle($overlay, 'a'), $_u_alpha, 1, 'float');
         $result = $rt->component_wise('max', $rt->swizzle($base, 'rgb'), $rt->construct(3, $scratchStrength));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($base, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($base, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

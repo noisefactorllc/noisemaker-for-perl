@@ -43,19 +43,19 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($a, $amt, $b, $color, $color1, $color2, $factor, $globalCoord, $middle, $resultHSV, $st);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $st = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
-        $color1 = $rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
-        $color2 = $rt->texture($_u_tex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)), 2, 'float')));
+        $st = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
+        $color1 = $rt->texture($_u_inputTex, $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)))));
+        $color2 = $rt->texture($_u_tex, $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_tex)))));
         $a = $rgb2hsv__vec3->($rt->swizzle($color1, 'rgb'));
         $b = $rgb2hsv__vec3->($rt->swizzle($color2, 'rgb'));
         $resultHSV = $rt->construct(3, 0.0);
         if ($rt->binary('==', $_u_mode, $rt->i(0))) {
-            @{$resultHSV} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($a, 'x'), $rt->swizzle($a, 'y'), $rt->swizzle($b, 'z')))};
+            scalar do { @{$resultHSV} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($a, 'x'), $rt->swizzle($a, 'y'), $rt->swizzle($b, 'z')))}; $resultHSV };
         } else {
             if ($rt->binary('==', $_u_mode, $rt->i(1))) {
-                @{$resultHSV} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($b, 'x'), $rt->swizzle($a, 'y'), $rt->swizzle($a, 'z')))};
+                scalar do { @{$resultHSV} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($b, 'x'), $rt->swizzle($a, 'y'), $rt->swizzle($a, 'z')))}; $resultHSV };
             } else {
-                @{$resultHSV} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($a, 'x'), $rt->swizzle($b, 'y'), $rt->swizzle($a, 'z')))};
+                scalar do { @{$resultHSV} = map { $rt->f32($_) } @{($rt->construct(3, $rt->swizzle($a, 'x'), $rt->swizzle($b, 'y'), $rt->swizzle($a, 'z')))}; $resultHSV };
             }
         }
         $middle = $rt->construct(4, $hsv2rgb__vec3->($resultHSV), $rt->f(1));
@@ -64,13 +64,13 @@ my $run_pixel = sub {
         $factor = $rt->f(0.0);
         if ($rt->binary('<', $amt, $rt->f(0.5))) {
             $factor = $rt->binary('*', $amt, $rt->f(2), 1, 'float');
-            @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $color1, $middle, $factor))};
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $color1, $middle, $factor))}; $color };
         } else {
             $factor = $rt->binary('*', $rt->binary('-', $amt, $rt->f(0.5), 1, 'float'), $rt->f(2), 1, 'float');
-            @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $middle, $color2, $factor))};
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $middle, $color2, $factor))}; $color };
         }
         $color = $rt->assign_swizzle($color, 'a', $rt->component_wise('max', $rt->swizzle($color1, 'a'), $rt->swizzle($color2, 'a')));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

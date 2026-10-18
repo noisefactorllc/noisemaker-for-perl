@@ -18,11 +18,11 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_for0_first, $_for1_first, $globalMax, $globalMin, $sampleCoord, $statsTexSize, $tileCount, $tileStats, $tx, $ty);
         if ((($rt->binary('!=', $rt->construct(1, $rt->swizzle($ctx->{frag_coord}, 'x'), 'int'), $rt->i(0))) || ($rt->binary('!=', $rt->construct(1, $rt->swizzle($ctx->{frag_coord}, 'y'), 'int'), $rt->i(0))) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
             return;
         }
         $statsTexSize = $rt->texture_size($_u_statsTex);
-        $tileCount = $rt->construct(2, $rt->binary('/', $rt->binary('-', $rt->binary('+', $rt->swizzle($statsTexSize, 'x'), $g->{TILE_SIZE}, 1, 'int'), $rt->i(1), 1, 'int'), $g->{TILE_SIZE}, 1, 'int'), $rt->binary('/', $rt->binary('-', $rt->binary('+', $rt->swizzle($statsTexSize, 'y'), $g->{TILE_SIZE}, 1, 'int'), $rt->i(1), 1, 'int'), $g->{TILE_SIZE}, 1, 'int'), 'int');
+        $tileCount = $rt->construct(2, $rt->binary('/', $rt->binary('-', $rt->binary('+', $rt->swizzle($statsTexSize, 'x'), $g->{TILE_SIZE}, 1, 'int'), $rt->i(1), 1, 'int'), $g->{TILE_SIZE}, 1, 'float'), $rt->binary('/', $rt->binary('-', $rt->binary('+', $rt->swizzle($statsTexSize, 'y'), $g->{TILE_SIZE}, 1, 'int'), $rt->i(1), 1, 'int'), $g->{TILE_SIZE}, 1, 'float'), 'int');
         $globalMin = $g->{F32_MAX};
         $globalMax = $g->{F32_MIN};
         $ty = $rt->i(0);
@@ -57,7 +57,7 @@ my $run_pixel = sub {
                 $globalMax = $rt->component_wise('max', $globalMax, $rt->swizzle($tileStats, 'y'));
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $globalMin, $globalMax, $rt->f(0), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $globalMin, $globalMax, $rt->f(0), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -30,7 +30,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($p3);
         $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
-        @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
+        scalar do { @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))}; $p3 };
         return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
     };
     $lum__vec3 = sub {
@@ -41,7 +41,7 @@ my $run_pixel = sub {
     $toSampleUV__vec2 = sub {
         my ($globalPixelPos) = @_;
         $globalPixelPos = $rt->copy($globalPixelPos, 'float');
-        return $rt->component_wise('clamp', $rt->binary('/', $rt->binary('-', $globalPixelPos, $_u_tileOffset, 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
+        return $rt->component_wise('clamp', $rt->metal_divide($rt->binary('-', $globalPixelPos, $_u_tileOffset, 2, 'float'), $_u_resolution), $rt->f(0), $rt->f(1));
     };
     $cellAvgColor3x3__vec2 = sub {
         my ($centerPx) = @_;
@@ -70,7 +70,7 @@ my $run_pixel = sub {
                     last;
                 }
                 $p = $rt->construct(2, $rt->binary('+', $centerPx, $rt->binary('*', $rt->construct_raw(2, $rt->construct(1, $i), $rt->construct(1, $j)), $sp, 2, 'float'), 2, 'float'));
-                @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->texture($_u_inputTex, $toSampleUV__vec2->($p)), 4, 'float'))};
+                scalar do { @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->texture($_u_inputTex, $toSampleUV__vec2->($p)), 4, 'float'))}; $sum };
             }
         }
         return $rt->construct(4, $rt->binary('*', $sum, $rt->binary('/', $rt->f(1), $rt->f(9), 1, 'float'), 4, 'float'));
@@ -128,15 +128,15 @@ my $run_pixel = sub {
         if ((((($rt->binary('>=', $rt->swizzle($bc, 'x'), $rt->unary('-', $g->{EPS}))) && ($rt->binary('>=', $rt->swizzle($bc, 'y'), $rt->unary('-', $g->{EPS}))) ? 1 : 0)) && ($rt->binary('>=', $rt->swizzle($bc, 'z'), $rt->unary('-', $g->{EPS}))) ? 1 : 0)) {
             return $rt->i(0);
         }
-        @{$bc} = map { $rt->f32($_) } @{($baryWeights__vec2_vec2_vec2_vec2->($P, $Cbr, $Ctr, $apex))};
+        scalar do { @{$bc} = map { $rt->f32($_) } @{($baryWeights__vec2_vec2_vec2_vec2->($P, $Cbr, $Ctr, $apex))}; $bc };
         if ((((($rt->binary('>=', $rt->swizzle($bc, 'x'), $rt->unary('-', $g->{EPS}))) && ($rt->binary('>=', $rt->swizzle($bc, 'y'), $rt->unary('-', $g->{EPS}))) ? 1 : 0)) && ($rt->binary('>=', $rt->swizzle($bc, 'z'), $rt->unary('-', $g->{EPS}))) ? 1 : 0)) {
             return $rt->i(1);
         }
-        @{$bc} = map { $rt->f32($_) } @{($baryWeights__vec2_vec2_vec2_vec2->($P, $Ctr, $Ctl, $apex))};
+        scalar do { @{$bc} = map { $rt->f32($_) } @{($baryWeights__vec2_vec2_vec2_vec2->($P, $Ctr, $Ctl, $apex))}; $bc };
         if ((((($rt->binary('>=', $rt->swizzle($bc, 'x'), $rt->unary('-', $g->{EPS}))) && ($rt->binary('>=', $rt->swizzle($bc, 'y'), $rt->unary('-', $g->{EPS}))) ? 1 : 0)) && ($rt->binary('>=', $rt->swizzle($bc, 'z'), $rt->unary('-', $g->{EPS}))) ? 1 : 0)) {
             return $rt->i(2);
         }
-        @{$bc} = map { $rt->f32($_) } @{($baryWeights__vec2_vec2_vec2_vec2->($P, $Ctl, $Cbl, $apex))};
+        scalar do { @{$bc} = map { $rt->f32($_) } @{($baryWeights__vec2_vec2_vec2_vec2->($P, $Ctl, $Cbl, $apex))}; $bc };
         if ((((($rt->binary('>=', $rt->swizzle($bc, 'x'), $rt->unary('-', $g->{EPS}))) && ($rt->binary('>=', $rt->swizzle($bc, 'y'), $rt->unary('-', $g->{EPS}))) ? 1 : 0)) && ($rt->binary('>=', $rt->swizzle($bc, 'z'), $rt->unary('-', $g->{EPS}))) ? 1 : 0)) {
             return $rt->i(3);
         }
@@ -161,7 +161,7 @@ my $run_pixel = sub {
         $halfCell = $rt->construct(2, $rt->binary('*', $_u_size, $rt->f(0.5), 1, 'float'));
         $toCenter = $rt->construct(2, $rt->binary('-', $imgCenter, $P, 2, 'float'));
         $distToCenter = $rt->length($toCenter);
-        $stepDir = $rt->construct(2, (($rt->binary('>', $distToCenter, $rt->f(0))) ? ($rt->binary('/', $toCenter, $distToCenter, 2, 'float')) : ($rt->construct(2, $rt->f(0)))));
+        $stepDir = $rt->construct(2, (($rt->binary('>', $distToCenter, $rt->f(0))) ? ($rt->metal_divide($toCenter, $distToCenter)) : ($rt->construct(2, $rt->f(0)))));
         $bestPriority = $rt->unary('-', $rt->f(1000000000));
         $bestCenterPx = $rt->construct(2, $rt->f(0));
         $bestS = $rt->f(1);
@@ -180,10 +180,10 @@ my $run_pixel = sub {
             }
             $t = $rt->component_wise('min', $rt->binary('*', $rt->construct(1, $i), $_u_size, 1, 'float'), $distToCenter);
             $samplePos = $rt->construct(2, $rt->binary('+', $P, $rt->binary('*', $stepDir, $t, 2, 'float'), 2, 'float'));
-            $cellIdxF = $rt->component_wise('floor', $rt->binary('/', $rt->binary('-', $samplePos, $imgCenter, 2, 'float'), $_u_size, 2, 'float'));
+            $cellIdxF = $rt->component_wise('floor', $rt->metal_divide($rt->binary('-', $samplePos, $imgCenter, 2, 'float'), $_u_size));
             $cellC = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('+', $cellIdxF, $rt->f(0.5), 2, 'float'), $_u_size, 2, 'float'), 2, 'float'));
             $h = $cellHeight__vec2_vec2->($cellC, $cellIdxF);
-            $s = $rt->binary('+', $rt->f(1), $rt->binary('*', $rt->binary('*', $h, $rt->binary('/', $_u_depth, $rt->f(100), 1, 'float'), 1, 'float'), $rt->f(0.40000000000000002), 1, 'float'), 1, 'float');
+            $s = $rt->construct(1, $rt->binary('+', $rt->f(1), $rt->binary('*', $rt->binary('*', $h, $rt->binary('/', $_u_depth, $rt->f(100), 1, 'float'), 1, 'float'), $rt->f(0.40000000000000002), 1, 'float'), 1, 'float'));
             $apex = $rt->construct(2, 0.0);
             $faceCenter = $rt->construct(2, 0.0);
             $faceHalf = $rt->construct(2, 0.0);
@@ -195,7 +195,7 @@ my $run_pixel = sub {
                 $tri = $pyramidTriHit__vec2_vec2_vec2_vec2->($P, $cellC, $apex, $halfCell);
                 if ((($rt->binary('>=', $tri, $rt->i(0))) && ($rt->binary('>', $s, $bestPriority)) ? 1 : 0)) {
                     $bestPriority = $s;
-                    @{$bestCenterPx} = map { $rt->f32($_) } @{($cellC)};
+                    scalar do { @{$bestCenterPx} = map { $rt->f32($_) } @{($cellC)}; $bestCenterPx };
                     $bestS = $s;
                     $bestTri = $tri;
                     $found = 1;
@@ -203,14 +203,14 @@ my $run_pixel = sub {
             } else {
                 $faceCenter = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->binary('*', $rt->binary('-', $cellC, $imgCenter, 2, 'float'), $s, 2, 'float'), 2, 'float'));
                 $faceHalf = $rt->construct(2, $rt->binary('*', $halfCell, $s, 2, 'float'));
-                $topHit = $rt->component_wise('all', $rt->component_wise('lessThanEqual', $rt->component_wise('abs', $rt->binary('-', $P, $faceCenter, 2, 'float')), $faceHalf));
+                $topHit = $rt->component_wise('all', $rt->component_wise('lessThanEqual', $rt->component_wise('abs', $rt->binary('-', $rt->binary('-', $P, $imgCenter, 2, 'float'), $rt->binary('*', $rt->binary('-', $cellC, $imgCenter, 2, 'float'), $s, 2, 'float'), 2, 'float')), $faceHalf));
                 $sideHit = (((($topHit) ? 0 : 1)) && ($rt->component_wise('all', $rt->component_wise('lessThanEqual', $rt->component_wise('abs', $rt->binary('-', $P, $cellC, 2, 'float')), $halfCell))) ? 1 : 0);
                 $priority = $rt->f(0.0);
                 if ((($topHit) || ($sideHit) ? 1 : 0)) {
                     $priority = $rt->binary('+', $s, (($topHit) ? ($rt->f(1000)) : ($rt->f(0))), 1, 'float');
                     if ($rt->binary('>', $priority, $bestPriority)) {
                         $bestPriority = $priority;
-                        @{$bestCenterPx} = map { $rt->f32($_) } @{($cellC)};
+                        scalar do { @{$bestCenterPx} = map { $rt->f32($_) } @{($cellC)}; $bestCenterPx };
                         $bestS = $s;
                         $bestIsTop = $topHit;
                         $found = 1;
@@ -224,8 +224,8 @@ my $run_pixel = sub {
         $outColor = $rt->construct(4, 0.0);
         $cellC = $rt->construct(2, 0.0);
         if ((($found) ? 0 : 1)) {
-            $cellC = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('+', $rt->component_wise('floor', $rt->binary('/', $rt->binary('-', $P, $imgCenter, 2, 'float'), $_u_size, 2, 'float')), $rt->f(0.5), 2, 'float')), $_u_size, 2, 'float')), 2, 'float'));
-            @{$outColor} = map { $rt->f32($_) } @{($cellAvgColor3x3__vec2->($cellC))};
+            $cellC = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('+', $rt->component_wise('floor', $rt->metal_divide($rt->binary('-', $P, $imgCenter, 2, 'float'), $_u_size)), $rt->f(0.5), 2, 'float')), $_u_size, 2, 'float')), 2, 'float'));
+            scalar do { @{$outColor} = map { $rt->f32($_) } @{($cellAvgColor3x3__vec2->($cellC))}; $outColor };
         } else {
             $Cbl = $rt->construct(2, 0.0);
             $Cbr = $rt->construct(2, 0.0);
@@ -257,22 +257,22 @@ my $run_pixel = sub {
                 $Ci1 = $rt->construct(2, 0.0);
                 $shadeConst = $rt->f(0.0);
                 if ($rt->binary('==', $bestTri, $rt->i(0))) {
-                    @{$Ci} = map { $rt->f32($_) } @{($Cbl)};
-                    @{$Ci1} = map { $rt->f32($_) } @{($Cbr)};
+                    scalar do { @{$Ci} = map { $rt->f32($_) } @{($Cbl)}; $Ci };
+                    scalar do { @{$Ci1} = map { $rt->f32($_) } @{($Cbr)}; $Ci1 };
                     $shadeConst = $g->{SHADE_BOTTOM};
                 } else {
                     if ($rt->binary('==', $bestTri, $rt->i(1))) {
-                        @{$Ci} = map { $rt->f32($_) } @{($Cbr)};
-                        @{$Ci1} = map { $rt->f32($_) } @{($Ctr)};
+                        scalar do { @{$Ci} = map { $rt->f32($_) } @{($Cbr)}; $Ci };
+                        scalar do { @{$Ci1} = map { $rt->f32($_) } @{($Ctr)}; $Ci1 };
                         $shadeConst = $g->{SHADE_RIGHT};
                     } else {
                         if ($rt->binary('==', $bestTri, $rt->i(2))) {
-                            @{$Ci} = map { $rt->f32($_) } @{($Ctr)};
-                            @{$Ci1} = map { $rt->f32($_) } @{($Ctl)};
+                            scalar do { @{$Ci} = map { $rt->f32($_) } @{($Ctr)}; $Ci };
+                            scalar do { @{$Ci1} = map { $rt->f32($_) } @{($Ctl)}; $Ci1 };
                             $shadeConst = $g->{SHADE_TOP};
                         } else {
-                            @{$Ci} = map { $rt->f32($_) } @{($Ctl)};
-                            @{$Ci1} = map { $rt->f32($_) } @{($Cbl)};
+                            scalar do { @{$Ci} = map { $rt->f32($_) } @{($Ctl)}; $Ci };
+                            scalar do { @{$Ci1} = map { $rt->f32($_) } @{($Cbl)}; $Ci1 };
                             $shadeConst = $g->{SHADE_LEFT};
                         }
                     }
@@ -282,31 +282,31 @@ my $run_pixel = sub {
                 $baseColor = $rt->construct(4, 0.0);
                 $localPos = $rt->construct(2, 0.0);
                 if ($_u_solidFront) {
-                    @{$baseColor} = map { $rt->f32($_) } @{($cellAvgColor3x3__vec2->($bestCenterPx))};
+                    scalar do { @{$baseColor} = map { $rt->f32($_) } @{($cellAvgColor3x3__vec2->($bestCenterPx))}; $baseColor };
                 } else {
                     $localPos = $rt->construct(2, $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->swizzle($bc, 'x'), $Ci, 2, 'float'), $rt->binary('*', $rt->swizzle($bc, 'y'), $Ci1, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->swizzle($bc, 'z'), $bestCenterPx, 2, 'float'), 2, 'float'));
-                    @{$baseColor} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $toSampleUV__vec2->($localPos)))};
+                    scalar do { @{$baseColor} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $toSampleUV__vec2->($localPos)))}; $baseColor };
                 }
                 $shade = $rt->component_wise('mix', $rt->f(1), $shadeConst, $apexW);
-                @{$outColor} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rt->swizzle($baseColor, 'rgb'), $shade, 3, 'float'), $rt->swizzle($baseColor, 'a')))};
+                scalar do { @{$outColor} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rt->swizzle($baseColor, 'rgb'), $shade, 3, 'float'), $rt->swizzle($baseColor, 'a')))}; $outColor };
             } else {
                 $meanColor = $rt->construct(4, 0.0);
                 if ($bestIsTop) {
                     $localPos = $rt->construct(2, 0.0);
                     if ($_u_solidFront) {
-                        @{$outColor} = map { $rt->f32($_) } @{($cellAvgColor3x3__vec2->($bestCenterPx))};
+                        scalar do { @{$outColor} = map { $rt->f32($_) } @{($cellAvgColor3x3__vec2->($bestCenterPx))}; $outColor };
                     } else {
                         $localPos = $rt->construct(2, $rt->binary('+', $imgCenter, $rt->binary('/', $rt->binary('-', $P, $imgCenter, 2, 'float'), $bestS, 2, 'float'), 2, 'float'));
-                        @{$outColor} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $toSampleUV__vec2->($localPos)))};
+                        scalar do { @{$outColor} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $toSampleUV__vec2->($localPos)))}; $outColor };
                     }
                 } else {
                     $shade = $sideShade__vec2_vec2->($P, $bestCenterPx);
                     $meanColor = $cellAvgColor3x3__vec2->($bestCenterPx);
-                    @{$outColor} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rt->swizzle($meanColor, 'rgb'), $shade, 3, 'float'), $rt->swizzle($meanColor, 'a')))};
+                    scalar do { @{$outColor} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rt->swizzle($meanColor, 'rgb'), $shade, 3, 'float'), $rt->swizzle($meanColor, 'a')))}; $outColor };
                 }
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($outColor)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($outColor)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

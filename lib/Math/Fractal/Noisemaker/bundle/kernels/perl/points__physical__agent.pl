@@ -41,7 +41,7 @@ my $run_pixel = sub {
         my ($a, $b, $c, $d, $f, $i, $n);
         $i = $rt->component_wise('floor', $p);
         $f = $rt->component_wise('fract', $p);
-        @{$f} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('*', $f, $f, 2, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 2, 'float'), 2, 'float'), 2, 'float'))};
+        scalar do { @{$f} = map { $rt->f32($_) } @{($rt->binary('*', $rt->binary('*', $f, $f, 2, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 2, 'float'), 2, 'float'), 2, 'float'))}; $f };
         $n = $rt->binary('+', $rt->construct(1, $rt->swizzle($i, 'x'), 'uint'), $rt->binary('*', $rt->construct(1, $rt->swizzle($i, 'y'), 'uint'), $rt->i(57), 1, 'uint'), 1, 'uint');
         $a = $hash__uint->($n);
         $b = $hash__uint->($rt->binary('+', $n, $rt->i(1), 1, 'uint'));
@@ -66,7 +66,7 @@ my $run_pixel = sub {
                 last;
             }
             $v = $rt->binary('+', $v, $rt->binary('*', $a, $noise2D__vec2->($p), 1, 'float'), 1, 'float');
-            @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(2), 2, 'float'))};
+            scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(2), 2, 'float'))}; $p };
             $a = $rt->binary('*', $a, $rt->f(0.5), 1, 'float');
         }
         return $v;
@@ -87,9 +87,9 @@ my $run_pixel = sub {
         $vz = $rt->swizzle($vel, 'z');
         $seed_f = $rt->swizzle($vel, 'w');
         if ($rt->binary('<', $alive, $rt->f(0.5))) {
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($xyz)};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($xyz)}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
             return;
         }
         $deviationMultiplier = $rt->binary('+', $rt->f(1), $rt->binary('*', $rt->binary('*', $rt->binary('-', $seed_f, $rt->f(0.5), 1, 'float'), $_u_deviation, 1, 'float'), $rt->f(2), 1, 'float'), 1, 'float');
@@ -112,13 +112,13 @@ my $run_pixel = sub {
             $needsRespawn = 1;
         }
         if ($needsRespawn) {
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $px, $py, $pz, $rt->f(0)))};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $vx, $vy, $vz, $seed_f))};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $px, $py, $pz, $rt->f(0)))}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $vx, $vy, $vz, $seed_f))}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
         } else {
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $px, $py, $pz, $rt->f(1)))};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $vx, $vy, $vz, $seed_f))};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $px, $py, $pz, $rt->f(1)))}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $vx, $vy, $vz, $seed_f))}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
         }
     };
     $main__void->();

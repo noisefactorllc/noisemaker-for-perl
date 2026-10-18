@@ -99,13 +99,13 @@ my $run_pixel = sub {
         $frameSeed = $rt->hash_uint_lcg($rt->binary('+', $rt->binary('*', $agentId, $rt->i(31), 1, 'uint'), $rt->float_bits_to_uint($seed), 1, 'uint'));
         $seed = $rt->binary('-', $rt->uint_bits_to_float($rt->binary('|', $rt->binary('&', $frameSeed, $rt->i(8388607), 1, 'uint'), $rt->i(1065353216), 1, 'uint')), $rt->f(1), 1, 'float');
         if ($rt->binary('<', $alive, $rt->f(0.5))) {
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($xyz)};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $seed, $rt->f(0), $rt->f(0), $agentRand))};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($xyz)}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $seed, $rt->f(0), $rt->f(0), $agentRand))}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
             return;
         }
         $gridDims = $rt->construct(2, $rt->texture_size($_u_gridTex));
-        $texel = $rt->binary('/', $rt->f(1), $rt->component_wise('max', $rt->swizzle($gridDims, 'x'), $rt->swizzle($gridDims, 'y')), 1, 'float');
+        $texel = $rt->metal_divide($rt->f(1), $rt->component_wise('max', $rt->swizzle($gridDims, 'x'), $rt->swizzle($gridDims, 'y')));
         $local = $neighborhood__vec2_float->($pos, $rt->f(2));
         $proximity = $rt->component_wise('smoothstep', $rt->f(0.014999999999999999), $rt->f(0.12), $local);
         $randomDir = do { ($_retc, $seed) = $randomDirection__float->($seed); $_retc };
@@ -121,13 +121,13 @@ my $run_pixel = sub {
             $inputVal = $rt->texel_fetch($_u_inputTex, $inputCoord, $rt->i(0));
             $inputDir = $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->swizzle($inputVal, 'xy'), $rt->f(2), 2, 'float'), $rt->f(1), 2, 'float'));
             if ($rt->binary('>', $rt->length($inputDir), $rt->f(0.01))) {
-                @{$inputDir} = map { $rt->f32($_) } @{($rt->normalize($inputDir))};
-                @{$stepDir} = map { $rt->f32($_) } @{($rt->normalize($rt->component_wise('mix', $randomDir, $inputDir, $inputW)))};
+                scalar do { @{$inputDir} = map { $rt->f32($_) } @{($rt->normalize($inputDir))}; $inputDir };
+                scalar do { @{$stepDir} = map { $rt->f32($_) } @{($rt->normalize($rt->component_wise('mix', $randomDir, $inputDir, $inputW)))}; $stepDir };
             }
         }
         $stepSize = $rt->binary('*', $rt->binary('*', $rt->binary('/', $_u_stride, $rt->f(10), 1, 'float'), $texel, 1, 'float'), $rt->component_wise('mix', $rt->f(3), $rt->f(0.5), $proximity), 1, 'float');
-        @{$stepDir} = map { $rt->f32($_) } @{($rt->binary('+', $stepDir, $rt->construct(2, $rt->binary('*', do { ($_retc, $seed) = $randomDirection__float->($seed); $_retc }, $rt->f(0.29999999999999999), 2, 'float')), 2, 'float'))};
-        @{$stepDir} = map { $rt->f32($_) } @{($rt->normalize($stepDir))};
+        scalar do { @{$stepDir} = map { $rt->f32($_) } @{($rt->binary('+', $stepDir, $rt->construct(2, $rt->binary('*', do { ($_retc, $seed) = $randomDirection__float->($seed); $_retc }, $rt->f(0.29999999999999999), 2, 'float')), 2, 'float'))}; $stepDir };
+        scalar do { @{$stepDir} = map { $rt->f32($_) } @{($rt->normalize($stepDir))}; $stepDir };
         $candidate = $wrap01__vec2->($rt->construct(2, $rt->binary('+', $pos, $rt->binary('*', $stepDir, $stepSize, 2, 'float'), 2, 'float')));
         $here = $sampleGrid__vec2->($candidate);
         $nearby = $neighborhood__vec2_float->($candidate, $rt->f(1));
@@ -141,18 +141,18 @@ my $run_pixel = sub {
             }
         }
         if ($stuck) {
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $candidate, $rt->f(0), $rt->f(0)))};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $seed, $rt->f(1), $rt->f(0), $agentRand))};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $candidate, $rt->f(0), $rt->f(0)))}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $seed, $rt->f(1), $rt->f(0), $agentRand))}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
         } else {
             if ($needsRespawn) {
-                @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $candidate, $rt->f(0), $rt->f(0)))};
-                @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $seed, $rt->f(0), $rt->f(0), $agentRand))};
-                @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+                scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $candidate, $rt->f(0), $rt->f(0)))}; $g->{outXYZ} };
+                scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $seed, $rt->f(0), $rt->f(0), $agentRand))}; $g->{outVel} };
+                scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
             } else {
-                @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $candidate, $rt->f(0), $rt->f(1)))};
-                @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $seed, $rt->f(0), $rt->f(0), $agentRand))};
-                @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+                scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $candidate, $rt->f(0), $rt->f(1)))}; $g->{outXYZ} };
+                scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $seed, $rt->f(0), $rt->f(0), $agentRand))}; $g->{outVel} };
+                scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
             }
         }
     };

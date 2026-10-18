@@ -110,13 +110,13 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($blended, $centerColor, $color, $corner, $dist01, $edgeColor, $f_high, $f_low, $globalCoord, $h, $mask, $minRes, $p, $scaledPower, $st, $width);
-        $st = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $st = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $edgeColor = $rt->texture($_u_inputTex, $st);
         $centerColor = $rt->texture($_u_tex, $st);
         $minRes = $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'));
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $p = $rt->construct(2, $rt->binary('/', $rt->binary('-', $globalCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->f(0.5), $minRes, 1, 'float'), 2, 'float'));
-        $corner = $rt->construct(2, $rt->binary('/', $_u_fullResolution, $minRes, 2, 'float'));
+        $p = $rt->construct(2, $rt->metal_divide($rt->binary('-', $globalCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->f(0.5), $minRes, 1, 'float')));
+        $corner = $rt->construct(2, $rt->metal_divide($_u_fullResolution, $minRes));
         $dist01 = $clamp01__float->($distanceMetric__vec2_vec2_int->($p, $corner, $_u_shape));
         $scaledPower = $rt->component_wise('mix', $rt->f(0.10000000000000001), $rt->f(25.050000000000001), $rt->binary('/', $rt->binary('+', $_u_power, $rt->f(100), 1, 'float'), $rt->f(200), 1, 'float'));
         $mask = $rt->component_wise('pow', $dist01, $scaledPower);
@@ -130,7 +130,7 @@ my $run_pixel = sub {
         $blended = $applyBlendMode__vec4_vec4_int->($centerColor, $edgeColor, $_u_blendMode);
         $color = $rt->component_wise('mix', $centerColor, $blended, $mask);
         $color = $rt->assign_swizzle($color, 'a', $rt->component_wise('max', $rt->swizzle($edgeColor, 'a'), $rt->swizzle($centerColor, 'a')));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

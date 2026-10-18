@@ -54,21 +54,21 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($blend, $f, $fw, $gamma_value, $globalCoord, $half_step, $inv_factor, $inv_gamma, $level_factor, $levels_quantized, $levels_raw, $quantized_rgb, $scaled, $texel, $uv, $working_rgb);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex))));
         $texel = $rt->texture($_u_inputTex, $uv);
         $levels_raw = $rt->component_wise('max', $_u_levels, $rt->f(0));
         $levels_quantized = $rt->component_wise('max', $rt->component_wise('round', $levels_raw), $g->{MIN_LEVELS});
         if ($rt->binary('<=', $levels_quantized, $rt->f(1))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($texel)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($texel)}; $g->{fragColor} };
             return;
         }
         $level_factor = $levels_quantized;
-        $inv_factor = $rt->binary('/', $rt->f(1), $level_factor, 1, 'float');
+        $inv_factor = $rt->metal_divide($rt->f(1), $level_factor);
         $half_step = $rt->binary('*', $inv_factor, $rt->f(0.5), 1, 'float');
         $gamma_value = $rt->component_wise('max', $_u_gamma, $g->{MIN_GAMMA});
-        $inv_gamma = $rt->binary('/', $rt->f(1), $gamma_value, 1, 'float');
+        $inv_gamma = $rt->metal_divide($rt->f(1), $gamma_value);
         $working_rgb = $srgb_to_linear_rgb__vec3->($rt->swizzle($texel, 'xyz'));
-        @{$working_rgb} = map { $rt->f32($_) } @{($pow_vec3__vec3_float->($rt->component_wise('clamp', $working_rgb, $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1))), $gamma_value))};
+        scalar do { @{$working_rgb} = map { $rt->f32($_) } @{($pow_vec3__vec3_float->($rt->component_wise('clamp', $working_rgb, $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1))), $gamma_value))}; $working_rgb };
         $scaled = $rt->construct(3, $rt->binary('+', $rt->binary('*', $working_rgb, $level_factor, 3, 'float'), $rt->construct_raw(3, $half_step), 3, 'float'));
         $quantized_rgb = $rt->construct(3, 0.0);
         $blend = $rt->construct(3, 0.0);
@@ -78,13 +78,13 @@ my $run_pixel = sub {
             $f = $rt->component_wise('fract', $scaled);
             $fw = $rt->fwidth($scaled);
             $blend = $rt->component_wise('smoothstep', $rt->binary('-', $rt->f(0.5), $rt->binary('*', $fw, $rt->f(0.5), 3, 'float'), 3, 'float'), $rt->binary('+', $rt->f(0.5), $rt->binary('*', $fw, $rt->f(0.5), 3, 'float'), 3, 'float'), $f);
-            @{$quantized_rgb} = map { $rt->f32($_) } @{($rt->binary('*', $rt->construct(3, $rt->binary('+', $rt->component_wise('floor', $scaled), $blend, 3, 'float')), $inv_factor, 3, 'float'))};
+            scalar do { @{$quantized_rgb} = map { $rt->f32($_) } @{($rt->binary('*', $rt->construct(3, $rt->binary('+', $rt->component_wise('floor', $scaled), $blend, 3, 'float')), $inv_factor, 3, 'float'))}; $quantized_rgb };
         } else {
-            @{$quantized_rgb} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('*', $rt->component_wise('floor', $scaled), $inv_factor, 3, 'float')))};
+            scalar do { @{$quantized_rgb} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('*', $rt->component_wise('floor', $scaled), $inv_factor, 3, 'float')))}; $quantized_rgb };
         }
-        @{$quantized_rgb} = map { $rt->f32($_) } @{($pow_vec3__vec3_float->($rt->component_wise('clamp', $quantized_rgb, $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1))), $inv_gamma))};
-        @{$quantized_rgb} = map { $rt->f32($_) } @{($linear_to_srgb_rgb__vec3->($quantized_rgb))};
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $clamp_01__float->($rt->swizzle($quantized_rgb, 'x')), $clamp_01__float->($rt->swizzle($quantized_rgb, 'y')), $clamp_01__float->($rt->swizzle($quantized_rgb, 'z')), $rt->swizzle($texel, 'w')))};
+        scalar do { @{$quantized_rgb} = map { $rt->f32($_) } @{($pow_vec3__vec3_float->($rt->component_wise('clamp', $quantized_rgb, $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1))), $inv_gamma))}; $quantized_rgb };
+        scalar do { @{$quantized_rgb} = map { $rt->f32($_) } @{($linear_to_srgb_rgb__vec3->($quantized_rgb))}; $quantized_rgb };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $clamp_01__float->($rt->swizzle($quantized_rgb, 'x')), $clamp_01__float->($rt->swizzle($quantized_rgb, 'y')), $clamp_01__float->($rt->swizzle($quantized_rgb, 'z')), $rt->swizzle($texel, 'w')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

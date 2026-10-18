@@ -101,7 +101,7 @@ my $run_pixel = sub {
         my ($_for0_first, $_for1_first, $blendMode, $blended, $centerSample, $centerWeight, $conv, $doInvert, $dx, $dy, $edge, $edgeColor, $kernelType, $localUV, $m, $mask, $origColor, $radius, $resolution, $s, $sampleCoord, $texSize, $texelSize, $thresh, $useLuma, $w);
         $texSize = $rt->texture_size($_u_inputTex);
         $resolution = $rt->construct(2, $texSize);
-        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $resolution, 2, 'float'));
+        $texelSize = $rt->construct(2, $rt->metal_divide($rt->f(1), $resolution));
         $origColor = $rt->texture($_u_inputTex, $rt->binary('*', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texelSize, 2, 'float'));
         $kernelType = $rt->construct(1, $_u__kernel, 'int');
         $radius = $rt->component_wise('min', $rt->construct(1, $rt->binary('*', $rt->binary('+', $_u_size, $rt->f(1), 1, 'float'), $_u_renderScale, 1, 'float'), 'int'), $rt->i(256));
@@ -112,7 +112,7 @@ my $run_pixel = sub {
         $centerWeight = $rt->f(0);
         $centerSample = $rt->construct(3, 0.0);
         if ($rt->binary('==', $kernelType, $rt->i(2))) {
-            @{$conv} = map { $rt->f32($_) } @{($contourConv__vec2_vec2_vec3_float_bool_bool->($rt->swizzle($ctx->{frag_coord}, 'xy'), $texelSize, $rt->swizzle($origColor, 'rgb'), $rt->binary('/', $_u_level, $rt->f(100), 1, 'float'), $useLuma, $rt->binary('>', $_u_contourSide, $rt->f(0.5))))};
+            scalar do { @{$conv} = map { $rt->f32($_) } @{($contourConv__vec2_vec2_vec3_float_bool_bool->($rt->swizzle($ctx->{frag_coord}, 'xy'), $texelSize, $rt->swizzle($origColor, 'rgb'), $rt->binary('/', $_u_level, $rt->f(100), 1, 'float'), $useLuma, $rt->binary('>', $_u_contourSide, $rt->f(0.5))))}; $conv };
         } else {
             $dy = $rt->unary('-', $rt->i(3));
             $_for0_first = 1;
@@ -148,21 +148,21 @@ my $run_pixel = sub {
                     $localUV = $rt->construct(2, $rt->binary('*', $sampleCoord, $texelSize, 2, 'float'));
                     $s = $rt->swizzle($rt->texture($_u_inputTex, $localUV), 'rgb');
                     if ($useLuma) {
-                        @{$conv} = map { $rt->f32($_) } @{($rt->binary('+', $conv, $rt->binary('*', $rt->construct_raw(3, $rt->dot($s, $g->{LUMA})), $w, 3, 'float'), 3, 'float'))};
+                        scalar do { @{$conv} = map { $rt->f32($_) } @{($rt->binary('+', $conv, $rt->binary('*', $rt->construct_raw(3, $rt->dot($s, $g->{LUMA})), $w, 3, 'float'), 3, 'float'))}; $conv };
                     } else {
-                        @{$conv} = map { $rt->f32($_) } @{($rt->binary('+', $conv, $rt->binary('*', $s, $w, 3, 'float'), 3, 'float'))};
+                        scalar do { @{$conv} = map { $rt->f32($_) } @{($rt->binary('+', $conv, $rt->binary('*', $s, $w, 3, 'float'), 3, 'float'))}; $conv };
                     }
                     $centerWeight = $rt->binary('-', $centerWeight, $w, 1, 'float');
                 }
             }
             $centerSample = $rt->swizzle($origColor, 'rgb');
             if ($useLuma) {
-                @{$centerSample} = map { $rt->f32($_) } @{($rt->construct(3, $rt->dot($centerSample, $g->{LUMA})))};
+                scalar do { @{$centerSample} = map { $rt->f32($_) } @{($rt->construct(3, $rt->dot($centerSample, $g->{LUMA})))}; $centerSample };
             }
-            @{$conv} = map { $rt->f32($_) } @{($rt->binary('+', $conv, $rt->binary('*', $centerSample, $centerWeight, 3, 'float'), 3, 'float'))};
+            scalar do { @{$conv} = map { $rt->f32($_) } @{($rt->binary('+', $conv, $rt->binary('*', $centerSample, $centerWeight, 3, 'float'), 3, 'float'))}; $conv };
         }
-        @{$conv} = map { $rt->f32($_) } @{($rt->binary('*', $conv, $rt->binary('/', $_u_amount, $rt->f(50), 1, 'float'), 3, 'float'))};
-        @{$conv} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $conv, $rt->f(0), $rt->f(1)))};
+        scalar do { @{$conv} = map { $rt->f32($_) } @{($rt->binary('*', $conv, $rt->binary('/', $_u_amount, $rt->f(50), 1, 'float'), 3, 'float'))}; $conv };
+        scalar do { @{$conv} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $conv, $rt->f(0), $rt->f(1)))}; $conv };
         $edge = $rt->f(0.0);
         $mask = $rt->f(0.0);
         $thresh = $rt->f(0.0);
@@ -175,15 +175,15 @@ my $run_pixel = sub {
                 $edge = $rt->dot($conv, $g->{LUMA});
             }
             $mask = $rt->component_wise('smoothstep', $rt->binary('-', $thresh, $rt->f(0.01), 1, 'float'), $rt->binary('+', $thresh, $rt->f(0.01), 1, 'float'), $edge);
-            @{$conv} = map { $rt->f32($_) } @{($rt->binary('*', $conv, $mask, 3, 'float'))};
+            scalar do { @{$conv} = map { $rt->f32($_) } @{($rt->binary('*', $conv, $mask, 3, 'float'))}; $conv };
         }
         if ($doInvert) {
-            @{$conv} = map { $rt->f32($_) } @{($rt->binary('-', $rt->f(1), $conv, 3, 'float'))};
+            scalar do { @{$conv} = map { $rt->f32($_) } @{($rt->binary('-', $rt->f(1), $conv, 3, 'float'))}; $conv };
         }
         $edgeColor = $rt->construct(4, $conv, $rt->swizzle($origColor, 'a'));
         $blended = $applyBlend__vec4_vec4_int->($edgeColor, $origColor, $blendMode);
         $m = $rt->binary('/', $_u_mixAmt, $rt->f(100), 1, 'float');
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('mix', $rt->swizzle($origColor, 'rgb'), $rt->swizzle($blended, 'rgb'), $m), $rt->swizzle($origColor, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('mix', $rt->swizzle($origColor, 'rgb'), $rt->swizzle($blended, 'rgb'), $m), $rt->swizzle($origColor, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

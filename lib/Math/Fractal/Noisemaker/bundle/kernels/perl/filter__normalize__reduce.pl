@@ -52,7 +52,7 @@ my $run_pixel = sub {
                 $maxVal = $rt->component_wise('max', $maxVal, $pixelMax);
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $minVal, $maxVal, $rt->f(0), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $minVal, $maxVal, $rt->f(0), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

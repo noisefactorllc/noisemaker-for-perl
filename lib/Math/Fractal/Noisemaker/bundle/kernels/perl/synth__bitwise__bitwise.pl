@@ -80,8 +80,8 @@ my $run_pixel = sub {
         $rotated = $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->swizzle($centered, 'x'), $c, 1, 'float'), $rt->binary('*', $rt->swizzle($centered, 'y'), $s, 1, 'float'), 1, 'float'), $rt->binary('+', $rt->binary('*', $rt->swizzle($centered, 'x'), $s, 1, 'float'), $rt->binary('*', $rt->swizzle($centered, 'y'), $c, 1, 'float'), 1, 'float'));
         $coord = $rt->construct(2, $rt->binary('+', $rotated, $rt->binary('*', $_u_fullResolution, $rt->f(0.5), 2, 'float'), 2, 'float'));
         $animOffset = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $rt->binary('*', $_u_time, $rt->construct(1, $rt->construct(1, $rt->unary('-', $_u_speed), 'int')), 1, 'float'), $rt->f(256), 1, 'float')), 'int');
-        $x = $rt->binary('+', $rt->binary('+', $rt->construct(1, $rt->component_wise('floor', $rt->binary('/', $rt->swizzle($coord, 'x'), $pixelScale, 1, 'float')), 'int'), $_u_offsetX, 1, 'int'), $animOffset, 1, 'int');
-        $y = $rt->binary('+', $rt->construct(1, $rt->component_wise('floor', $rt->binary('/', $rt->swizzle($coord, 'y'), $pixelScale, 1, 'float')), 'int'), $_u_offsetY, 1, 'int');
+        $x = $rt->binary('+', $rt->binary('+', $rt->construct(1, $rt->component_wise('floor', $rt->metal_divide($rt->swizzle($coord, 'x'), $pixelScale)), 'int'), $_u_offsetX, 1, 'int'), $animOffset, 1, 'int');
+        $y = $rt->binary('+', $rt->construct(1, $rt->component_wise('floor', $rt->metal_divide($rt->swizzle($coord, 'y'), $pixelScale)), 'int'), $_u_offsetY, 1, 'int');
         $x = $rt->binary('^', $x, $_u_seed, 1, 'int');
         $y = $rt->binary('^', $y, $rt->binary('*', $_u_seed, $rt->i(3), 1, 'int'), 1, 'int');
         $v = $rt->f(0.0);
@@ -91,17 +91,17 @@ my $run_pixel = sub {
         $r = $rt->f(0.0);
         if ($rt->binary('==', $_u_colorMode, $rt->i(0))) {
             $v = $bitOp__int_int_int_int->($x, $y, $_u_operation, $_u_mask);
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $v, $v, $v, $rt->f(1)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $v, $v, $v, $rt->f(1)))}; $g->{fragColor} };
         } else {
             if ($rt->binary('==', $_u_colorMode, $rt->i(1))) {
                 $r = $bitOp__int_int_int_int->($x, $y, $_u_operation, $_u_mask);
                 $_g = $bitOp__int_int_int_int->($rt->binary('+', $x, $_u_colorOffset, 1, 'int'), $y, $_u_operation, $_u_mask);
                 $b = $bitOp__int_int_int_int->($x, $rt->binary('+', $y, $_u_colorOffset, 1, 'int'), $_u_operation, $_u_mask);
-                @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $r, $_g, $b, $rt->f(1)))};
+                scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $r, $_g, $b, $rt->f(1)))}; $g->{fragColor} };
             } else {
                 $v = $bitOp__int_int_int_int->($x, $y, $_u_operation, $_u_mask);
-                $hueScale = $rt->binary('/', $rt->construct(1, $_u_mask), $rt->construct(1, $rt->binary('+', $_u_mask, $rt->i(1), 1, 'int')), 1, 'float');
-                @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $hsv2rgb__vec3->($rt->construct(3, $rt->binary('*', $v, $hueScale, 1, 'float'), $rt->f(1), $rt->f(1))), $rt->f(1)))};
+                $hueScale = $rt->metal_divide($rt->construct(1, $_u_mask), $rt->construct(1, $rt->binary('+', $_u_mask, $rt->i(1), 1, 'int')));
+                scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $hsv2rgb__vec3->($rt->construct(3, $rt->binary('*', $v, $hueScale, 1, 'float'), $rt->f(1), $rt->f(1))), $rt->f(1)))}; $g->{fragColor} };
             }
         }
     };

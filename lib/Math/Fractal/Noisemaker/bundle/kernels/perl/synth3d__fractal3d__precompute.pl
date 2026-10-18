@@ -51,8 +51,8 @@ my $run_pixel = sub {
             $zr = $rt->component_wise('pow', $r, $n);
             $newTheta = $rt->binary('*', $theta, $n, 1, 'float');
             $newPhi = $rt->binary('*', $phi, $n, 1, 'float');
-            @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $zr, $rt->construct_raw(3, $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('cos', $newPhi), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('sin', $newPhi), 1, 'float'), $rt->component_wise('cos', $newTheta)), 3, 'float'))};
-            @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $z, $pos, 3, 'float'))};
+            scalar do { @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $zr, $rt->construct_raw(3, $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('cos', $newPhi), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('sin', $newPhi), 1, 'float'), $rt->component_wise('cos', $newTheta)), 3, 'float'))}; $z };
+            scalar do { @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $z, $pos, 3, 'float'))}; $z };
             $iter = $rt->binary('+', $iter, $rt->f(1), 1, 'float');
         }
         $dist = $rt->binary('/', $rt->binary('*', $rt->binary('*', $rt->f(0.5), $rt->component_wise('log', $r), 1, 'float'), $r, 1, 'float'), $dr, 1, 'float');
@@ -89,8 +89,8 @@ my $run_pixel = sub {
             $zr = $rt->component_wise('pow', $r, $n);
             $newTheta = $rt->binary('*', $theta, $n, 1, 'float');
             $newPhi = $rt->binary('*', $phi, $n, 1, 'float');
-            @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $zr, $rt->construct_raw(3, $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('cos', $newPhi), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('sin', $newPhi), 1, 'float'), $rt->component_wise('cos', $newTheta)), 3, 'float'))};
-            @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $z, $c, 3, 'float'))};
+            scalar do { @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $zr, $rt->construct_raw(3, $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('cos', $newPhi), 1, 'float'), $rt->binary('*', $rt->component_wise('sin', $newTheta), $rt->component_wise('sin', $newPhi), 1, 'float'), $rt->component_wise('cos', $newTheta)), 3, 'float'))}; $z };
+            scalar do { @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $z, $c, 3, 'float'))}; $z };
             $iter = $rt->binary('+', $iter, $rt->f(1), 1, 'float');
         }
         $dist = $rt->binary('/', $rt->binary('*', $rt->binary('*', $rt->f(0.5), $rt->component_wise('log', $r), 1, 'float'), $r, 1, 'float'), $dr, 1, 'float');
@@ -122,23 +122,23 @@ my $run_pixel = sub {
             if (!($rt->binary('<', $i, $maxIter))) {
                 last;
             }
-            @{$z} = map { $rt->f32($_) } @{($boxFold__vec3_float->($z, $foldingLimit))};
+            scalar do { @{$z} = map { $rt->f32($_) } @{($boxFold__vec3_float->($z, $foldingLimit))}; $z };
             $r2 = $rt->dot($z, $z);
             $minR2 = $rt->binary('*', $minRadius, $minRadius, 1, 'float');
             $fixedR2 = $rt->binary('*', $fixedRadius, $fixedRadius, 1, 'float');
             $factor = $rt->f(0.0);
             if ($rt->binary('<', $r2, $minR2)) {
                 $factor = $rt->binary('/', $fixedR2, $minR2, 1, 'float');
-                @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $z, $factor, 3, 'float'))};
+                scalar do { @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $z, $factor, 3, 'float'))}; $z };
                 $dr = $rt->binary('*', $dr, $factor, 1, 'float');
             } else {
                 if ($rt->binary('<', $r2, $fixedR2)) {
                     $factor = $rt->binary('/', $fixedR2, $r2, 1, 'float');
-                    @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $z, $factor, 3, 'float'))};
+                    scalar do { @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $z, $factor, 3, 'float'))}; $z };
                     $dr = $rt->binary('*', $dr, $factor, 1, 'float');
                 }
             }
-            @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $z, $scale, 3, 'float'), $pos, 3, 'float'))};
+            scalar do { @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $z, $scale, 3, 'float'), $pos, 3, 'float'))}; $z };
             $dr = $rt->binary('+', $rt->binary('*', $dr, $rt->component_wise('abs', $scale), 1, 'float'), $rt->f(1), 1, 'float');
             $trap = $rt->component_wise('min', $trap, $rt->length($z));
             $iter = $rt->binary('+', $iter, $rt->f(1), 1, 'float');
@@ -172,23 +172,23 @@ my $run_pixel = sub {
             if (!($rt->binary('<', $i, $maxIter))) {
                 last;
             }
-            @{$z} = map { $rt->f32($_) } @{($boxFold__vec3_float->($z, $foldingLimit))};
+            scalar do { @{$z} = map { $rt->f32($_) } @{($boxFold__vec3_float->($z, $foldingLimit))}; $z };
             $r2 = $rt->dot($z, $z);
             $minR2 = $rt->binary('*', $minRadius, $minRadius, 1, 'float');
             $fixedR2 = $rt->binary('*', $fixedRadius, $fixedRadius, 1, 'float');
             $factor = $rt->f(0.0);
             if ($rt->binary('<', $r2, $minR2)) {
                 $factor = $rt->binary('/', $fixedR2, $minR2, 1, 'float');
-                @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $z, $factor, 3, 'float'))};
+                scalar do { @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $z, $factor, 3, 'float'))}; $z };
                 $dr = $rt->binary('*', $dr, $factor, 1, 'float');
             } else {
                 if ($rt->binary('<', $r2, $fixedR2)) {
                     $factor = $rt->binary('/', $fixedR2, $r2, 1, 'float');
-                    @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $z, $factor, 3, 'float'))};
+                    scalar do { @{$z} = map { $rt->f32($_) } @{($rt->binary('*', $z, $factor, 3, 'float'))}; $z };
                     $dr = $rt->binary('*', $dr, $factor, 1, 'float');
                 }
             }
-            @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $z, $scale, 3, 'float'), $c, 3, 'float'))};
+            scalar do { @{$z} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $z, $scale, 3, 'float'), $c, 3, 'float'))}; $z };
             $dr = $rt->binary('+', $rt->binary('*', $dr, $rt->component_wise('abs', $scale), 1, 'float'), $rt->f(1), 1, 'float');
             $trap = $rt->component_wise('min', $trap, $rt->length($z));
             $iter = $rt->binary('+', $iter, $rt->f(1), 1, 'float');
@@ -229,13 +229,13 @@ my $run_pixel = sub {
         $pixelCoord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $x = $rt->swizzle($pixelCoord, 'x');
         $y = $rt->binary('%', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'int');
-        $z = $rt->binary('/', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'int');
+        $z = POSIX::trunc($rt->binary('/', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'float'));
         if ((((($rt->binary('>=', $x, $volSize)) || ($rt->binary('>=', $y, $volSize)) ? 1 : 0)) || ($rt->binary('>=', $z, $volSize)) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
-            @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(0.5), $rt->f(0.5), $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
+            scalar do { @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(0.5), $rt->f(0.5), $rt->f(0)))}; $g->{geoOut} };
             return;
         }
-        $p = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->construct_raw(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float'), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'), $rt->f(1.5), 3, 'float'));
+        $p = $rt->construct(3, $rt->binary('*', $rt->binary('-', $rt->binary('*', $rt->metal_divide($rt->construct_raw(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float')), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'), $rt->f(1.5), 3, 'float'));
         $juliaC = $rt->construct(3, $rt->binary('*', $rt->construct_raw(3, $_u_juliaX, $_u_juliaY, $_u_juliaZ), $rt->f(0.01), 3, 'float'));
         $result = $computeFractal__vec3_vec3->($p, $juliaC);
         $dist = $rt->swizzle($result, 'x');
@@ -249,11 +249,11 @@ my $run_pixel = sub {
         $gradient = $rt->construct(3, $rt->binary('/', $rt->construct_raw(3, $rt->binary('-', $dxp, $dist, 1, 'float'), $rt->binary('-', $dyp, $dist, 1, 'float'), $rt->binary('-', $dzp, $dist, 1, 'float')), $eps, 3, 'float'));
         $normal = $rt->normalize($rt->binary('+', $gradient, $rt->construct_raw(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
         if ($rt->binary('==', $_u_colorMode, $rt->i(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalizedDist, $normalizedDist, $normalizedDist, $rt->f(1)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalizedDist, $normalizedDist, $normalizedDist, $rt->f(1)))}; $g->{fragColor} };
         } else {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalizedDist, $trap, $iterRatio, $rt->f(1)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalizedDist, $trap, $iterRatio, $rt->f(1)))}; $g->{fragColor} };
         }
-        @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->binary('*', $normal, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'), $normalizedDist))};
+        scalar do { @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->binary('*', $normal, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'), $normalizedDist))}; $g->{geoOut} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

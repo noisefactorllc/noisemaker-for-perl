@@ -23,31 +23,31 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($globalCoord, $globalUV, $localUV, $st);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $globalUV = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $globalUV = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
         $st = $rt->fresh($globalUV);
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('*', $rt->swizzle($st, 'x'), $_u_aspect, 1, 'float'));
-        @{$st} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $st, $rt->construct_raw(2, $_u_x, $_u_y), 2, 'float'), $rt->construct_raw(2, $rt->binary('*', $_u_offsetX, $_u_aspect, 1, 'float'), $_u_offsetY), 2, 'float'))};
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('+', $rt->binary('*', $st, $rt->construct_raw(2, $_u_x, $_u_y), 2, 'float'), $rt->construct_raw(2, $rt->binary('*', $_u_offsetX, $_u_aspect, 1, 'float'), $_u_offsetY), 2, 'float'))}; $st };
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('/', $rt->swizzle($st, 'x'), $_u_aspect, 1, 'float'));
         if ($rt->binary('==', $_u_wrap, $rt->i(0))) {
-            @{$st} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $st, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
+            scalar do { @{$st} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $st, $rt->construct(2, $rt->binary('*', $rt->f(2), $rt->component_wise('floor', $rt->binary('*', $rt->binary('+', $st, $rt->f(1), 2, 'float'), $rt->f(0.5), 2, 'float')), 2, 'float')), 2, 'float'))))}; $st };
         } else {
             if ($rt->binary('==', $_u_wrap, $rt->i(1))) {
-                @{$st} = map { $rt->f32($_) } @{($rt->component_wise('fract', $st))};
+                scalar do { @{$st} = map { $rt->f32($_) } @{($rt->component_wise('fract', $st))}; $st };
             } else {
-                @{$st} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $st, $rt->f(0), $rt->f(1)))};
+                scalar do { @{$st} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $st, $rt->f(0), $rt->f(1)))}; $st };
             }
         }
-        $localUV = $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $st, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+        $localUV = $rt->construct(2, $rt->metal_divide($rt->construct(2, $rt->binary('-', $rt->binary('*', $st, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex))));
         if ($rt->binary('==', $_u_wrap, $rt->i(0))) {
-            @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $rt->component_wise('mod', $rt->binary('+', $localUV, $rt->f(1), 2, 'float'), $rt->f(2)), $rt->f(1), 2, 'float'))))};
+            scalar do { @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('abs', $rt->construct(2, $rt->binary('-', $localUV, $rt->construct(2, $rt->binary('*', $rt->f(2), $rt->component_wise('floor', $rt->binary('*', $rt->binary('+', $localUV, $rt->f(1), 2, 'float'), $rt->f(0.5), 2, 'float')), 2, 'float')), 2, 'float'))))}; $localUV };
         } else {
             if ($rt->binary('==', $_u_wrap, $rt->i(1))) {
-                @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('fract', $localUV))};
+                scalar do { @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('fract', $localUV))}; $localUV };
             } else {
-                @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $localUV, $rt->f(0), $rt->f(1)))};
+                scalar do { @{$localUV} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $localUV, $rt->f(0), $rt->f(1)))}; $localUV };
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($rt->texture($_u_inputTex, $localUV), 'rgb'), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($rt->texture($_u_inputTex, $localUV), 'rgb'), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

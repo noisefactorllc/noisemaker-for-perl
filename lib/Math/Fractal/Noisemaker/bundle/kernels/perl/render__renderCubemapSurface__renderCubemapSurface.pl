@@ -35,7 +35,7 @@ my $run_pixel = sub {
         $volSize = $_u_volumeSize;
         $volSizeF = $rt->construct(1, $volSize);
         $uvw = $rt->construct(3, $rt->binary('+', $rt->binary('*', $worldPos, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'));
-        @{$uvw} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $uvw, $rt->f(0), $rt->f(1)))};
+        scalar do { @{$uvw} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $uvw, $rt->f(0), $rt->f(1)))}; $uvw };
         $texelPos = $rt->construct(3, $rt->binary('*', $uvw, $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float'));
         $texelFloor = $rt->component_wise('floor', $texelPos);
         $frac = $rt->construct(3, $rt->binary('-', $texelPos, $texelFloor, 3, 'float'));
@@ -77,7 +77,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_for0_first, $a, $col, $dt, $i, $outc, $rd, $res, $ro, $s, $t, $t0, $tb, $trans, $uv);
         $res = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($_u_resolution)));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $rt->binary('*', $rt->f(0.5), $res, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->f(0.5), $rt->swizzle($res, 'y'), 1, 'float'), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->binary('-', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $rt->binary('*', $rt->f(0.5), $res, 2, 'float'), 2, 'float'), $rt->binary('*', $rt->f(0.5), $rt->swizzle($res, 'y'), 1, 'float')));
         $ro = $rt->construct(3, $rt->f(0));
         $rd = $rt->normalize($rt->matrix_mult($_u_cubeBasis, $rt->construct(3, $rt->swizzle($uv, 'x'), $rt->unary('-', $rt->swizzle($uv, 'y')), $rt->f(1)), 3));
         $col = $rt->construct(3, $rt->f(0));
@@ -102,7 +102,7 @@ my $run_pixel = sub {
                 }
                 $s = $sampleVolume__vec3->($rt->construct(3, $rt->binary('+', $ro, $rt->binary('*', $rd, $t, 3, 'float'), 3, 'float')));
                 $a = $rt->binary('-', $rt->f(1), $rt->component_wise('exp', $rt->binary('*', $rt->binary('*', $rt->binary('*', $rt->unary('-', $rt->swizzle($s, 'r')), $_u_density, 1, 'float'), $_u_absorption, 1, 'float'), $dt, 1, 'float')), 1, 'float');
-                @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->binary('*', $rt->binary('*', $rt->binary('*', $trans, $a, 1, 'float'), $rt->swizzle($s, 'rgb'), 3, 'float'), $_u_emission, 3, 'float'), 3, 'float'))};
+                scalar do { @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->binary('*', $rt->binary('*', $rt->binary('*', $trans, $a, 1, 'float'), $rt->swizzle($s, 'rgb'), 3, 'float'), $_u_emission, 3, 'float'), 3, 'float'))}; $col };
                 $trans = $rt->binary('*', $trans, $rt->binary('-', $rt->f(1), $a, 1, 'float'), 1, 'float');
                 if ($rt->binary('<', $trans, $rt->f(0.01))) {
                     last;
@@ -111,8 +111,8 @@ my $run_pixel = sub {
             }
         }
         $outc = $rt->construct(3, $rt->binary('+', $col, $rt->binary('*', $_u_bgColor, $trans, 3, 'float'), 3, 'float'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outc, $rt->binary('+', $rt->binary('-', $rt->f(1), $trans, 1, 'float'), $rt->binary('*', $_u_bgAlpha, $trans, 1, 'float'), 1, 'float')))};
-        @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(0.5), $rt->f(0.5), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outc, $rt->binary('+', $rt->binary('-', $rt->f(1), $trans, 1, 'float'), $rt->binary('*', $_u_bgAlpha, $trans, 1, 'float'), 1, 'float')))}; $g->{fragColor} };
+        scalar do { @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(0.5), $rt->f(0.5), $rt->f(1)))}; $g->{geoOut} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -112,7 +112,7 @@ my $run_pixel = sub {
         }
         $maxDiff = $rt->component_wise('max', $rt->component_wise('max', $rt->component_wise('abs', $rt->binary('-', $center_luma, $north_luma, 1, 'float')), $rt->component_wise('abs', $rt->binary('-', $center_luma, $south_luma, 1, 'float'))), $rt->component_wise('max', $rt->component_wise('abs', $rt->binary('-', $center_luma, $west_luma, 1, 'float')), $rt->component_wise('abs', $rt->binary('-', $center_luma, $east_luma, 1, 'float'))));
         if ($rt->binary('<', $maxDiff, $_u_threshold)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($center_texel)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($center_texel)}; $g->{fragColor} };
             return;
         }
         $weight_center = $rt->f(1);
@@ -133,10 +133,10 @@ my $run_pixel = sub {
             }
         } else {
             $blended_rgb = $rt->construct(3, $rt->binary('/', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('*', $center_rgb, $weight_center, 3, 'float'), $rt->binary('*', $north_rgb, $weight_north, 3, 'float'), 3, 'float'), $rt->binary('*', $south_rgb, $weight_south, 3, 'float'), 3, 'float'), $rt->binary('*', $west_rgb, $weight_west, 3, 'float'), 3, 'float'), $rt->binary('*', $east_rgb, $weight_east, 3, 'float'), 3, 'float'), $weight_sum, 3, 'float'));
-            @{$result_texel} = map { $rt->f32($_) } @{($rt->construct(4, $blended_rgb, $rt->swizzle($result_texel, 'w')))};
+            scalar do { @{$result_texel} = map { $rt->f32($_) } @{($rt->construct(4, $blended_rgb, $rt->swizzle($result_texel, 'w')))}; $result_texel };
         }
         $result_texel = $rt->assign_swizzle($result_texel, 'w', $rt->swizzle($center_texel, 'w'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('mix', $center_texel, $result_texel, $_u_strength))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('mix', $center_texel, $result_texel, $_u_strength))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

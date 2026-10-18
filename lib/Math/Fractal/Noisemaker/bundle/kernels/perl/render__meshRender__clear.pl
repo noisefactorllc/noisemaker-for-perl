@@ -13,7 +13,7 @@ my $run_pixel = sub {
     my $_u_bgAlpha = exists $U->{'bgAlpha'} ? $U->{'bgAlpha'} : $rt->f(0.0);
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $_u_bgColor, $_u_bgAlpha, 3, 'float'), $_u_bgAlpha))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $_u_bgColor, $_u_bgAlpha, 3, 'float'), $_u_bgAlpha))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

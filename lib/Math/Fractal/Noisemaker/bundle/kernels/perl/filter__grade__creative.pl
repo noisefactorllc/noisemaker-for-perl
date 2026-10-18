@@ -118,8 +118,8 @@ my $run_pixel = sub {
         $shadowWeight = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $rt->f(0), $balancePoint, $luma), 1, 'float');
         $highlightWeight = $rt->component_wise('smoothstep', $balancePoint, $rt->f(1), $luma);
         $tintedRgb = $rt->fresh($rgb);
-        @{$tintedRgb} = map { $rt->f32($_) } @{($rt->binary('+', $tintedRgb, $rt->binary('*', $rt->binary('*', $shadowShift, $shadowWeight, 3, 'float'), $rt->f(0.29999999999999999), 3, 'float'), 3, 'float'))};
-        @{$tintedRgb} = map { $rt->f32($_) } @{($rt->binary('+', $tintedRgb, $rt->binary('*', $rt->binary('*', $highlightShift, $highlightWeight, 3, 'float'), $rt->f(0.29999999999999999), 3, 'float'), 3, 'float'))};
+        scalar do { @{$tintedRgb} = map { $rt->f32($_) } @{($rt->binary('+', $tintedRgb, $rt->binary('*', $rt->binary('*', $shadowShift, $shadowWeight, 3, 'float'), $rt->f(0.29999999999999999), 3, 'float'), 3, 'float'))}; $tintedRgb };
+        scalar do { @{$tintedRgb} = map { $rt->f32($_) } @{($rt->binary('+', $tintedRgb, $rt->binary('*', $rt->binary('*', $highlightShift, $highlightWeight, 3, 'float'), $rt->f(0.29999999999999999), 3, 'float'), 3, 'float'))}; $tintedRgb };
         return $tintedRgb;
     };
     $main__void = sub {
@@ -128,11 +128,11 @@ my $run_pixel = sub {
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         $rgb = $srgbToLinear__vec3->($rt->swizzle($color, 'rgb'));
-        @{$rgb} = map { $rt->f32($_) } @{($applyVibrance__vec3_float->($rgb, $_u_vibrance))};
-        @{$rgb} = map { $rt->f32($_) } @{($applyFadedFilm__vec3_float->($rgb, $_u_fadedFilm))};
-        @{$rgb} = map { $rt->f32($_) } @{($applySplitTone__vec3_vec3_vec3_float->($rgb, $_u_shadowTint, $_u_highlightTint, $_u_splitToneBalance))};
-        @{$rgb} = map { $rt->f32($_) } @{($linearToSrgb__vec3->($rt->component_wise('max', $rgb, $rt->construct(3, $rt->f(0)))))};
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rgb, $rt->swizzle($color, 'a')))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($applyVibrance__vec3_float->($rgb, $_u_vibrance))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($applyFadedFilm__vec3_float->($rgb, $_u_fadedFilm))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($applySplitTone__vec3_vec3_vec3_float->($rgb, $_u_shadowTint, $_u_highlightTint, $_u_splitToneBalance))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($linearToSrgb__vec3->($rt->component_wise('max', $rgb, $rt->construct(3, $rt->f(0)))))}; $rgb };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rgb, $rt->swizzle($color, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

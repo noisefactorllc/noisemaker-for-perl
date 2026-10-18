@@ -18,18 +18,18 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($blue, $blueGlobalUV, $blueLocalUV, $boundedDisplacement, $globalPixel, $globalUV, $green, $greenLocalUV, $maxDisplacementUV, $red, $redGlobalUV, $redLocalUV);
         $globalPixel = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $globalUV = $rt->construct(2, $rt->binary('/', $globalPixel, $_u_fullResolution, 2, 'float'));
-        $maxDisplacementUV = $rt->binary('/', $rt->f(256), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float');
+        $globalUV = $rt->construct(2, $rt->metal_divide($globalPixel, $_u_fullResolution));
+        $maxDisplacementUV = $rt->metal_divide($rt->f(256), $rt->swizzle($_u_fullResolution, 'x'));
         $boundedDisplacement = $rt->component_wise('clamp', $_u_displacement, $rt->unary('-', $maxDisplacementUV), $maxDisplacementUV);
         $redGlobalUV = $rt->construct(2, $rt->binary('+', $globalUV, $rt->construct_raw(2, $boundedDisplacement, $rt->f(0)), 2, 'float'));
-        $redLocalUV = $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $redGlobalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+        $redLocalUV = $rt->construct(2, $rt->metal_divide($rt->construct(2, $rt->binary('-', $rt->binary('*', $redGlobalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex))));
         $red = $rt->texture($_u_inputTex, $redLocalUV);
-        $greenLocalUV = $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $globalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+        $greenLocalUV = $rt->construct(2, $rt->metal_divide($rt->construct(2, $rt->binary('-', $rt->binary('*', $globalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex))));
         $green = $rt->texture($_u_inputTex, $greenLocalUV);
         $blueGlobalUV = $rt->construct(2, $rt->binary('-', $globalUV, $rt->construct_raw(2, $boundedDisplacement, $rt->f(0)), 2, 'float'));
-        $blueLocalUV = $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $blueGlobalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'));
+        $blueLocalUV = $rt->construct(2, $rt->metal_divide($rt->construct(2, $rt->binary('-', $rt->binary('*', $blueGlobalUV, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex))));
         $blue = $rt->texture($_u_inputTex, $blueLocalUV);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($red, 'r'), $rt->swizzle($green, 'g'), $rt->swizzle($blue, 'b'), $rt->swizzle($green, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($red, 'r'), $rt->swizzle($green, 'g'), $rt->swizzle($blue, 'b'), $rt->swizzle($green, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

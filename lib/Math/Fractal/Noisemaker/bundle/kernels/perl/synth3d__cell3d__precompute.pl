@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($pcg3d__uvec3, $hash3__vec3, $cellNoise3D__vec3, $main__void);
+    my ($pcg3d__uvec3, $hash3__vec3_vec3, $cellNoise3D__vec3, $main__void);
     my $_retc;
     my $_u_tileOffset = exists $U->{'tileOffset'} ? $U->{'tileOffset'} : $rt->construct(2, 0.0);
     my $_u_fullResolution = exists $U->{'fullResolution'} ? $U->{'fullResolution'} : $rt->construct(2, 0.0);
@@ -22,23 +22,26 @@ my $run_pixel = sub {
     $pcg3d__uvec3 = sub {
         my ($v) = @_;
         $v = $rt->copy($v, 'uint');
-        @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
-        @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
         return $v;
     };
-    $hash3__vec3 = sub {
-        my ($p) = @_;
-        $p = $rt->copy($p, 'float');
-        my ($q);
-        @{$p} = map { $rt->f32($_) } @{($rt->construct(3, $rt->binary('+', $p, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(0.10000000000000001), 1, 'float'), 3, 'float')))};
+    $hash3__vec3_vec3 = sub {
+        my ($base, $neighbor) = @_;
+        $base = $rt->copy($base, 'float');
+        $neighbor = $rt->copy($neighbor, 'float');
+        my ($cpuCellPos, $cpuSeedOffset, $p, $q);
+        $cpuSeedOffset = $rt->construct(1, $rt->binary('*', $_u_seed, $rt->f(0.10000000000000001), 1, 'float'));
+        $cpuCellPos = $rt->construct(3, $rt->binary('+', $base, $neighbor, 3, 'float'));
+        $p = $rt->construct(3, $rt->binary('+', $rt->swizzle($base, 'x'), $rt->construct(1, $rt->binary('+', $rt->swizzle($neighbor, 'x'), $cpuSeedOffset, 1, 'float')), 1, 'float'), $rt->binary('+', $rt->swizzle($cpuCellPos, 'y'), $cpuSeedOffset, 1, 'float'), $rt->binary('+', $rt->swizzle($cpuCellPos, 'z'), $cpuSeedOffset, 1, 'float'));
         $q = $rt->construct(3, $rt->binary('+', $rt->construct(3, $rt->construct(3, $rt->binary('*', $p, $rt->f(1000), 3, 'float')), 'int'), $rt->i(65536), 3, 'int'), 'uint');
-        @{$q} = @{($rt->pcg3d($q))};
+        scalar do { @{$q} = @{($rt->pcg3d($q))}; $q };
         return $rt->construct(3, $rt->binary('/', $rt->construct_raw(3, $rt->construct(3, $q)), $rt->f(4294967295), 3, 'float'));
     };
     $cellNoise3D__vec3 = sub {
@@ -81,7 +84,7 @@ my $run_pixel = sub {
                     }
                     $neighbor = $rt->construct(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z));
                     $cellPos = $rt->construct(3, $rt->binary('+', $i, $neighbor, 3, 'float'));
-                    $randomOffset = $hash3__vec3->($cellPos);
+                    $randomOffset = $hash3__vec3_vec3->($i, $neighbor);
                     $jitter = $rt->binary('*', $_u_cellVariation, $rt->f(0.01), 1, 'float');
                     $cellPoint = $rt->construct_raw(3, $rt->construct(3, $rt->binary('+', $neighbor, $rt->component_wise('mix', $rt->construct(3, $rt->f(0.5)), $randomOffset, $jitter), 3, 'float')));
                     $diff = $rt->construct(3, $rt->binary('-', $cellPoint, $f, 3, 'float'));
@@ -112,22 +115,22 @@ my $run_pixel = sub {
         $pixelCoord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $x = $rt->swizzle($pixelCoord, 'x');
         $y = $rt->binary('%', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'int');
-        $z = $rt->binary('/', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'int');
+        $z = POSIX::trunc($rt->binary('/', $rt->swizzle($pixelCoord, 'y'), $volSize, 1, 'float'));
         if ((((($rt->binary('>=', $x, $volSize)) || ($rt->binary('>=', $y, $volSize)) ? 1 : 0)) || ($rt->binary('>=', $z, $volSize)) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
-            @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(0.5), $rt->f(0.5), $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
+            scalar do { @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(0.5), $rt->f(0.5), $rt->f(0)))}; $g->{geoOut} };
             return;
         }
-        $p = $rt->construct(3, $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->construct_raw(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float'), 3, 'float'), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'));
+        $p = $rt->construct(3, $rt->binary('-', $rt->binary('*', $rt->metal_divide($rt->construct_raw(3, $rt->construct(1, $x), $rt->construct(1, $y), $rt->construct(1, $z)), $rt->binary('-', $volSizeF, $rt->f(1), 1, 'float')), $rt->f(2), 3, 'float'), $rt->f(1), 3, 'float'));
         $scaledP = $rt->construct(3, $rt->binary('*', $p, $rt->binary('-', $rt->f(16), $_u_scale, 1, 'float'), 3, 'float'));
         $result = $cellNoise3D__vec3->($scaledP);
         $dist = $rt->swizzle($result, 'x');
         $cellId = $rt->swizzle($result, 'y');
-        $eps = $rt->binary('/', $rt->f(0.01), $_u_scale, 1, 'float');
+        $eps = $rt->metal_divide($rt->f(0.01), $_u_scale);
         $dxp = $rt->swizzle($cellNoise3D__vec3->($rt->construct(3, $rt->binary('+', $scaledP, $rt->construct_raw(3, $eps, $rt->f(0), $rt->f(0)), 3, 'float'))), 'x');
         $dyp = $rt->swizzle($cellNoise3D__vec3->($rt->construct(3, $rt->binary('+', $scaledP, $rt->construct_raw(3, $rt->f(0), $eps, $rt->f(0)), 3, 'float'))), 'x');
         $dzp = $rt->swizzle($cellNoise3D__vec3->($rt->construct(3, $rt->binary('+', $scaledP, $rt->construct_raw(3, $rt->f(0), $rt->f(0), $eps), 3, 'float'))), 'x');
-        $gradient = $rt->construct(3, $rt->binary('/', $rt->construct_raw(3, $rt->binary('-', $dxp, $dist, 1, 'float'), $rt->binary('-', $dyp, $dist, 1, 'float'), $rt->binary('-', $dzp, $dist, 1, 'float')), $eps, 3, 'float'));
+        $gradient = $rt->construct(3, $rt->metal_divide($rt->construct_raw(3, $rt->binary('-', $dxp, $dist, 1, 'float'), $rt->binary('-', $dyp, $dist, 1, 'float'), $rt->binary('-', $dzp, $dist, 1, 'float')), $eps));
         $normal = $rt->normalize($rt->binary('+', $rt->unary('-', $gradient), $rt->construct_raw(3, $rt->f(9.9999999999999995e-07)), 3, 'float'));
         $normalizer = $rt->f(0.0);
         if ($rt->binary('==', $_u_metric, $rt->i(0))) {
@@ -144,11 +147,11 @@ my $run_pixel = sub {
         $h2 = $rt->component_wise('fract', $rt->binary('*', $cellId, $rt->f(0.023099999999999999), 1, 'float'));
         $h3 = $rt->component_wise('fract', $rt->binary('*', $cellId, $rt->f(0.034700000000000002), 1, 'float'));
         if ($rt->binary('==', $_u_colorMode, $rt->i(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalizedDist, $normalizedDist, $normalizedDist, $rt->f(1)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalizedDist, $normalizedDist, $normalizedDist, $rt->f(1)))}; $g->{fragColor} };
         } else {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalizedDist, $h1, $h2, $h3))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalizedDist, $h1, $h2, $h3))}; $g->{fragColor} };
         }
-        @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->binary('*', $normal, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'), $normalizedDist))};
+        scalar do { @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->binary('*', $normal, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'), $normalizedDist))}; $g->{geoOut} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

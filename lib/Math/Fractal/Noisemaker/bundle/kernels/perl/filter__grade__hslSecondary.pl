@@ -165,7 +165,7 @@ my $run_pixel = sub {
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         if ($rt->binary('==', $_u_hslEnable, $rt->i(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)}; $g->{fragColor} };
             return;
         }
         $rgb = $srgbToLinear__vec3->($rt->swizzle($color, 'rgb'));
@@ -173,9 +173,9 @@ my $run_pixel = sub {
         $matte = $computeHslKey__vec3_float_float_float_float_float_float_float->($hsl, $_u_hslHueCenter, $_u_hslHueRange, $_u_hslSatMin, $_u_hslSatMax, $_u_hslLumMin, $_u_hslLumMax, $_u_hslFeather);
         $correctedHsl = $applyHslCorrection__vec3_float_float_float->($hsl, $_u_hslHueShift, $_u_hslSatAdjust, $_u_hslLumAdjust);
         $correctedRgb = $hslToRgb__vec3->($correctedHsl);
-        @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rgb, $correctedRgb, $matte))};
-        @{$rgb} = map { $rt->f32($_) } @{($linearToSrgb__vec3->($rt->component_wise('max', $rgb, $rt->construct(3, $rt->f(0)))))};
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rgb, $rt->swizzle($color, 'a')))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rgb, $correctedRgb, $matte))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($linearToSrgb__vec3->($rt->component_wise('max', $rgb, $rt->construct(3, $rt->f(0)))))}; $rgb };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rgb, $rt->swizzle($color, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

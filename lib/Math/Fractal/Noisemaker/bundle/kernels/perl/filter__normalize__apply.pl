@@ -23,11 +23,11 @@ my $run_pixel = sub {
         $minVal = $rt->swizzle($stats, 'r');
         $maxVal = $rt->swizzle($stats, 'g');
         if ($rt->binary('<', $rt->binary('-', $maxVal, $minVal, 1, 'float'), $rt->f(1.0000000000000001e-05))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)}; $g->{fragColor} };
             return;
         }
-        $normalized = $rt->construct(3, $rt->binary('/', $rt->binary('-', $rt->swizzle($color, 'rgb'), $minVal, 3, 'float'), $rt->binary('-', $maxVal, $minVal, 1, 'float'), 3, 'float'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalized, $rt->swizzle($color, 'a')))};
+        $normalized = $rt->construct(3, $rt->metal_divide($rt->binary('-', $rt->swizzle($color, 'rgb'), $minVal, 3, 'float'), $rt->binary('-', $maxVal, $minVal, 1, 'float')));
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $normalized, $rt->swizzle($color, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

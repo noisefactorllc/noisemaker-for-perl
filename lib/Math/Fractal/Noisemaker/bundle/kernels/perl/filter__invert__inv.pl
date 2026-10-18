@@ -15,14 +15,14 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($color, $texSize, $uv);
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize))));
         $color = $rt->texture($_u_inputTex, $uv);
         if ($rt->binary('==', $_u_mode, $rt->i(1))) {
             $color = $rt->assign_swizzle($color, 'rgb', $rt->component_wise('min', $rt->swizzle($color, 'rgb'), $rt->binary('-', $rt->swizzle($color, 'a'), $rt->swizzle($color, 'rgb'), 3, 'float')));
         } else {
             $color = $rt->assign_swizzle($color, 'rgb', $rt->binary('-', $rt->swizzle($color, 'a'), $rt->swizzle($color, 'rgb'), 3, 'float'));
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

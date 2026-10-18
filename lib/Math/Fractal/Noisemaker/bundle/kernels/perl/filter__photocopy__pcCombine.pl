@@ -29,7 +29,7 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($band, $blur, $edgeGain, $edgeInk, $ink, $lumBlur, $lumSrc, $outColor, $src, $toneHi, $toneInk, $toneLo, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $src = $rt->texture($_u_inputTex, $uv);
         $blur = $rt->texture($_u_blurTex, $uv);
         $lumSrc = $lum__vec3->($rt->swizzle($src, 'rgb'));
@@ -42,7 +42,7 @@ my $run_pixel = sub {
         $toneInk = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $toneLo, $toneHi, $lumSrc), 1, 'float');
         $ink = $rt->component_wise('clamp', $rt->component_wise('max', $edgeInk, $toneInk), $rt->f(0), $rt->f(1));
         $outColor = $tonemap2__float_vec3_vec3->($rt->binary('-', $rt->f(1), $ink, 1, 'float'), $_u_inkColor, $_u_paperColor);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outColor, $rt->swizzle($src, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $outColor, $rt->swizzle($src, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

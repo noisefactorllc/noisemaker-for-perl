@@ -35,24 +35,24 @@ my $run_pixel = sub {
     $sample_glyph__int_int_int_int = sub {
         my ($digit, $localX, $localY, $iScale) = @_;
         my ($gx, $gy, $row);
-        $gx = $rt->binary('/', $localX, $iScale, 1, 'float');
-        $gy = $rt->binary('/', $localY, $iScale, 1, 'float');
+        $gx = POSIX::trunc($rt->binary('/', $localX, $iScale, 1, 'float'));
+        $gy = POSIX::trunc($rt->binary('/', $localY, $iScale, 1, 'float'));
         if ((((((($rt->binary('<', $gx, $rt->i(0))) || ($rt->binary('>=', $gx, $g->{GLYPH_W})) ? 1 : 0)) || ($rt->binary('<', $gy, $rt->i(0))) ? 1 : 0)) || ($rt->binary('>=', $gy, $g->{GLYPH_H})) ? 1 : 0)) {
             return $rt->f(0);
         }
-        $row = (($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'float')) >= 0 && ($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'float')) == int($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'float')) && ($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'float')) < scalar(@{$g->{GLYPHS}}) ? $g->{GLYPHS}->[int($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'float'))] : 0);
-        return $rt->construct(1, $rt->binary('&', $rt->binary('>>', $row, $rt->binary('-', $rt->i(6), $gx, 1, 'float'), 1, 'int'), $rt->i(1), 1, 'int'));
+        $row = $g->{GLYPHS}->[int($rt->binary('+', $rt->binary('*', $digit, $rt->i(8), 1, 'int'), $gy, 1, 'int'))];
+        return $rt->construct(1, $rt->binary('&', $rt->binary('>>', $row, $rt->binary('-', $rt->i(6), $gx, 1, 'int'), 1, 'int'), $rt->i(1), 1, 'int'));
     };
     $ticker_row_mask__int_int_int_float_int_int = sub {
         my ($pixelX, $pixelY, $rowSeed, $t, $CELL_W, $iScale) = @_;
         my ($cellX, $digit, $h, $localX, $offset, $scrollSpeed, $sx);
-        $scrollSpeed = $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->construct(1, $rt->binary('&', $hash_mix__uint->($rt->binary('^', $rt->construct(1, $rowSeed, 'uint'), $rt->i(17), 1, 'uint')), $rt->i(65535), 1, 'uint')), $rt->f(65535), 1, 'float'), $rt->f(1.5), 1, 'float'), 1, 'float');
+        $scrollSpeed = $rt->binary('+', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->construct(1, $rt->binary('&', $rt->hash_uint($rt->binary('^', $rt->construct(1, $rowSeed, 'uint'), $rt->i(17), 1, 'uint')), $rt->i(65535), 1, 'uint')), $rt->f(65535), 1, 'float'), $rt->f(1.5), 1, 'float'), 1, 'float');
         $offset = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $rt->binary('*', $t, $scrollSpeed, 1, 'float'), $rt->f(120), 1, 'float')), 'int');
         $sx = $rt->binary('+', $pixelX, $offset, 1, 'int');
-        $cellX = (($rt->binary('>=', $sx, $rt->i(0))) ? ($rt->binary('/', $sx, $CELL_W, 1, 'float')) : ($rt->binary('/', $rt->binary('+', $rt->binary('-', $sx, $CELL_W, 1, 'int'), $rt->i(1), 1, 'int'), $CELL_W, 1, 'float')));
-        $localX = $rt->binary('-', $sx, $rt->binary('*', $cellX, $CELL_W, 1, 'float'), 1, 'float');
-        $h = $hash_mix__uint->($rt->binary('^', $rt->construct(1, $cellX, 'uint'), $rt->binary('*', $rt->construct(1, $rowSeed, 'uint'), $rt->i(997), 1, 'uint'), 1, 'uint'));
-        $digit = $rt->construct(1, $rt->binary('%', $h, $rt->i(10), 1, 'uint'), 'int');
+        $cellX = (($rt->binary('>=', $sx, $rt->i(0))) ? (POSIX::trunc($rt->binary('/', $sx, $CELL_W, 1, 'float'))) : (POSIX::trunc($rt->binary('/', $rt->binary('+', $rt->binary('-', $sx, $CELL_W, 1, 'int'), $rt->i(1), 1, 'int'), $CELL_W, 1, 'float'))));
+        $localX = $rt->binary('-', $sx, $rt->binary('*', $cellX, $CELL_W, 1, 'int'), 1, 'int');
+        $h = $rt->hash_uint($rt->binary('^', $rt->construct(1, $cellX, 'uint'), $rt->binary('*', $rt->construct(1, $rowSeed, 'uint'), $rt->i(997), 1, 'uint'), 1, 'uint'));
+        $digit = $rt->construct(1, $rt->binary('%', $h, $rt->i(10), 1, 'float'), 'int');
         return $sample_glyph__int_int_int_int->($digit, $localX, $pixelY, $iScale);
     };
     $main__void = sub {
@@ -64,33 +64,33 @@ my $run_pixel = sub {
         $dims = $rt->construct(2, $rt->texture_size($_u_inputTex));
         $src = $rt->texture($_u_inputTex, $ctx->{uv});
         $t = $rt->binary('*', $_u_time, $_u_speed, 1, 'float');
-        $baseSeed = $hash_mix__uint->($rt->binary('*', $rt->construct(1, $_u_seed, 'uint'), $rt->i(7919), 1, 'uint'));
+        $baseSeed = $rt->hash_uint($rt->binary('*', $rt->construct(1, $_u_seed, 'uint'), $rt->i(7919), 1, 'uint'));
         $totalH = $rt->binary('*', $_u_rows, $rt->binary('+', $CELL_H, $ROW_GAP, 1, 'int'), 1, 'int');
         $px = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $rt->swizzle($ctx->{uv}, 'x'), $rt->swizzle($dims, 'x'), 1, 'float')), 'int');
         $pyFromBottom = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $rt->binary('-', $rt->f(1), $rt->swizzle($ctx->{uv}, 'y'), 1, 'float'), $rt->swizzle($dims, 'y'), 1, 'float')), 'int');
         if ($rt->binary('>=', $pyFromBottom, $totalH)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($src)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($src)}; $g->{fragColor} };
             return;
         }
         $rowStride = $rt->binary('+', $CELL_H, $ROW_GAP, 1, 'int');
-        $rowIdx = $rt->binary('/', $pyFromBottom, $rowStride, 1, 'float');
-        $localY = $rt->binary('-', $pyFromBottom, $rt->binary('*', $rowIdx, $rowStride, 1, 'float'), 1, 'float');
+        $rowIdx = POSIX::trunc($rt->binary('/', $pyFromBottom, $rowStride, 1, 'float'));
+        $localY = $rt->binary('-', $pyFromBottom, $rt->binary('*', $rowIdx, $rowStride, 1, 'int'), 1, 'int');
         if ((($rt->binary('>=', $rowIdx, $_u_rows)) || ($rt->binary('>=', $localY, $CELL_H)) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($src)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($src)}; $g->{fragColor} };
             return;
         }
-        $rowSeed = $rt->construct(1, $hash_mix__uint->($rt->binary('+', $rt->construct(1, $rowIdx, 'uint'), $baseSeed, 1, 'uint')), 'int');
+        $rowSeed = $rt->construct(1, $rt->hash_uint($rt->binary('+', $rt->construct(1, $rowIdx, 'uint'), $baseSeed, 1, 'uint')), 'int');
         $mask = $ticker_row_mask__int_int_int_float_int_int->($px, $localY, $rowSeed, $t, $CELL_W, $iScale);
         $shadow = $rt->f(0);
         $shadowOff = $rt->component_wise('max', $rt->construct(1, $rt->binary('*', $rt->f(2), $_u_renderScale, 1, 'float'), 'int'), $rt->i(1));
-        $shadowLocalY = $rt->binary('+', $localY, $shadowOff, 1, 'float');
+        $shadowLocalY = $rt->binary('+', $localY, $shadowOff, 1, 'int');
         if ($rt->binary('<', $shadowLocalY, $CELL_H)) {
             $shadow = $ticker_row_mask__int_int_int_float_int_int->($rt->binary('+', $px, $shadowOff, 1, 'int'), $shadowLocalY, $rowSeed, $t, $CELL_W, $iScale);
         }
         $result = $rt->swizzle($src, 'rgb');
-        @{$result} = map { $rt->f32($_) } @{($rt->binary('*', $result, $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('*', $shadow, $rt->f(0.40000000000000002), 1, 'float'), $_u_alpha, 1, 'float'), 1, 'float'), 3, 'float'))};
-        @{$result} = map { $rt->f32($_) } @{($rt->component_wise('max', $result, $rt->binary('*', $rt->construct_raw(3, $mask), $_u_alpha, 3, 'float')))};
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $result, $rt->f(0), $rt->f(1)), $rt->swizzle($src, 'a')))};
+        scalar do { @{$result} = map { $rt->f32($_) } @{($rt->binary('*', $result, $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('*', $shadow, $rt->f(0.40000000000000002), 1, 'float'), $_u_alpha, 1, 'float'), 1, 'float'), 3, 'float'))}; $result };
+        scalar do { @{$result} = map { $rt->f32($_) } @{($rt->component_wise('max', $result, $rt->binary('*', $rt->construct_raw(3, $mask), $_u_alpha, 3, 'float')))}; $result };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $result, $rt->f(0), $rt->f(1)), $rt->swizzle($src, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

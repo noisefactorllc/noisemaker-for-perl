@@ -19,12 +19,12 @@ my $run_pixel = sub {
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $inputColor = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         if ($_u_resetState) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($inputColor)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($inputColor)}; $g->{fragColor} };
             return;
         }
         $feedback = $rt->texel_fetch($_u_feedbackTex, $coord, $rt->i(0));
         $result = $rt->component_wise('mix', $rt->swizzle($inputColor, 'rgb'), $rt->swizzle($feedback, 'rgb'), $_u_intensity);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($inputColor, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($inputColor, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

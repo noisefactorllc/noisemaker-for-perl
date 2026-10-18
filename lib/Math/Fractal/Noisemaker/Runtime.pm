@@ -29,6 +29,7 @@ use Math::Fractal::Noisemaker::UintMath qw(
     u32 umul uadd usub ushl ushr uand uor uxor fdiv
 );
 use Math::Fractal::Noisemaker::Sampler ();
+use Math::Fractal::Noisemaker::MetalDivision ();
 
 use constant _U32 => 0xFFFFFFFF;
 
@@ -597,6 +598,11 @@ sub component_wise {
     return _is_vec($r) ? [map { f32($_) } @$r] : f32($r);
 }
 
+sub metal_divide {
+    my ($self, $a, $b) = @_;
+    return _bcn(\&Math::Fractal::Noisemaker::MetalDivision::divide, $a, $b);
+}
+
 # ---- texture ----
 
 sub texture {
@@ -608,7 +614,7 @@ sub texture {
     if (($sampler->filter || 'nearest') eq 'linear') {
         return Math::Fractal::Noisemaker::Sampler::sample_bilinear($sampler, $u, $v);
     }
-    return Math::Fractal::Noisemaker::Sampler::sample_nearest_bottom_left($sampler, $u, $v);
+    return Math::Fractal::Noisemaker::Sampler::sample_nearest_texel_bottom_left($sampler, $u, $v);
 }
 
 sub texture_size {

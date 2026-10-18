@@ -43,8 +43,8 @@ my $run_pixel = sub {
     $sample_glyph__int_int_int_int = sub {
         my ($digit, $localX, $localY, $iScale) = @_;
         my ($gx, $gy, $row);
-        $gx = $rt->binary('/', $localX, $iScale, 1, 'int');
-        $gy = $rt->binary('/', $localY, $iScale, 1, 'int');
+        $gx = POSIX::trunc($rt->binary('/', $localX, $iScale, 1, 'float'));
+        $gy = POSIX::trunc($rt->binary('/', $localY, $iScale, 1, 'float'));
         if ((((((($rt->binary('<', $gx, $rt->i(0))) || ($rt->binary('>=', $gx, $g->{GLYPH_W})) ? 1 : 0)) || ($rt->binary('<', $gy, $rt->i(0))) ? 1 : 0)) || ($rt->binary('>=', $gy, $g->{GLYPH_H})) ? 1 : 0)) {
             return $rt->f(0);
         }
@@ -66,11 +66,11 @@ my $run_pixel = sub {
         $globalCoord = $rt->binary('+', $coord, $rt->construct(2, $_u_tileOffset, 'int'), 2, 'int');
         $texel = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         $blend_alpha = $rt->component_wise('clamp', $_u_alpha, $rt->f(0), $rt->f(1));
-        $scanlineStep = $rt->component_wise('max', $rt->binary('/', $iScale, $g->{BASE_SCALE}, 1, 'int'), $rt->i(1));
-        $scanline = $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('*', $rt->f(0.029999999999999999), $blend_alpha, 1, 'float'), $rt->construct(1, $rt->binary('&', $rt->binary('/', $rt->swizzle($globalCoord, 'y'), $scanlineStep, 1, 'int'), $rt->i(1), 1, 'int')), 1, 'float'), 1, 'float');
+        $scanlineStep = $rt->component_wise('max', $rt->binary('/', $iScale, $g->{BASE_SCALE}, 1, 'float'), $rt->i(1));
+        $scanline = $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('*', $rt->f(0.029999999999999999), $blend_alpha, 1, 'float'), $rt->construct(1, $rt->binary('&', $rt->binary('/', $rt->swizzle($globalCoord, 'y'), $scanlineStep, 1, 'float'), $rt->i(1), 1, 'int')), 1, 'float'), 1, 'float');
         $base_rgb = $rt->construct(3, $rt->binary('*', $rt->swizzle($texel, 'rgb'), $scanline, 3, 'float'));
         if ($rt->binary('<=', $blend_alpha, $rt->f(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $base_rgb, $rt->swizzle($texel, 'a')))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $base_rgb, $rt->swizzle($texel, 'a')))}; $g->{fragColor} };
             return;
         }
         $base_seed = $rt->construct(1, $rt->component_wise('max', $_u_seed, $rt->f(1)), 'uint');
@@ -108,7 +108,7 @@ my $run_pixel = sub {
         $panel_x1 = $rt->binary('+', $rt->binary('+', $origin_x, $overlay_w, 1, 'int'), $panel_pad, 1, 'int');
         $panel_y1 = $rt->binary('+', $rt->binary('+', $origin_y, $overlay_h, 1, 'int'), $panel_pad, 1, 'int');
         if ((((((($rt->binary('<', $rt->swizzle($globalCoord, 'x'), $panel_x0)) || ($rt->binary('>=', $rt->swizzle($globalCoord, 'x'), $panel_x1)) ? 1 : 0)) || ($rt->binary('<', $rt->swizzle($globalCoord, 'y'), $panel_y0)) ? 1 : 0)) || ($rt->binary('>=', $rt->swizzle($globalCoord, 'y'), $panel_y1)) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $base_rgb, $rt->swizzle($texel, 'a')))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $base_rgb, $rt->swizzle($texel, 'a')))}; $g->{fragColor} };
             return;
         }
         $lx = $rt->binary('-', $rt->swizzle($globalCoord, 'x'), $origin_x, 1, 'int');
@@ -119,7 +119,7 @@ my $run_pixel = sub {
         $within_glyph_x = 0;
         if ((((((($rt->binary('>=', $lx, $rt->i(0))) && ($rt->binary('<', $lx, $overlay_w)) ? 1 : 0)) && ($rt->binary('>=', $ly, $rt->i(0))) ? 1 : 0)) && ($rt->binary('<', $ly, $overlay_h)) ? 1 : 0)) {
             $cell_stride = $rt->binary('+', $CELL_W, $GAP, 1, 'int');
-            $glyph_idx = $rt->binary('/', $lx, $cell_stride, 1, 'int');
+            $glyph_idx = POSIX::trunc($rt->binary('/', $lx, $cell_stride, 1, 'float'));
             $within_glyph_x = $rt->binary('-', $lx, $rt->binary('*', $glyph_idx, $cell_stride, 1, 'int'), 1, 'int');
             $digit = 0;
             $digit_hash = 0;
@@ -135,13 +135,13 @@ my $run_pixel = sub {
         }
         $panel_bg = $rt->construct(3, $rt->binary('*', $base_rgb, $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->f(0.5), $blend_alpha, 1, 'float'), 1, 'float'), 3, 'float'));
         if ($rt->binary('<', $mask, $rt->f(0.5))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $panel_bg, $rt->f(0), $rt->f(1)), $rt->swizzle($texel, 'a')))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $panel_bg, $rt->f(0), $rt->f(1)), $rt->swizzle($texel, 'a')))}; $g->{fragColor} };
             return;
         }
         $osd_color = $rt->construct(3, $rt->f(0.69999999999999996), $rt->f(1), $rt->f(0.75));
         $highlight = $rt->component_wise('max', $panel_bg, $rt->binary('*', $osd_color, $mask, 3, 'float'));
         $blended = $rt->component_wise('mix', $panel_bg, $highlight, $blend_alpha);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $blended, $rt->f(0), $rt->f(1)), $rt->swizzle($texel, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $blended, $rt->f(0), $rt->f(1)), $rt->swizzle($texel, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

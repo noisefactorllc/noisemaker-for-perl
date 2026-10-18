@@ -25,42 +25,42 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($bOut, $cur, $db, $dg, $dr, $gOut, $ib0, $ib1, $ig0, $ig1, $ir0, $ir1, $rOut, $s, $slots, $texSize, $uv);
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize))));
         $cur = $rt->texture($_u_inputTex, $uv);
         $slots = $rt->new_array($rt->i(9), 4);
-        @{$slots->[int($rt->i(0))]} = map { $rt->f32($_) } @{($cur)};
+        scalar do { @{$slots->[int($rt->i(0))]} = map { $rt->f32($_) } @{($cur)}; $slots->[int($rt->i(0))] };
         $s = $rt->construct(4, 0.0);
-        @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h1, $uv))};
+        scalar do { @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h1, $uv))}; $s };
         if ((($rt->binary('<', $rt->swizzle($s, 'a'), $rt->f(0.5))) ? 0 : 1)) {
-            @{$slots->[int($rt->i(1))]} = map { $rt->f32($_) } @{($s)};
+            scalar do { @{$slots->[int($rt->i(1))]} = map { $rt->f32($_) } @{($s)}; $slots->[int($rt->i(1))] };
         }
-        @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h2, $uv))};
+        scalar do { @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h2, $uv))}; $s };
         if ((($rt->binary('<', $rt->swizzle($s, 'a'), $rt->f(0.5))) ? 0 : 1)) {
-            @{$slots->[int($rt->i(2))]} = map { $rt->f32($_) } @{($s)};
+            scalar do { @{$slots->[int($rt->i(2))]} = map { $rt->f32($_) } @{($s)}; $slots->[int($rt->i(2))] };
         }
-        @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h3, $uv))};
+        scalar do { @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h3, $uv))}; $s };
         if ((($rt->binary('<', $rt->swizzle($s, 'a'), $rt->f(0.5))) ? 0 : 1)) {
-            @{$slots->[int($rt->i(3))]} = map { $rt->f32($_) } @{($s)};
+            scalar do { @{$slots->[int($rt->i(3))]} = map { $rt->f32($_) } @{($s)}; $slots->[int($rt->i(3))] };
         }
-        @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h4, $uv))};
+        scalar do { @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h4, $uv))}; $s };
         if ((($rt->binary('<', $rt->swizzle($s, 'a'), $rt->f(0.5))) ? 0 : 1)) {
-            @{$slots->[int($rt->i(4))]} = map { $rt->f32($_) } @{($s)};
+            scalar do { @{$slots->[int($rt->i(4))]} = map { $rt->f32($_) } @{($s)}; $slots->[int($rt->i(4))] };
         }
-        @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h5, $uv))};
+        scalar do { @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h5, $uv))}; $s };
         if ((($rt->binary('<', $rt->swizzle($s, 'a'), $rt->f(0.5))) ? 0 : 1)) {
-            @{$slots->[int($rt->i(5))]} = map { $rt->f32($_) } @{($s)};
+            scalar do { @{$slots->[int($rt->i(5))]} = map { $rt->f32($_) } @{($s)}; $slots->[int($rt->i(5))] };
         }
-        @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h6, $uv))};
+        scalar do { @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h6, $uv))}; $s };
         if ((($rt->binary('<', $rt->swizzle($s, 'a'), $rt->f(0.5))) ? 0 : 1)) {
-            @{$slots->[int($rt->i(6))]} = map { $rt->f32($_) } @{($s)};
+            scalar do { @{$slots->[int($rt->i(6))]} = map { $rt->f32($_) } @{($s)}; $slots->[int($rt->i(6))] };
         }
-        @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h7, $uv))};
+        scalar do { @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h7, $uv))}; $s };
         if ((($rt->binary('<', $rt->swizzle($s, 'a'), $rt->f(0.5))) ? 0 : 1)) {
-            @{$slots->[int($rt->i(7))]} = map { $rt->f32($_) } @{($s)};
+            scalar do { @{$slots->[int($rt->i(7))]} = map { $rt->f32($_) } @{($s)}; $slots->[int($rt->i(7))] };
         }
-        @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h8, $uv))};
+        scalar do { @{$s} = map { $rt->f32($_) } @{($rt->texture($_u_h8, $uv))}; $s };
         if ((($rt->binary('<', $rt->swizzle($s, 'a'), $rt->f(0.5))) ? 0 : 1)) {
-            @{$slots->[int($rt->i(8))]} = map { $rt->f32($_) } @{($s)};
+            scalar do { @{$slots->[int($rt->i(8))]} = map { $rt->f32($_) } @{($s)}; $slots->[int($rt->i(8))] };
         }
         $dr = $rt->component_wise('clamp', $_u_redDelay, $rt->f(0), $rt->f(8));
         $ir0 = $rt->construct(1, $rt->component_wise('floor', $dr), 'int');
@@ -74,7 +74,7 @@ my $run_pixel = sub {
         $ib0 = $rt->construct(1, $rt->component_wise('floor', $db), 'int');
         $ib1 = $rt->component_wise('min', $rt->binary('+', $ib0, $rt->i(1), 1, 'int'), $rt->i(8));
         $bOut = $rt->swizzle($rt->component_wise('mix', $slots->[int($ib0)], $slots->[int($ib1)], $rt->binary('-', $db, $rt->construct(1, $ib0), 1, 'float')), 'b');
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rOut, $gOut, $bOut, $rt->swizzle($cur, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rOut, $gOut, $bOut, $rt->swizzle($cur, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

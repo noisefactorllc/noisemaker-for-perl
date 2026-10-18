@@ -30,14 +30,14 @@ my $run_pixel = sub {
             if (!($rt->binary('<', $s, $NUM_SAMPLES))) {
                 last;
             }
-            $sampleX = $rt->binary('/', $rt->binary('*', $s, $width, 1, 'int'), $NUM_SAMPLES, 1, 'int');
+            $sampleX = $rt->binary('/', $rt->binary('*', $s, $width, 1, 'int'), $NUM_SAMPLES, 1, 'float');
             $lum = $rt->swizzle($rt->texel_fetch($_u_lumTex, $rt->construct(2, $sampleX, $y, 'int'), $rt->i(0)), 'r');
             if ($rt->binary('>', $lum, $maxLum)) {
                 $maxLum = $lum;
                 $brightestX = $sampleX;
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('/', $rt->construct(1, $brightestX), $rt->construct(1, $rt->binary('-', $width, $rt->i(1), 1, 'int')), 1, 'float'), $maxLum, $rt->f(0), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->metal_divide($rt->construct(1, $brightestX), $rt->construct(1, $rt->binary('-', $width, $rt->i(1), 1, 'int'))), $maxLum, $rt->f(0), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

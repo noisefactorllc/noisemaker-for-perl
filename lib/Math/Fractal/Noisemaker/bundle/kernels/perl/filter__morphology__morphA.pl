@@ -17,8 +17,8 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($_for0_first, $_for1_first, $_for2_first, $acc, $d, $hi, $i, $lo, $o, $r, $r2, $s, $sL, $sR, $texel, $uv, $x, $y);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
-        $texel = $rt->construct(2, $rt->binary('/', $rt->f(1), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
+        $texel = $rt->construct(2, $rt->metal_divide($rt->f(1), $_u_resolution));
         $acc = $rt->texture($_u_inputTex, $uv);
         $r = $rt->f(0.0);
         $r2 = $rt->f(0.0);
@@ -55,7 +55,7 @@ my $run_pixel = sub {
                     $s = $rt->texture($_u_inputTex, $rt->binary('+', $uv, $rt->binary('*', $d, $texel, 2, 'float'), 2, 'float'));
                     $hi = $rt->component_wise('max', $acc, $s);
                     $lo = $rt->component_wise('min', $acc, $s);
-                    @{$acc} = map { $rt->f32($_) } @{($rt->component_wise('mix', $hi, $lo, $rt->construct(1, $_u_mode)))};
+                    scalar do { @{$acc} = map { $rt->f32($_) } @{($rt->component_wise('mix', $hi, $lo, $rt->construct(1, $_u_mode)))}; $acc };
                 }
             }
         } else {
@@ -78,10 +78,10 @@ my $run_pixel = sub {
                 $sR = $rt->texture($_u_inputTex, $rt->binary('+', $uv, $o, 2, 'float'));
                 $hi = $rt->component_wise('max', $acc, $rt->component_wise('max', $sL, $sR));
                 $lo = $rt->component_wise('min', $acc, $rt->component_wise('min', $sL, $sR));
-                @{$acc} = map { $rt->f32($_) } @{($rt->component_wise('mix', $hi, $lo, $rt->construct(1, $_u_mode)))};
+                scalar do { @{$acc} = map { $rt->f32($_) } @{($rt->component_wise('mix', $hi, $lo, $rt->construct(1, $_u_mode)))}; $acc };
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($acc)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($acc)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

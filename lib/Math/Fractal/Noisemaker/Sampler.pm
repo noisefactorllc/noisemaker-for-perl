@@ -24,7 +24,7 @@ use warnings;
 use POSIX ();
 use Exporter 'import';
 
-our @EXPORT_OK = qw(sample_nearest sample_nearest_bottom_left sample_bilinear);
+our @EXPORT_OK = qw(sample_nearest sample_nearest_bottom_left sample_nearest_texel_bottom_left sample_bilinear);
 
 sub _f32 { unpack('f', pack('f', $_[0])) }
 
@@ -59,6 +59,21 @@ sub sample_nearest_bottom_left {
     my $source = ($y * $width + $x) * 4;
     my $d = $surface->data;
     return [@{$d}[$source .. $source + 3]];
+}
+
+sub _nearest_texel {
+    my ($coordinate, $size) = @_;
+    my $scaled = _f32($coordinate * $size);
+    return $size - 1 if $scaled != $scaled;
+    return _clamp(POSIX::floor($scaled), 0, $size - 1);
+}
+
+sub sample_nearest_texel_bottom_left {
+    my ($surface, $u, $v) = @_;
+    my $x = _nearest_texel($u, $surface->width);
+    my $y = $surface->height - 1 - _nearest_texel($v, $surface->height);
+    my $source = ($y * $surface->width + $x) * 4;
+    return [@{ $surface->data }[$source .. $source + 3]];
 }
 
 # Bilinear sample, half-texel-centered, clamped to edge, GL bottom-left row

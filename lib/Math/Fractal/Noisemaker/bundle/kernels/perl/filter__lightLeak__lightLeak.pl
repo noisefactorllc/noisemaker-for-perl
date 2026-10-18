@@ -24,11 +24,11 @@ my $run_pixel = sub {
     $pcg__uvec3 = sub {
         my ($v) = @_;
         $v = $rt->copy($v, 'uint');
-        @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('+', $rt->binary('*', $v, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
-        @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))};
+        scalar do { @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->i(16), 3, 'uint'), 3, 'uint'))}; $v };
         $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
         $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
@@ -85,7 +85,7 @@ my $run_pixel = sub {
             }
         }
         $s = $rt->construct(3, $rt->binary('+', $seed_f, $rt->f(100), 1, 'float'), $rt->binary('*', $rt->construct(1, $best_index), $rt->f(13.369999999999999), 1, 'float'), $rt->f(5));
-        @{$cell_color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $hash33__vec3->($s), $_u_color, $rt->f(0.59999999999999998)))};
+        scalar do { @{$cell_color} = map { $rt->f32($_) } @{($rt->component_wise('mix', $hash33__vec3->($s), $_u_color, $rt->f(0.59999999999999998)))}; $cell_color };
         $cell_dist = $best_dist;
         return (undef, $cell_color, $cell_dist);
     };
@@ -103,11 +103,11 @@ my $run_pixel = sub {
         $coords = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $tileDims = $rt->texture_size($_u_inputTex);
         $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($rt->construct(2, $tileDims))));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes));
         $base = $rt->texel_fetch($_u_inputTex, $coords, $rt->i(0));
         $blend_alpha = $rt->component_wise('clamp', $_u_alpha, $rt->f(0), $rt->f(1));
         if ($rt->binary('<=', $blend_alpha, $rt->f(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($base)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($base)}; $g->{fragColor} };
             return;
         }
         $seed_f = $rt->construct(1, $_u_seed);
@@ -134,14 +134,14 @@ my $run_pixel = sub {
         $nb1 = $rt->component_wise('clamp', $rt->binary('+', $coords, $rt->construct(2, $rt->unary('-', $rt->i(2)), $rt->i(0), 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $tileDims, $rt->i(1), 2, 'int'));
         $nb2 = $rt->component_wise('clamp', $rt->binary('+', $coords, $rt->construct(2, $rt->i(0), $rt->i(2), 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $tileDims, $rt->i(1), 2, 'int'));
         $nb3 = $rt->component_wise('clamp', $rt->binary('+', $coords, $rt->construct(2, $rt->i(0), $rt->unary('-', $rt->i(2)), 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $tileDims, $rt->i(1), 2, 'int'));
-        @{$soft_accum} = map { $rt->f32($_) } @{($rt->binary('+', $soft_accum, $rt->swizzle($rt->texel_fetch($_u_inputTex, $nb0, $rt->i(0)), 'rgb'), 3, 'float'))};
-        @{$soft_accum} = map { $rt->f32($_) } @{($rt->binary('+', $soft_accum, $rt->swizzle($rt->texel_fetch($_u_inputTex, $nb1, $rt->i(0)), 'rgb'), 3, 'float'))};
-        @{$soft_accum} = map { $rt->f32($_) } @{($rt->binary('+', $soft_accum, $rt->swizzle($rt->texel_fetch($_u_inputTex, $nb2, $rt->i(0)), 'rgb'), 3, 'float'))};
-        @{$soft_accum} = map { $rt->f32($_) } @{($rt->binary('+', $soft_accum, $rt->swizzle($rt->texel_fetch($_u_inputTex, $nb3, $rt->i(0)), 'rgb'), 3, 'float'))};
+        scalar do { @{$soft_accum} = map { $rt->f32($_) } @{($rt->binary('+', $soft_accum, $rt->swizzle($rt->texel_fetch($_u_inputTex, $nb0, $rt->i(0)), 'rgb'), 3, 'float'))}; $soft_accum };
+        scalar do { @{$soft_accum} = map { $rt->f32($_) } @{($rt->binary('+', $soft_accum, $rt->swizzle($rt->texel_fetch($_u_inputTex, $nb1, $rt->i(0)), 'rgb'), 3, 'float'))}; $soft_accum };
+        scalar do { @{$soft_accum} = map { $rt->f32($_) } @{($rt->binary('+', $soft_accum, $rt->swizzle($rt->texel_fetch($_u_inputTex, $nb2, $rt->i(0)), 'rgb'), 3, 'float'))}; $soft_accum };
+        scalar do { @{$soft_accum} = map { $rt->f32($_) } @{($rt->binary('+', $soft_accum, $rt->swizzle($rt->texel_fetch($_u_inputTex, $nb3, $rt->i(0)), 'rgb'), 3, 'float'))}; $soft_accum };
         $soft_w = $rt->binary('+', $soft_w, $rt->f(4), 1, 'float');
         $vaseline = $rt->construct(3, $rt->binary('/', $soft_accum, $soft_w, 3, 'float'));
         $final_color = $rt->component_wise('mix', $rt->swizzle($base, 'rgb'), $rt->component_wise('mix', $masked, $vaseline, $blend_alpha), $blend_alpha);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $final_color, $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1))), $rt->swizzle($base, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $final_color, $rt->construct(3, $rt->f(0)), $rt->construct(3, $rt->f(1))), $rt->swizzle($base, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

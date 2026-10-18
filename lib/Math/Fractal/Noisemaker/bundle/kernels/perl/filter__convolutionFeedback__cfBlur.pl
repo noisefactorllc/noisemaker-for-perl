@@ -21,7 +21,7 @@ my $run_pixel = sub {
         $center = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         $scaledRadius = $rt->construct(1, $rt->binary('*', $rt->construct(1, $_u_blurRadius), $_u_renderScale, 1, 'float'), 'int');
         if ((($rt->binary('<=', $scaledRadius, $rt->i(0))) || ($rt->binary('<=', $_u_blurAmount, $rt->f(0))) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($center)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($center)}; $g->{fragColor} };
             return;
         }
         $sigma = $rt->binary('/', $rt->construct(1, $scaledRadius), $rt->f(2), 1, 'float');
@@ -49,17 +49,17 @@ my $run_pixel = sub {
                     last;
                 }
                 $samplePos = $rt->binary('+', $coord, $rt->construct(2, $kx, $ky, 'int'), 2, 'int');
-                @{$samplePos} = @{($rt->component_wise('clamp', $samplePos, $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $texSize, $rt->i(1), 2, 'int')))};
+                scalar do { @{$samplePos} = @{($rt->component_wise('clamp', $samplePos, $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $texSize, $rt->i(1), 2, 'int')))}; $samplePos };
                 $dist2 = $rt->construct(1, $rt->binary('+', $rt->binary('*', $kx, $kx, 1, 'int'), $rt->binary('*', $ky, $ky, 1, 'int'), 1, 'int'));
-                $weight = $rt->component_wise('exp', $rt->binary('/', $rt->unary('-', $dist2), $rt->binary('*', $rt->f(2), $sigma2, 1, 'float'), 1, 'float'));
+                $weight = $rt->component_wise('exp', $rt->metal_divide($rt->unary('-', $dist2), $rt->binary('*', $rt->f(2), $sigma2, 1, 'float')));
                 $texSample = $rt->texel_fetch($_u_inputTex, $samplePos, $rt->i(0));
-                @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->binary('*', $rt->swizzle($texSample, 'rgb'), $weight, 3, 'float'), 3, 'float'))};
+                scalar do { @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->binary('*', $rt->swizzle($texSample, 'rgb'), $weight, 3, 'float'), 3, 'float'))}; $sum };
                 $weightSum = $rt->binary('+', $weightSum, $weight, 1, 'float');
             }
         }
         $blurred = $rt->construct(3, $rt->binary('/', $sum, $weightSum, 3, 'float'));
         $result = $rt->component_wise('mix', $rt->swizzle($center, 'rgb'), $blurred, $_u_blurAmount);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($center, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($center, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

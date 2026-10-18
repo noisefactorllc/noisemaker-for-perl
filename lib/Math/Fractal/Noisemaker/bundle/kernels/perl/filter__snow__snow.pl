@@ -81,7 +81,7 @@ my $run_pixel = sub {
         $texel = $rt->texel_fetch($_u_inputTex, $coords, $rt->i(0));
         $alphaVal = $rt->component_wise('clamp', $_u_alpha, $rt->f(0), $rt->f(1));
         if ($rt->binary('==', $alphaVal, $rt->f(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($texel)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($texel)}; $g->{fragColor} };
             return;
         }
         $pixelCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'x'), $rt->swizzle($_u_tileOffset, 'x'), 1, 'float'), $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'y'), $rt->swizzle($_u_tileOffset, 'y'), 1, 'float'));
@@ -90,11 +90,11 @@ my $run_pixel = sub {
         $static_value = $snow_noise__vec2_float_float_vec3->($pixelCoord, $timeVal, $speedVal, $g->{STATIC_SEED});
         $limiter_value = $snow_noise__vec2_float_float_vec3->($pixelCoord, $timeVal, $speedVal, $g->{LIMITER_SEED});
         $d = $rt->component_wise('max', $rt->binary('*', $_u_density, $rt->f(0.01), 1, 'float'), $rt->f(0.0001));
-        $exponent = $rt->binary('/', $rt->binary('-', $rt->f(1), $d, 1, 'float'), $d, 1, 'float');
+        $exponent = $rt->metal_divide($rt->binary('-', $rt->f(1), $d, 1, 'float'), $d);
         $limiter_mask = $rt->binary('*', $rt->component_wise('pow', $rt->component_wise('min', $limiter_value, $rt->f(0.98999999999999999)), $exponent), $alphaVal, 1, 'float');
         $static_color = $rt->construct(3, $static_value);
         $mixed_rgb = $rt->component_wise('mix', $rt->swizzle($texel, 'xyz'), $static_color, $rt->construct(3, $limiter_mask));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $mixed_rgb, $rt->swizzle($texel, 'w')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $mixed_rgb, $rt->swizzle($texel, 'w')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

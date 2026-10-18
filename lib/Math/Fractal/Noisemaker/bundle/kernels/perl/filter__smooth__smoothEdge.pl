@@ -27,7 +27,7 @@ my $run_pixel = sub {
         $texSize = $rt->texture_size($_u_inputTex);
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         if ($rt->binary('==', $_u_smoothType, $rt->i(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texel_fetch($_u_inputTex, $coord, $rt->i(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texel_fetch($_u_inputTex, $coord, $rt->i(0)))}; $g->{fragColor} };
             return;
         }
         $maxCoord = $rt->binary('-', $texSize, $rt->i(1), 2, 'int');
@@ -38,7 +38,7 @@ my $run_pixel = sub {
         $Le = $luminance__vec3->($rt->swizzle($rt->texel_fetch($_u_inputTex, $rt->component_wise('clamp', $rt->binary('+', $coord, $rt->construct(2, $rt->i(1), $rt->i(0), 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $maxCoord), $rt->i(0)), 'rgb'));
         $edgeH = $rt->component_wise('step', $_u_threshold, $rt->component_wise('max', $rt->component_wise('abs', $rt->binary('-', $L, $Ln, 1, 'float')), $rt->component_wise('abs', $rt->binary('-', $L, $Ls, 1, 'float'))));
         $edgeV = $rt->component_wise('step', $_u_threshold, $rt->component_wise('max', $rt->component_wise('abs', $rt->binary('-', $L, $Lw, 1, 'float')), $rt->component_wise('abs', $rt->binary('-', $L, $Le, 1, 'float'))));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $edgeH, $edgeV, $rt->f(0), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $edgeH, $edgeV, $rt->f(0), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

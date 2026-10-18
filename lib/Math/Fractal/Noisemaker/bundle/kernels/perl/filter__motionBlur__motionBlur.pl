@@ -17,15 +17,15 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($current, $mixFactor, $previous, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         if ($_u_resetState) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $uv))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $uv))}; $g->{fragColor} };
             return;
         }
         $current = $rt->texture($_u_inputTex, $uv);
         $previous = $rt->texture($_u_selfTex, $uv);
         $mixFactor = $rt->component_wise('clamp', $rt->binary('*', $_u_amount, $rt->f(0.0080000000000000002), 1, 'float'), $rt->f(0), $rt->f(0.97999999999999998));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('mix', $current, $previous, $mixFactor))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('mix', $current, $previous, $mixFactor))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

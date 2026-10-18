@@ -39,14 +39,14 @@ my $run_pixel = sub {
         $texSize = $rt->texture_size($_u_inputTex);
         $tileDims = $rt->construct(2, $texSize);
         $dims = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims)));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $tileDims, 2, 'float'));
-        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $dims, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $tileDims));
+        $globalUV = $rt->construct(2, $rt->metal_divide($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $dims));
         $texel = $rt->texture($_u_inputTex, $uv);
         $mask = $computeVignetteMask__vec2_vec2->($globalUV, $dims);
         $brightnessRgb = $rt->construct(3, $_u_vignetteBrightness);
         $edgeBlend = $rt->component_wise('mix', $rt->swizzle($texel, 'rgb'), $brightnessRgb, $mask);
         $finalRgb = $rt->component_wise('mix', $rt->swizzle($texel, 'rgb'), $edgeBlend, $_u_alpha);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $finalRgb, $rt->swizzle($texel, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $finalRgb, $rt->swizzle($texel, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

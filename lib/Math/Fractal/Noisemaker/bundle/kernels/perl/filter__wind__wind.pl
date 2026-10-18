@@ -27,12 +27,12 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($_for0_first, $accumColor, $accumWeight, $activation, $alongRun, $amount, $baseLum, $blendAmount, $candidate, $contrast, $decayRate, $density, $densityRate, $distancePx, $edge, $endTaper, $globalCoord, $i, $integrated, $marchDir, $methodGain, $reach, $sampleDistance, $sampleUV, $src, $staggerPhase, $streak, $taperStart, $uv, $weight);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $src = $rt->texture($_u_inputTex, $uv);
         $amount = $rt->component_wise('clamp', $rt->binary('/', $_u_strength, $rt->f(100), 1, 'float'), $rt->f(0), $rt->f(1));
         if ($rt->binary('<=', $amount, $rt->f(0))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($src)};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($src)}; $g->{fragColor} };
             return;
         }
         $reach = $rt->binary('*', $g->{MAX_REACH}, $amount, 1, 'float');
@@ -60,11 +60,11 @@ my $run_pixel = sub {
                 last;
             }
             $sampleDistance = $rt->binary('+', $distancePx, $staggerPhase, 1, 'float');
-            $sampleUV = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->binary('*', $marchDir, $sampleDistance, 1, 'float'), $rt->f(0)), 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
+            $sampleUV = $rt->component_wise('clamp', $rt->metal_divide($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->binary('*', $marchDir, $sampleDistance, 1, 'float'), $rt->f(0)), 2, 'float'), $_u_resolution), $rt->f(0), $rt->f(1));
             $candidate = $rt->swizzle($rt->texture($_u_inputTex, $sampleUV), 'rgb');
             $contrast = $rt->binary('-', $rt->binary('-', $lum__vec3->($candidate), $baseLum, 1, 'float'), $edge, 1, 'float');
             $activation = $rt->component_wise('smoothstep', $rt->f(0), $rt->f(0.080000000000000002), $contrast);
-            $alongRun = $rt->binary('/', $distancePx, $rt->component_wise('max', $reach, $rt->f(1)), 1, 'float');
+            $alongRun = $rt->metal_divide($distancePx, $rt->component_wise('max', $reach, $rt->f(1)));
             $decayRate = $rt->f(0.0);
             if ($rt->binary('==', $_u_METHOD, $rt->i(1))) {
                 $decayRate = $rt->f(0.80000000000000004);
@@ -83,7 +83,7 @@ my $run_pixel = sub {
             }
             $endTaper = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $taperStart, $rt->f(1), $alongRun), 1, 'float');
             $weight = $rt->binary('*', $rt->binary('*', $activation, $rt->component_wise('exp', $rt->binary('*', $rt->unary('-', $decayRate), $alongRun, 1, 'float')), 1, 'float'), $endTaper, 1, 'float');
-            @{$accumColor} = map { $rt->f32($_) } @{($rt->binary('+', $accumColor, $rt->binary('*', $candidate, $weight, 3, 'float'), 3, 'float'))};
+            scalar do { @{$accumColor} = map { $rt->f32($_) } @{($rt->binary('+', $accumColor, $rt->binary('*', $candidate, $weight, 3, 'float'), 3, 'float'))}; $accumColor };
             $accumWeight = $rt->binary('+', $accumWeight, $weight, 1, 'float');
         }
         $integrated = $rt->construct(3, $rt->binary('/', $accumColor, $rt->component_wise('max', $accumWeight, $rt->f(1.0000000000000001e-05)), 3, 'float'));
@@ -102,7 +102,7 @@ my $run_pixel = sub {
         }
         $blendAmount = $rt->component_wise('clamp', $rt->binary('*', $rt->binary('*', $density, $amount, 1, 'float'), $methodGain, 1, 'float'), $rt->f(0), $rt->f(1));
         $streak = $rt->component_wise('mix', $rt->swizzle($src, 'rgb'), $integrated, $blendAmount);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('max', $rt->swizzle($src, 'rgb'), $streak), $rt->swizzle($src, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('max', $rt->swizzle($src, 'rgb'), $streak), $rt->swizzle($src, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

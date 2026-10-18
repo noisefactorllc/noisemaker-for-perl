@@ -42,7 +42,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_for0_first, $dispPixels, $f, $globalCoord, $i, $isTileRendering, $maxDispPixels, $prevF, $prevUV, $rayUV, $shift, $stepSize, $t, $uv, $v, $w);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
         $v = $rt->construct(3, (($rt->binary('>', $rt->length($_u_direction), $rt->f(0))) ? ($rt->normalize($_u_direction)) : ($rt->construct(3, $rt->f(0), $rt->f(0), $rt->f(1)))));
         $shift = $rt->construct(2, $rt->binary('*', $rt->swizzle($v, 'xy'), $g->{SHIFT_SCALE}, 2, 'float'));
         $isTileRendering = $rt->binary('>', $rt->length($_u_tileOffset), $rt->f(0));
@@ -52,7 +52,7 @@ my $run_pixel = sub {
             $maxDispPixels = $rt->f(256);
             $dispPixels = $rt->length($rt->binary('*', $shift, $_u_fullResolution, 2, 'float'));
             if ($rt->binary('>', $dispPixels, $maxDispPixels)) {
-                @{$shift} = map { $rt->f32($_) } @{($rt->binary('*', $shift, $rt->binary('/', $maxDispPixels, $dispPixels, 1, 'float'), 2, 'float'))};
+                scalar do { @{$shift} = map { $rt->f32($_) } @{($rt->binary('*', $shift, $rt->metal_divide($maxDispPixels, $dispPixels), 2, 'float'))}; $shift };
             }
         }
         $t = $rt->f(1);
@@ -74,17 +74,17 @@ my $run_pixel = sub {
                 $prevF = $f;
                 $prevUV = $rt->fresh($rayUV);
                 $t = $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->construct(1, $i), $stepSize, 1, 'float'), 1, 'float');
-                @{$rayUV} = map { $rt->f32($_) } @{($rt->binary('+', $uv, $rt->binary('*', $shift, $rt->binary('-', $t, $_u_pivot, 1, 'float'), 2, 'float'), 2, 'float'))};
+                scalar do { @{$rayUV} = map { $rt->f32($_) } @{($rt->binary('+', $uv, $rt->binary('*', $shift, $rt->binary('-', $t, $_u_pivot, 1, 'float'), 2, 'float'), 2, 'float'))}; $rayUV };
                 $f = $rt->binary('-', $t, $getHeight__vec2->($rayUV), 1, 'float');
                 $w = $rt->f(0.0);
                 if ($rt->binary('<=', $f, $rt->f(0))) {
-                    $w = $rt->binary('/', $f, $rt->binary('-', $f, $prevF, 1, 'float'), 1, 'float');
-                    @{$rayUV} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rayUV, $prevUV, $w))};
+                    $w = $rt->metal_divide($f, $rt->binary('-', $f, $prevF, 1, 'float'));
+                    scalar do { @{$rayUV} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rayUV, $prevUV, $w))}; $rayUV };
                     last;
                 }
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($getInput__vec2->($rayUV))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($getInput__vec2->($rayUV))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

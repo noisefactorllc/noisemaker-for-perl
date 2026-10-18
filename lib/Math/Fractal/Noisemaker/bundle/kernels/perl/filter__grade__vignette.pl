@@ -73,11 +73,11 @@ my $run_pixel = sub {
         $centered = $rt->construct(2, $rt->binary('-', $uv, $rt->f(0.5), 2, 'float'));
         $scale = $rt->construct(2, 0.0);
         if ($rt->binary('>', $roundness, $rt->f(0))) {
-            @{$scale} = map { $rt->f32($_) } @{($rt->component_wise('mix', $aspectRatio, $rt->construct(2, $rt->f(1)), $roundness))};
+            scalar do { @{$scale} = map { $rt->f32($_) } @{($rt->component_wise('mix', $aspectRatio, $rt->construct(2, $rt->f(1)), $roundness))}; $scale };
         } else {
-            @{$scale} = map { $rt->f32($_) } @{($rt->component_wise('mix', $aspectRatio, $rt->binary('*', $aspectRatio, $rt->construct_raw(2, $rt->binary('+', $rt->f(1), $rt->component_wise('abs', $roundness), 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->component_wise('abs', $roundness), $rt->f(0.5), 1, 'float'), 1, 'float')), 2, 'float'), $rt->unary('-', $roundness)))};
+            scalar do { @{$scale} = map { $rt->f32($_) } @{($rt->component_wise('mix', $aspectRatio, $rt->binary('*', $aspectRatio, $rt->construct_raw(2, $rt->binary('+', $rt->f(1), $rt->component_wise('abs', $roundness), 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->component_wise('abs', $roundness), $rt->f(0.5), 1, 'float'), 1, 'float')), 2, 'float'), $rt->unary('-', $roundness)))}; $scale };
         }
-        @{$centered} = map { $rt->f32($_) } @{($rt->binary('*', $centered, $scale, 2, 'float'))};
+        scalar do { @{$centered} = map { $rt->f32($_) } @{($rt->binary('*', $centered, $scale, 2, 'float'))}; $centered };
         $dist = $rt->binary('*', $rt->length($centered), $rt->f(2), 1, 'float');
         $inner = $rt->binary('-', $midpoint, $rt->binary('*', $feather, $rt->f(0.5), 1, 'float'), 1, 'float');
         $outer = $rt->binary('+', $midpoint, $rt->binary('*', $feather, $rt->f(0.5), 1, 'float'), 1, 'float');
@@ -109,25 +109,25 @@ my $run_pixel = sub {
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->construct(2, $rt->texture_size($_u_inputTex));
         $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($texSize)));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize, 2, 'float'));
-        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $texSize));
+        $globalUV = $rt->construct(2, $rt->metal_divide($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes));
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         if ($rt->binary('<', $rt->component_wise('abs', $_u_vignetteAmount), $rt->f(0.001))) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rt->swizzle($color, 'rgb'), $rt->swizzle($color, 'a'), 3, 'float'), $rt->swizzle($color, 'a')))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rt->swizzle($color, 'rgb'), $rt->swizzle($color, 'a'), 3, 'float'), $rt->swizzle($color, 'a')))}; $g->{fragColor} };
             return;
         }
         $rgb = $srgbToLinear__vec3->($rt->swizzle($color, 'rgb'));
         $aspectRatio = $rt->construct(2, $rt->f(1));
         if ($rt->binary('>', $rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y'))) {
-            @{$aspectRatio} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('/', $rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y'), 1, 'float'), $rt->f(1)))};
+            scalar do { @{$aspectRatio} = map { $rt->f32($_) } @{($rt->construct(2, $rt->metal_divide($rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y')), $rt->f(1)))}; $aspectRatio };
         } else {
-            @{$aspectRatio} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(1), $rt->binary('/', $rt->swizzle($fullRes, 'y'), $rt->swizzle($fullRes, 'x'), 1, 'float')))};
+            scalar do { @{$aspectRatio} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(1), $rt->metal_divide($rt->swizzle($fullRes, 'y'), $rt->swizzle($fullRes, 'x'))))}; $aspectRatio };
         }
         $vignetteMask = $computeVignette__vec2_vec2_float_float_float->($globalUV, $aspectRatio, $_u_vignetteMidpoint, $_u_vignetteRoundness, $_u_vignetteFeather);
-        @{$rgb} = map { $rt->f32($_) } @{($applyVignette__vec3_float_float_float->($rgb, $vignetteMask, $_u_vignetteAmount, $_u_vigHiProtect))};
-        @{$rgb} = map { $rt->f32($_) } @{($linearToSrgb__vec3->($rt->component_wise('max', $rgb, $rt->construct(3, $rt->f(0)))))};
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rgb, $rt->swizzle($color, 'a'), 3, 'float'), $rt->swizzle($color, 'a')))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($applyVignette__vec3_float_float_float->($rgb, $vignetteMask, $_u_vignetteAmount, $_u_vigHiProtect))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($linearToSrgb__vec3->($rt->component_wise('max', $rgb, $rt->construct(3, $rt->f(0)))))}; $rgb };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rgb, $rt->swizzle($color, 'a'), 3, 'float'), $rt->swizzle($color, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

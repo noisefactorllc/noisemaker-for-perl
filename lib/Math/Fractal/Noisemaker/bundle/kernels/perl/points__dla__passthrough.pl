@@ -16,7 +16,7 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($alpha, $color, $grid, $gridColor, $gridStrength, $inputCol, $matteAlpha, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $inputCol = $rt->texture($_u_inputTex, $uv);
         $grid = $rt->texture($_u_gridTex, $uv);
         $gridStrength = $rt->component_wise('clamp', $rt->swizzle($grid, 'a'), $rt->f(0), $rt->f(1));
@@ -24,7 +24,7 @@ my $run_pixel = sub {
         $matteAlpha = $_u_matteOpacity;
         $color = $rt->component_wise('mix', $rt->binary('*', $rt->swizzle($inputCol, 'rgb'), $matteAlpha, 3, 'float'), $gridColor, $gridStrength);
         $alpha = $rt->component_wise('max', $gridStrength, $matteAlpha);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $alpha))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $alpha))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

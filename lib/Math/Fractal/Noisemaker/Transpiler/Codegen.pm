@@ -56,44 +56,13 @@ my $FLOAT = $TYPE{float};
 my $BOOL  = $TYPE{bool};
 my $VEC4  = $TYPE{vec4};
 
-# Effects whose pinned authority capture follows the oracle's JS lowering for
-# scalar integer division. The noisemaker-for-cpu oracle compiles GLSL to JS,
-# where int typing is lost: every scalar int/int division stays a raw float64
-# division, and scripts/upstream/compile-glsl.js restoreIntegerDivision
-# re-truncates only two statement forms (VEC[<literal>] / intName for every
-# effect, and IDENT / IDENT when both operands are provably int-typed
-# declarations). filter/spookyTicker is exempt from that second rewrite — its
-# M4/Metal authority capture matches the untruncated lowering (measured) — so
-# its kernel runs the JS model end to end: a division result stays float64
-# through the arithmetic that consumes it, uint()/int() casts and bitwise ops
-# truncate toward zero at the coercion boundary, and an array read with a
-# fractional index yields undefined (bitwise consumers coerce it to 0).
-my %UNTRUNCATED_INT_DIVISION = map { $_ => 1 } qw(filter/spookyTicker);
+# Preserve the existing effect-scoped JS uint coercion and guarded reads.
+# Integer division restoration is independent of this runtime flag.
+my %JS_UINT_MODEL = map { $_ => 1 } qw(filter/spookyTicker);
 
 sub base_of  { my ($t) = @_; ($t && $t->{base}) ? $t->{base} : 'float' }
 sub width_of { my ($t) = @_; ($t && $t->{width}) ? $t->{width} : 1 }
-
-# True for effects whose scalar integer divisions stay float64 (see the
-# %UNTRUNCATED_INT_DIVISION rationale above).
-sub _int_division_stays_float {
-    my ($self) = @_;
-    return $UNTRUNCATED_INT_DIVISION{ $self->{effect_id} || q{} } ? 1 : 0;
-}
-
-# The one division form the oracle's restoreIntegerDivision rewrite still
-# truncates for every effect, including the exempted ones:
-# `VEC[<decimal literal>] / intName;` where the divisor is a provably
-# int-typed scalar in scope.
-sub _vec_index_int_division {
-    my ($self, $node, $scope) = @_;
-    my ($l, $r) = ($node->{l}, $node->{r});
-    return 0 unless ($l->{k} || q{}) eq 'index' && ($r->{k} || q{}) eq 'id';
-    return 0 unless ($l->{obj}{k} || q{}) eq 'id';
-    return 0 unless ($l->{idx}{k} || q{}) eq 'num' && $l->{idx}{value} =~ /^\d+$/;
-    my $entry = $scope->resolve($r->{name});
-    return 0 unless $entry && base_of($entry->{type}) eq 'int' && width_of($entry->{type}) == 1;
-    return 1;
-}
+sub _uses_js_uint_model { $JS_UINT_MODEL{$_[0]{effect_id} || q{}} ? 1 : 0 }
 
 sub pq {    # single-quoted Perl string literal
     my ($s) = @_;
@@ -136,6 +105,7 @@ sub define {
     my $entry = {
         py => (defined $pyname ? $pyname : '$' . Math::Fractal::Noisemaker::Transpiler::Codegen::p_ident($name)),
         type => $typ,
+        declared_type => $typ,
     };
     $self->{vars}{$name} = $entry;
     return $entry;
@@ -154,9 +124,12 @@ sub resolve {
 package Math::Fractal::Noisemaker::Transpiler::Codegen;
 
 sub new {
-    my ($class, $program, $outputs, $varyings, $effect_id) = @_;
+    my ($class, $program, $outputs, $varyings, $effect_id, $options) = @_;
+    $options ||= {};
     my $self = bless {
         program   => $program,
+        constant_divisors => $options->{constant_divisors} || {},
+        int_names => $program->{integer_names} || {},
         effect_id => $effect_id,
         outputs   => ($outputs && @$outputs) ? $outputs : ['fragColor'],
         varyings  => { map { $_ => 1 } @{ $varyings || [] } },
@@ -242,6 +215,7 @@ sub _collect_decl {
                 type  => $self->type_of_name($d->{type}, $dc->{array}),
                 init  => $dc->{init},
                 array => $dc->{array},
+                constant => scalar(grep { $_ eq 'const' } @$quals),
                 };
         }
     }
@@ -253,11 +227,14 @@ sub emit {
     my ($self) = @_;
     $self->collect;
     for my $u (@{ $self->{uniforms} }) {
-        $self->{root}->define($u->{name}, $u->{type}, '$_u_' . p_ident($u->{name}));
+        my $entry = $self->{root}->define($u->{name}, $u->{type}, '$_u_' . p_ident($u->{name}));
+        $entry->{division_kind} = exists $self->{constant_divisors}{$u->{name}} ? 'constant' : 'runtime';
     }
     for my $g (@{ $self->{globals} }) {
         my $py = $self->{varyings}{ $g->{name} } ? '$ctx->{uv}' : '$g->{' . p_ident($g->{name}) . '}';
-        $self->{root}->define($g->{name}, $g->{type}, $py);
+        my $entry = $self->{root}->define($g->{name}, $g->{type}, $py);
+        $entry->{division_kind} = $g->{constant} ? 'constant' : undef;
+        $entry->{initializer} = $g->{init};
     }
 
     my @L = (
@@ -267,11 +244,11 @@ sub emit {
         '    my $U = $ctx->uniforms;',
         '    my $g = {};',
     );
-    # The %UNTRUNCATED_INT_DIVISION effects run the oracle's transpiled-JS op
+    # The %JS_UINT_MODEL effects run the oracle's transpiled-JS op
     # semantics (see the hash table comment): scalar uint bitwise ops coerce
     # through ToInt32 in the runtime. local() scopes the flag to this kernel's
     # dynamic extent, so sibling kernels in the same render are unaffected.
-    push @L, '    local $rt->{js_native_ints} = 1;' if $self->_int_division_stays_float;
+    push @L, '    local $rt->{js_native_ints} = 1;' if $self->_uses_js_uint_model;
     my @fn_lexicals = map { '$' . $_->{mangled} } @{ $self->{funcs} };
     push @L, '    my (' . join(', ', @fn_lexicals) . ');' if @fn_lexicals;
     push @L, '    my $_retc;';
@@ -361,6 +338,8 @@ sub _emit_func {
     my $prev_out    = $self->{cur_out};
     my $prev_decl   = $self->{declared};
     my $prev_ret    = $self->{cur_ret};
+    my $prev_func   = $self->{cur_func};
+    $self->{cur_func} = $fn->{node}{name};
     $self->{cur_out}  = \@out_pynames;
     $self->{declared} = { map { $_ => 1 } @pynames };
     $self->{cur_ret}  = $fn->{ret};
@@ -373,6 +352,7 @@ sub _emit_func {
     $self->{cur_out}  = $prev_out;
     $self->{declared} = $prev_decl;
     $self->{cur_ret}  = $prev_ret;
+    $self->{cur_func} = $prev_func;
     push @$L, "$pad\$$fn->{mangled} = sub {";
     push @$L, @body_head;
     push @$L, "$pad    my (" . join(', ', @locals) . ');' if @locals;
@@ -405,6 +385,7 @@ sub stmt {
     elsif ($k eq 'decl') {
         for my $dc (@{ $s->{declarators} }) {
             my $t = $self->type_of_name($s->{type}, $dc->{array});
+            my $declared_type = $t;
             # Resolve the initializer in the ENCLOSING scope, before the new
             # name is defined (GLSL `float time = time;` reads the outer time).
             # A float vector initializer is stored the way the oracle stores
@@ -413,15 +394,16 @@ sub stmt {
             my $init_t;
             if (defined $dc->{init}) {
                 (undef, $init_t) = $self->expr($dc->{init}, $scope);
-                $init_code = $self->_materialized_operand($dc->{init}, $scope);
+                $init_code = $self->_restore_integer_division($dc->{init}, $scope, $dc->{name});
+                if (defined $init_code) { $init_t = $t }
+                else { $init_code = $self->_materialized_operand($dc->{init}, $scope) }
             }
-            # JS model for the %UNTRUNCATED_INT_DIVISION effects: a scalar
+            # A scalar declaration can retain the CPU's raw float64 result.
             # int/uint declaration whose initializer computes a float64 value
             # (an untruncated division flowed into it) keeps the value's type,
             # so the arithmetic that consumes the variable stays float64 too.
             $t = { %$t, base => 'float' }
-                if $self->_int_division_stays_float
-                && defined $init_t
+                if defined $init_t
                 && width_of($t) == 1
                 && width_of($init_t) == 1
                 && (base_of($t) eq 'int' || base_of($t) eq 'uint')
@@ -434,7 +416,12 @@ sub stmt {
             $init_code = "\$rt->fresh($init_code)"
                 if defined $init_code && $dc->{init}{k} eq 'id' && !defined $dc->{array}
                 && width_of($t) > 1 && base_of($t) ne 'struct';
+            my $kind = (grep { $_ eq 'const' } @{$s->{quals} || []}) ? 'constant'
+                : (($self->{cur_func} || '') eq 'main' && defined $dc->{init}
+                    ? $self->_divisor_kind($dc->{init}, $scope) : 'unknown');
             my $e = $scope->define($dc->{name}, $t);
+            $e->{division_kind} = $kind;
+            $e->{declared_type} = $declared_type;
             $self->_local($e->{py});
             if (defined $init_code) {
                 push @$out, "$pad$e->{py} = $init_code;";
@@ -669,11 +656,11 @@ sub _e_index {
         my $n = $obj_t->{mat};
         return ("\$rt->mat_col($obj_code, $idx_code, $n)", { base => 'float', width => $n });
     }
-    # JS model for the %UNTRUNCATED_INT_DIVISION effects: an array read with a
+    # JS model for the %JS_UINT_MODEL effects: an array read with a
     # fractional, negative or out-of-range index yields undefined, and the
     # bitwise consumers of such a read coerce it to 0 (ToInt32(undefined) is
     # 0). The plain int() wrap would silently read a truncated row instead.
-    if ($self->_int_division_stays_float
+    if ($self->_uses_js_uint_model
         && base_of($idx_t) eq 'float'
         && width_of($idx_t) == 1) {
         my $t = { base => base_of($obj_t), width => $obj_t->{array} ? $obj_t->{width} : 1 };
@@ -726,6 +713,122 @@ sub _e_cond {
     return ("(($c_code) ? ($a_code) : ($b_code))", { base => base_of($a_t), width => $w });
 }
 
+sub _divisor_kind {
+    my ($self, $node, $scope, $seen) = @_;
+    $seen ||= {};
+    my @kinds;
+    if (ref($node) eq 'HASH') {
+        if (($node->{k} || '') eq 'id') {
+            my $name = $node->{name};
+            return 'runtime' if $name eq 'gl_FragCoord';
+            my $entry = $scope->resolve($name);
+            return 'constant' unless $entry;
+            return 'unknown' unless exists $entry->{division_kind};
+            return $entry->{division_kind} if defined $entry->{division_kind};
+            return 'unknown' if $seen->{$name};
+            return $self->_divisor_kind($entry->{initializer}, $scope, {%$seen, $name=>1});
+        }
+        @kinds = map { $self->_divisor_kind($_, $scope, $seen) } grep { ref($_) } values %$node;
+    } elsif (ref($node) eq 'ARRAY') {
+        @kinds = map { $self->_divisor_kind($_, $scope, $seen) } @$node;
+    } else { return defined($node) ? 'constant' : 'unknown' }
+    return 'unknown' if grep { $_ eq 'unknown' } @kinds;
+    return (grep { $_ eq 'runtime' } @kinds) ? 'runtime' : 'constant';
+}
+
+sub _grouped_division_name {
+    my ($self, $node) = @_;
+    return 0 unless ($node->{grouping} || 0) == 1;
+    return 1 if $node->{k} eq 'id';
+    return 1 if $node->{k} eq 'member' && $node->{obj}{k} eq 'id' && length($node->{field}) == 1;
+    return 1 if $node->{k} eq 'index' && $node->{obj}{k} eq 'id' && $node->{idx}{k} eq 'num';
+    return 0;
+}
+
+sub _lowered_integer_expression {
+    my ($self, $node, $scope) = @_;
+    if ($node->{k} eq 'id') {
+        my $entry = $scope->resolve($node->{name});
+        return $entry && base_of($entry->{declared_type}) =~ /^(?:int|uint)$/;
+    }
+    if ($node->{k} eq 'construct' && $node->{type} eq 'float' && @{$node->{args}} == 1 && $node->{args}[0]{k} eq 'id') {
+        return $self->_lowered_integer_expression($node->{args}[0], $scope);
+    }
+    if ($node->{k} eq 'binary' && $node->{op} =~ m{^[-+*/]$}) {
+        return $self->_lowered_integer_expression($node->{l}, $scope) && $self->_lowered_integer_expression($node->{r}, $scope);
+    }
+    return base_of(($self->expr($node, $scope))[1]) =~ /^(?:int|uint)$/;
+}
+
+sub _integer_division_operand {
+    my ($self, $node, $scope) = @_;
+    return 0 if $self->_grouped_division_name($node);
+    return $self->_lowered_integer_expression($node, $scope) if $node->{k} eq 'id';
+    return 1 if $node->{grouping} && $node->{k} eq 'construct' && $node->{type} eq 'float' && $self->_lowered_integer_expression($node, $scope);
+    return 1 if $node->{k} eq 'binary' && $self->_lowered_integer_expression($node, $scope);
+    return 1 if base_of(($self->expr($node, $scope))[1]) =~ /^(?:int|uint)$/;
+    return $node->{k} eq 'construct' && $node->{type} =~ /^vec[234]$/ && @{$node->{args}} == 1
+        && width_of(($self->expr($node->{args}[0], $scope))[1]) > 1
+        && $self->_integer_division_operand($node->{args}[0], $scope);
+}
+
+sub _metal_division {
+    my ($self, $node, $scope, $left, $right) = @_;
+    return 0 unless $node->{op} eq '/' && !$left->{mat} && !$right->{mat}
+        && width_of($left) <= 4 && width_of($right) <= 4;
+    return 0 unless base_of($left) eq 'float' || base_of($right) eq 'float'
+        || $self->_grouped_division_name($node->{l}) || $self->_grouped_division_name($node->{r});
+    return 0 if $self->_integer_division_operand($node->{l}, $scope) && $self->_integer_division_operand($node->{r}, $scope);
+    return $self->_divisor_kind($node->{r}, $scope) eq 'runtime';
+}
+
+sub _truncated_division {
+    my ($self, $node, $scope) = @_;
+    my $left = ($self->expr($node->{l}, $scope))[0];
+    my $right = ($self->expr($node->{r}, $scope))[0];
+    return "POSIX::trunc(\$rt->binary('/', $left, $right, 1, 'float'))";
+}
+
+sub _restore_integer_division {
+    my ($self, $node, $scope, $name) = @_;
+    if ($node->{k} eq 'cond') {
+        return undef unless $self->{int_names}{$name};
+        my $text = join(' ', @{$node->{source_tokens} || []});
+        $text =~ s/\bint\s*\(([^()]*)\)/$1|0/g;
+        my $name = qr/[A-Za-z_]\w*/;
+        if ($text =~ /\A[^;?:]+\?\s*($name|\([^()]*\))\s*\/\s*($name)\s*:\s*($name|\([^()]*\))\s*\/\s*($name)\z/) {
+            my ($l, $ld, $r, $rd) = ($1, $2, $3, $4);
+            if ($self->{int_names}{$ld} && $self->{int_names}{$rd}
+                && ($l =~ /^\(/ || $self->{int_names}{$l}) && ($r =~ /^\(/ || $self->{int_names}{$r})) {
+                my @branches = ($node->{a}, $node->{b});
+                my @metal = map {
+                    my $b = $branches[$_];
+                    $self->_metal_division($b, $scope, ($self->expr($b->{l}, $scope))[1], ($self->expr($b->{r}, $scope))[1]);
+                } 0, 1;
+                my @arms = map { (grep { $_ } @metal) ? ($self->expr($_, $scope))[0] : $self->_truncated_division($_, $scope) } @branches;
+                my $condition = ($self->expr($node->{c}, $scope))[0];
+                return "(($condition) ? ($arms[0]) : ($arms[1]))";
+            }
+        }
+        return undef;
+    }
+    return undef unless $node->{k} eq 'binary' && $node->{op} eq '/';
+    my ($l, $r) = ($node->{l}, $node->{r});
+    return undef if $l->{grouping} || $r->{grouping} || $r->{k} ne 'id';
+    return undef unless $self->{int_names}{$r->{name}};
+    return undef if $self->_metal_division($node, $scope,
+        ($self->expr($l, $scope))[1], ($self->expr($r, $scope))[1]);
+    if ($l->{k} eq 'id') {
+        return undef unless $self->{int_names}{$l->{name}};
+        return undef if $l->{name} eq $r->{name};
+    } elsif ($l->{k} eq 'member' && $l->{obj}{k} eq 'id' && length($l->{field}) == 1) {
+        return undef unless width_of(($self->expr($l->{obj}, $scope))[1]) > 1;
+    } elsif ($l->{k} eq 'index' && $l->{obj}{k} eq 'id' && $l->{idx}{k} eq 'num') {
+        return undef unless width_of(($self->expr($l->{obj}, $scope))[1]) > 1;
+    } else { return undef }
+    return $self->_truncated_division($node, $scope);
+}
+
 sub _e_binary {
     my ($self, $node, $scope) = @_;
     my $op = $node->{op};
@@ -753,29 +856,36 @@ sub _e_binary {
     if ($lb eq 'uint' || $rb eq 'uint') { $base = 'uint' }
     elsif (($lb eq 'int' && $rb eq 'int') || $op =~ /^(?:&|\||\^|<<|>>|%)$/) { $base = 'int' }
     else { $base = 'float' }
-    # The oracle's JS lowering for the exempted effects (see
-    # %UNTRUNCATED_INT_DIVISION): a scalar integer division keeps its raw
-    # float64 quotient except for the restoreIntegerDivision vec-index form,
-    # which truncates for every effect.
-    if ($op eq '/'
-        && $self->_int_division_stays_float
-        && $width == 1
-        && !$self->_vec_index_int_division($node, $scope)) {
-        $base = 'float';
-    }
+    # Parenthesized uint literals miss the CPU source normalizer's cpu_umul
+    # pattern, leaving a raw scalar product before later bitwise coercion.
+    $base = 'float' if $op eq '*' && $width == 1 && $base eq 'uint'
+        && grep { $_->{k} eq 'num' && $_->{grouping} } ($node->{l}, $node->{r});
+    # JavaScript remainder does not coerce a runtime hash's unsigned result
+    # through ToInt32; the following explicit int cast supplies that boundary.
+    $base = 'float' if $op eq '%' && $width == 1 && $base eq 'uint'
+        && $self->_uses_js_uint_model;
+    # Scalar divisions remain raw until the CPU's declaration-level restore.
+    $base = 'float' if $op eq '/' && $width == 1;
+    my $metal = $self->_metal_division($node, $scope, $l_t, $r_t);
+    $base = 'float' if $metal;
     my $code = '$rt->binary(' . pq($op) . ", $l_code, $r_code, $width, " . pq($base) . ')';
+    $code = "\$rt->metal_divide($l_code, $r_code)" if $metal;
     # Round where the oracle's compiled JS rounds (see _vec_kind); otherwise
     # the result stays raw until its next consumption boundary.
     if ($base eq 'float' && $width > 1 && $op =~ m{^[-+*/]$}) {
+        my ($left, $right);
         if ($self->_vec_binary_rounds($node, $scope)) {
-            $code = "\$rt->construct($width, \$rt->binary(" . pq($op) . ', '
-                . $self->_materialized_operand($node->{l}, $scope) . ', '
-                . $self->_materialized_operand($node->{r}, $scope) . ", $width, 'float'))";
+            $left = $self->_materialized_operand($node->{l}, $scope);
+            $right = $self->_materialized_operand($node->{r}, $scope);
+            my $operation = $metal ? "\$rt->metal_divide($left, $right)"
+                : '$rt->binary(' . pq($op) . ", $left, $right, $width, 'float')";
+            $code = "\$rt->construct($width, $operation)";
         }
         else {
-            $code = '$rt->binary(' . pq($op) . ', '
-                . $self->_fused_operand($node->{l}, $scope) . ', '
-                . $self->_fused_operand($node->{r}, $scope) . ", $width, 'float')";
+            $left = $self->_fused_operand($node->{l}, $scope);
+            $right = $self->_fused_operand($node->{r}, $scope);
+            $code = $metal ? "\$rt->metal_divide($left, $right)"
+                : '$rt->binary(' . pq($op) . ", $left, $right, $width, 'float')";
         }
     }
     return ($code, { base => $base, width => $width });
@@ -913,14 +1023,19 @@ sub _e_assign {
     my ($self, $node, $scope) = @_;
     my $op     = $node->{op};
     my $target = $node->{target};
-    my ($v_code) = $self->expr($node->{value}, $scope);
+    my ($v_code, $v_type) = $self->expr($node->{value}, $scope);
     my $base_op = $op eq '=' ? undef : substr($op, 0, length($op) - 1);
     my ($tcode, $tt) = $self->expr($target, $scope);
     if ($target->{k} eq 'id' || $target->{k} eq 'index') {
         my $rhs;
         if ($base_op) {
             my $b = base_of($tt) eq 'uint' ? 'uint' : (base_of($tt) eq 'int' ? 'int' : 'float');
+            $b = 'float' if $base_op eq '/' && width_of($tt) == 1;
             $rhs = '$rt->binary(' . pq($base_op) . ", $tcode, $v_code, " . width_of($tt) . ', ' . pq($b) . ')';
+            $rhs = "\$rt->metal_divide($tcode, $v_code)"
+                if $base_op eq '/' && $b eq 'float' && width_of($tt) > 1
+                && width_of($v_type) == 1
+                && $self->_divisor_kind($node->{value}, $scope) eq 'runtime';
         }
         else {
             $rhs = $v_code;
@@ -933,9 +1048,9 @@ sub _e_assign {
         # store exact.
         if ($target->{k} eq 'id' && width_of($tt) > 1) {
             if (base_of($tt) eq 'int' || base_of($tt) eq 'uint') {
-                return ("\@{$tcode} = \@{($rhs)}", $tt);
+                return ("scalar do { \@{$tcode} = \@{($rhs)}; $tcode }", $tt);
             }
-            return ("\@{$tcode} = map { \$rt->f32(\$_) } \@{($rhs)}", $tt);
+            return ("scalar do { \@{$tcode} = map { \$rt->f32(\$_) } \@{($rhs)}; $tcode }", $tt);
         }
         # An element of a float vector, or of an array of float vectors, is a
         # Float32Array slot in the oracle's JS, so the store rounds; a float
@@ -943,7 +1058,7 @@ sub _e_assign {
         if ($target->{k} eq 'index' && base_of($tt) eq 'float' && !$tt->{mat}) {
             my (undef, $obj_t) = $self->expr($target->{obj}, $scope);
             if (width_of($tt) > 1 && !$obj_t->{mat}) {
-                return ("\@{$tcode} = map { \$rt->f32(\$_) } \@{($rhs)}", $tt);
+                return ("scalar do { \@{$tcode} = map { \$rt->f32(\$_) } \@{($rhs)}; $tcode }", $tt);
             }
             if (width_of($tt) == 1 && width_of($obj_t) > 1 && !$obj_t->{array} && !$obj_t->{mat}) {
                 return ("$tcode = \$rt->f32($rhs)", $tt);
@@ -967,7 +1082,11 @@ sub _e_assign {
             my $cur = "\$rt->swizzle($obj_code, " . pq($sw) . ')';
             my $ob  = base_of($obj_t);
             my $b   = $ob eq 'uint' ? 'uint' : ($ob eq 'int' ? 'int' : 'float');
+            $b = 'float' if $base_op eq '/' && length($sw) == 1;
             $rhs = '$rt->binary(' . pq($base_op) . ", $cur, $v_code, " . length($sw) . ', ' . pq($b) . ')';
+            $rhs = "\$rt->metal_divide($cur, $v_code)"
+                if $base_op eq '/' && $b eq 'float' && length($sw) > 1
+                && $self->_divisor_kind($node->{value}, $scope) eq 'runtime';
         }
         else {
             $rhs = $v_code;
@@ -1039,7 +1158,8 @@ sub _e_call {
         $self->{uses_deriv} = 1;
         return ("\$rt->$name($codes[0])", $args[0][1]);
     }
-    if (my $r = $ROUTED{$name}) {
+    return ("\$rt->hash_uint($codes[0])", $TYPE{uint}) if $self->{program}{murmur_finalizers}{$name};
+    if (my $r = ($name eq 'hash_uint' && $self->{overloads}{$name}) ? undef : $ROUTED{$name}) {
         return $r->($self, \@codes, \@args);
     }
     if ($self->{overloads}{$name}) {
@@ -1109,10 +1229,10 @@ my %SKIP_FUNCS = map { $_ => 1 }
     qw(cpu_umul cpu_ivec2 cpu_ivec3 cpu_ivec4 cpu_uvec2 cpu_uvec3 cpu_uvec4 cpu_float);
 
 sub emit_perl {
-    my ($program, $outputs, $varyings, $effect_id) = @_;
+    my ($program, $outputs, $varyings, $effect_id, $options) = @_;
     $program->{decls} =
         [grep { !(($_->{k} || '') eq 'func' && $SKIP_FUNCS{ $_->{name} || '' }) } @{ $program->{decls} }];
-    my $gen = __PACKAGE__->new($program, $outputs, $varyings, $effect_id);
+    my $gen = __PACKAGE__->new($program, $outputs, $varyings, $effect_id, $options);
     return $gen->emit;
 }
 

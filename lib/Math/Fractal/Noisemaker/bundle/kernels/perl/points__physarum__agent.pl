@@ -78,9 +78,9 @@ my $run_pixel = sub {
         $age = $rt->swizzle($vel, 'z');
         $seed = $rt->swizzle($vel, 'w');
         if ($rt->binary('<', $alive, $rt->f(0.5))) {
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $pos, $rt->binary('*', $hash__uint->($rt->construct(1, $rt->binary('*', $seed, $rt->f(1000), 1, 'float'), 'uint')), $g->{TAU}, 1, 'float'), $rt->f(0)))};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $pos, $rt->binary('*', $hash__uint->($rt->construct(1, $rt->binary('*', $seed, $rt->f(1000), 1, 'float'), 'uint')), $g->{TAU}, 1, 'float'), $rt->f(0)))}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
             return;
         }
         $forwardDir = $rt->construct(2, $rt->component_wise('cos', $heading), $rt->component_wise('sin', $heading));
@@ -118,9 +118,9 @@ my $run_pixel = sub {
         $normalizedSpeed = $rt->binary('*', $rt->binary('*', $_u_moveSpeed, $rt->f(0.001), 1, 'float'), $speedScale, 1, 'float');
         $newPos = $wrapPosition__vec2->($rt->construct(2, $rt->binary('+', $pos, $rt->binary('*', $moveDir, $normalizedSpeed, 2, 'float'), 2, 'float')));
         $newAge = $rt->binary('+', $age, $rt->f(0.016), 1, 'float');
-        @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPos, $newHeading, $rt->f(1)))};
-        @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $newAge, $seed))};
-        @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+        scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPos, $newHeading, $rt->f(1)))}; $g->{outXYZ} };
+        scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $newAge, $seed))}; $g->{outVel} };
+        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
     };
     $main__void->();
     my $_c0 = $g->{outXYZ};

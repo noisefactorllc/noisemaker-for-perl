@@ -207,7 +207,12 @@ sub var_decl_rest {
             $self->expect(']');
         }
         my $init;
-        $init = $self->assign_expr if $self->eat('=');
+        if ($self->eat('=')) {
+            my $start = $self->{i};
+            $init = $self->assign_expr;
+            $init->{source_tokens} = [map { $_->{value} } @{$self->{toks}}[$start .. $self->{i}-1]]
+                if $init->{k} eq 'cond';
+        }
         push @declarators, { name => $name, array => $arr, init => $init };
         last unless $self->eat(',');
         $name = $self->next_tok->{value};
@@ -443,6 +448,8 @@ sub primary {
         $self->next_tok;
         my $e = $self->expr;
         $self->expect(')');
+        $e->{grouping} = ($e->{grouping} || 0) + 1
+            if $e->{k} =~ /^(?:id|member|index|num)$/ || ($e->{k} eq 'construct' && $e->{type} eq 'float');
         return $e;
     }
     if ($t->{kind} eq 'num') {
@@ -480,10 +487,44 @@ sub primary {
     die "unexpected token '$t->{value}' at $self->{i}\n";
 }
 
+sub _murmur_finalizers {
+    my ($source) = @_;
+    $source =~ s{/\*.*?\*/}{}gs;
+    $source =~ s{//[^\n]*}{}g;
+    my %names;
+    while ($source =~ /\buint\s+([A-Za-z_]\w*)\s*\(\s*uint\s+([A-Za-z_]\w*)\s*\)\s*\{([^{}]*)\}/g) {
+        my ($name, $argument, $body) = ($1, $2, $3);
+        my @statements = grep { length } map { s/\s+//gr } split /;/, $body;
+        next unless @statements && pop(@statements) eq "return$argument";
+        my @steps;
+        for (@statements) {
+            if (/^\Q$argument\E(?:\^=|=\Q$argument\E\^)\(?\Q$argument\E>>(\d+)u\)?$/) {
+                push @steps, '^>>'.$1;
+            } elsif (/^\Q$argument\E(?:\*=|=\Q$argument\E\*)(0x[0-9A-Fa-f]+)u$/) {
+                push @steps, '*'.lc($1);
+            } else { push @steps, '' }
+        }
+        $names{$name} = 1 if join(',', @steps) eq '^>>16,*0x7feb352d,^>>15,*0x846ca68b,^>>16';
+    }
+    return \%names;
+}
+
 sub parse {
-    my ($source_or_tokens) = @_;
+    my ($source_or_tokens, $original_source) = @_;
     my $tokens = ref $source_or_tokens ? $source_or_tokens : tokenize($source_or_tokens);
-    return __PACKAGE__->new($tokens)->parse_program;
+    my $program = __PACKAGE__->new($tokens)->parse_program;
+    my $source = defined $original_source ? $original_source
+        : ref $source_or_tokens ? join(' ', map { $_->{value} } @$tokens) : $source_or_tokens;
+    # The CPU scans source spellings, so later comma declarators do not gain
+    # integer-name evidence merely because the parser knows their type.
+    my %names;
+    $names{$_} = 1 for $source =~ /\buniform\s+int\s+([A-Za-z_\$]\w*)/g;
+    $names{$_} = 1 for $source =~ /\bint\s+([A-Za-z_\$]\w*)\s*(?:=|;)/g;
+    $names{$_} = 1 for $source =~ /\bivec[234]\s+([A-Za-z_\$]\w*)/g;
+    $names{$_} = 1 for $source =~ /\bint\s+([A-Za-z_\$]\w*)\s*(?:,|\))/g;
+    $program->{integer_names} = \%names;
+    $program->{murmur_finalizers} = _murmur_finalizers($source);
+    return $program;
 }
 
 1;

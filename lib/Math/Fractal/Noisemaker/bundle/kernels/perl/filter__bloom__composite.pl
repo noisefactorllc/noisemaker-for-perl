@@ -22,9 +22,9 @@ my $run_pixel = sub {
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $sceneColor = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         $bloom = $rt->swizzle($rt->texel_fetch($_u_bloomTex, $coord, $rt->i(0)), 'rgb');
-        @{$bloom} = map { $rt->f32($_) } @{($rt->binary('*', $bloom, $_u_tint, 3, 'float'))};
+        scalar do { @{$bloom} = map { $rt->f32($_) } @{($rt->binary('*', $bloom, $_u_tint, 3, 'float'))}; $bloom };
         $finalRgb = $rt->construct(3, $rt->binary('+', $rt->swizzle($sceneColor, 'rgb'), $rt->binary('*', $_u_intensity, $bloom, 3, 'float'), 3, 'float'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $finalRgb, $rt->swizzle($sceneColor, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $finalRgb, $rt->swizzle($sceneColor, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

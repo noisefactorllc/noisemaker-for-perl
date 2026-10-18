@@ -31,7 +31,7 @@ my $run_pixel = sub {
             if (!($rt->binary('<', $s, $NUM_SAMPLES))) {
                 last;
             }
-            $sampleX = $rt->binary('/', $rt->binary('*', $s, $width, 1, 'int'), $NUM_SAMPLES, 1, 'int');
+            $sampleX = $rt->binary('/', $rt->binary('*', $s, $width, 1, 'int'), $NUM_SAMPLES, 1, 'float');
             if ($rt->binary('==', $sampleX, $x)) {
                 next;
             }
@@ -41,7 +41,7 @@ my $run_pixel = sub {
             }
         }
         $estimatedRank = $rt->binary('/', $rt->construct(1, $brighterCount), $rt->construct(1, $NUM_SAMPLES), 1, 'float');
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $estimatedRank, $myLum, $rt->binary('/', $rt->construct(1, $x), $rt->construct(1, $rt->binary('-', $width, $rt->i(1), 1, 'int')), 1, 'float'), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $estimatedRank, $myLum, $rt->metal_divide($rt->construct(1, $x), $rt->construct(1, $rt->binary('-', $width, $rt->i(1), 1, 'int'))), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

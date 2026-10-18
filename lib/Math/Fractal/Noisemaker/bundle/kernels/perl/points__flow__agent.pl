@@ -90,8 +90,8 @@ my $run_pixel = sub {
                             return $rt->binary('*', $rotRand, $g->{TAU}, 1, 'float');
                         } else {
                             if ($rt->binary('==', $behaviorMode, $rt->i(5))) {
-                                $quarterSize = $rt->component_wise('max', $rt->i(1), $rt->binary('/', $totalAgents, $rt->i(4), 1, 'int'));
-                                $band = $rt->binary('/', $agentIndex, $quarterSize, 1, 'int');
+                                $quarterSize = $rt->component_wise('max', $rt->i(1), $rt->binary('/', $totalAgents, $rt->i(4), 1, 'float'));
+                                $band = POSIX::trunc($rt->binary('/', $agentIndex, $quarterSize, 1, 'float'));
                                 if ($rt->binary('<=', $band, $rt->i(0))) {
                                     return $baseHeading;
                                 } else {
@@ -132,14 +132,14 @@ my $run_pixel = sub {
         $rotRand = $rt->swizzle($vel, 'z');
         $strideRand = $rt->swizzle($vel, 'w');
         if ($rt->binary('<', $alive, $rt->f(0.5))) {
-            @{$g->{outXYZ}} = map { $rt->f32($_) } @{($xyz)};
-            @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)};
-            @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+            scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($xyz)}; $g->{outXYZ} };
+            scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
             return;
         }
         $texSize = $rt->texture_size($_u_inputTex);
         $texCoord = $rt->construct(2, $rt->binary('*', $px, $rt->construct(1, $rt->swizzle($texSize, 'x')), 1, 'float'), $rt->binary('*', $py, $rt->construct(1, $rt->swizzle($texSize, 'y')), 1, 'float'), 'int');
-        @{$texCoord} = @{($rt->component_wise('clamp', $texCoord, $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $texSize, $rt->i(1), 2, 'int')))};
+        scalar do { @{$texCoord} = @{($rt->component_wise('clamp', $texCoord, $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $texSize, $rt->i(1), 2, 'int')))}; $texCoord };
         $texel = $rt->texel_fetch($_u_inputTex, $texCoord, $rt->i(0));
         $inputLuma = $oklab_l__vec3->($rt->swizzle($texel, 'rgb'));
         $weightBlend = $rt->component_wise('clamp', $rt->binary('*', $_u_inputWeight, $rt->f(0.01), 1, 'float'), $rt->f(0), $rt->f(1));
@@ -155,14 +155,14 @@ my $run_pixel = sub {
         }
         $scale = $rt->component_wise('max', $rt->binary('/', $rt->component_wise('max', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($_u_resolution, 'y')), $rt->f(1024), 1, 'float'), $rt->f(1));
         $devFactor = $rt->binary('+', $rt->f(1), $rt->binary('*', $rt->binary('*', $strideRand, $rt->f(2), 1, 'float'), $_u_strideDeviation, 1, 'float'), 1, 'float');
-        $actualStride = $rt->component_wise('max', $rt->f(0.0001), $rt->binary('/', $rt->binary('*', $rt->binary('*', $rt->binary('*', $_u_stride, $rt->f(0.10000000000000001), 1, 'float'), $scale, 1, 'float'), $devFactor, 1, 'float'), $rt->component_wise('max', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($_u_resolution, 'y')), 1, 'float'));
+        $actualStride = $rt->component_wise('max', $rt->f(0.0001), $rt->metal_divide($rt->binary('*', $rt->binary('*', $rt->binary('*', $_u_stride, $rt->f(0.10000000000000001), 1, 'float'), $scale, 1, 'float'), $devFactor, 1, 'float'), $rt->component_wise('max', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($_u_resolution, 'y'))));
         $newX = $rt->binary('+', $px, $rt->binary('*', $rt->component_wise('sin', $finalAngle), $actualStride, 1, 'float'), 1, 'float');
         $newY = $rt->binary('+', $py, $rt->binary('*', $rt->component_wise('cos', $finalAngle), $actualStride, 1, 'float'), 1, 'float');
         $newX = $rt->component_wise('fract', $newX);
         $newY = $rt->component_wise('fract', $newY);
-        @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newX, $newY, $pz, $rt->f(1)))};
-        @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rotRand, $strideRand))};
-        @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)};
+        scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newX, $newY, $pz, $rt->f(1)))}; $g->{outXYZ} };
+        scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rotRand, $strideRand))}; $g->{outVel} };
+        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
     };
     $main__void->();
     my $_c0 = $g->{outXYZ};

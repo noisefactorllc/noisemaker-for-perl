@@ -9,14 +9,8 @@ use Math::Fractal::Noisemaker::Transpiler::Codegen qw(emit_perl);
 use Math::Fractal::Noisemaker::Transpiler::Parser qw(parse);
 use Math::Fractal::Noisemaker::Transpiler::Preprocess qw(normalize);
 
-# filter/spookyTicker's pinned authority capture follows the oracle's
-# transpiled-JS lowering, not strict GLSL integer semantics: scalar int/int
-# divisions stay float64 (the noisemaker-for-cpu restoreIntegerDivision
-# scalar/scalar rewrite is exempt for this effect), the float64 flows through
-# the arithmetic that consumes it, scalar uint bitwise ops coerce through
-# ToInt32 (arithmetic >>, signed ^, signed %), and array reads with fractional,
-# negative or out-of-range indices yield undefined (bitwise consumers coerce
-# that to 0). Every other effect keeps the strict GLSL lowering.
+# Integer declaration rewrites now apply to every effect. Existing effect-scoped
+# JS uint coercion and guarded fractional array reads remain independently tested.
 
 my $GLYPH_GLSL = <<'GLSL';
 precision highp float;
@@ -50,17 +44,17 @@ sub emit_for {
 my $js   = emit_for('filter/spookyTicker');
 my $glsl = emit_for('filter/invert');
 
-# Scalar/scalar int division stays float64 for the exempted effect only.
-like $js,   qr{binary\('/', \$localX, \$iScale, 1, 'float'\)}, 'spookyTicker gx division stays float64';
-like $glsl, qr{binary\('/', \$localX, \$iScale, 1, 'int'\)},   'other effects keep truncating int division';
+# The CPU restores scalar declarations and ternary integer declarations everywhere.
+like $js, qr{POSIX::trunc\(\$rt->binary\('/', \$localX, \$iScale, 1, 'float'\)\)}, 'spookyTicker gx division truncates';
+like $glsl, qr{POSIX::trunc\(\$rt->binary\('/', \$localX, \$iScale, 1, 'float'\)\)}, 'other effects restore the same declaration';
+like $js, qr{binary\('\*', \$cellX, \$w, 1, 'int'\)}, 'restored spookyTicker cell index stays integer';
+like $glsl, qr{binary\('\*', \$cellX, \$w, 1, 'int'\)}, 'other effects retain the same integer arithmetic';
 
-# The float64 result keeps flowing float64 through consuming arithmetic.
-like $js,   qr{binary\('\*', \$cellX, \$w, 1, 'float'\)}, 'spookyTicker localX multiply stays float64';
-like $glsl, qr{binary\('\*', \$cellX, \$w, 1, 'int'\)},   'other effects truncate cellX at the multiply';
-
-# Fractional/negative/out-of-range array reads yield the JS undefined (0).
-like $js, qr{binary\('\+', .*'float'\)\) >= 0 .* scalar\(\@\{\$g->\{GLYPHS\}\}\)}, 'spookyTicker array read is JS-guarded';
-unlike $glsl, qr{scalar\(\@\{\$g->\{GLYPHS\}\}\)}, 'other effects read arrays with the plain int() wrap';
+# A genuinely fractional read still uses the existing JS guard.
+my $fractional_norm = normalize('out vec4 fragColor; int GLYPHS[8]; void main(){float i=1.5;fragColor=vec4(float(GLYPHS[i]));}', {});
+my $fractional = emit_perl(parse($fractional_norm->{source}), $fractional_norm->{outputs}, $fractional_norm->{varyings}, 'filter/spookyTicker');
+like $fractional, qr{\(\$i\) >= 0 .* scalar\(\@\{\$g->\{GLYPHS\}\}\)}, 'fractional array read is JS-guarded';
+unlike $glsl, qr{scalar\(\@\{\$g->\{GLYPHS\}\}\)}, 'integer array reads retain their ordinary indexing';
 
 # The kernel opts into the runtime's JS-native uint lowering, scoped locally.
 like $js,   qr{local \$rt->\{js_native_ints\} = 1;}, 'spookyTicker kernel sets the JS-native uint flag';
@@ -79,7 +73,7 @@ void main() {
 }
 GLSL
 my $vec_js = emit_perl(parse($vec_norm->{source}), $vec_norm->{outputs}, $vec_norm->{varyings}, 'filter/spookyTicker');
-like $vec_js, qr{binary\('/', .*?1, 'int'\)}, 'vec-index int division truncates even for the exempted effect';
+like $vec_js, qr{POSIX::trunc\(\$rt->binary\('/', .*?1, 'float'\)\)}, 'vec-index declaration truncates for spookyTicker';
 
 # --- runtime: the JS-native uint semantics ---------------------------------
 
@@ -105,7 +99,7 @@ is $rt->binary('%', 4241615619, 10, 1, 'uint'), 9,      'default % is an unsigne
     $v = $rt->binary('^', $v, $rt->binary('>>', $v, 15, 1, 'uint'), 1, 'uint');
     $v = $rt->binary('*', $v, 2221713035, 1, 'uint');
     $v = $rt->binary('^', $v, $rt->binary('>>', $v, 16, 1, 'uint'), 1, 'uint');
-    is $v, 174598519, 'js uint chain matches the oracle hash_mix body';
+    is $v, 174598519, 'existing JS-native uint sequence remains stable';
     is $rt->binary('^', $v, 17, 1, 'uint') & 65535, 10598, 'masking a signed xor result keeps the u32 bits';
 }
 

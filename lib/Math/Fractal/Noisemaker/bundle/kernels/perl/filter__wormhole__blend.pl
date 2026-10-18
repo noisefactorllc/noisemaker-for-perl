@@ -19,9 +19,9 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_for0_first, $_for1_first, $accum, $count, $globalCoord, $gx, $gy, $mean, $normalized, $s, $sampleUV, $sqrtVal, $src, $sum, $uv, $v);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
-        $src = $rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
-        $accum = $rt->texture($_u_accumTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_accumTex)), 2, 'float')));
+        $uv = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
+        $src = $rt->texture($_u_inputTex, $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)))));
+        $accum = $rt->texture($_u_accumTex, $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_accumTex)))));
         $sum = $rt->f(0);
         $count = $rt->f(0);
         $gy = $rt->i(0);
@@ -54,12 +54,12 @@ my $run_pixel = sub {
         $mean = $rt->binary('/', $sum, $count, 1, 'float');
         $normalized = $rt->construct(3, 0.0);
         if ($rt->binary('>', $mean, $rt->f(0))) {
-            @{$normalized} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('/', $rt->swizzle($accum, 'rgb'), $rt->binary('*', $mean, $rt->f(4), 1, 'float'), 3, 'float'), $rt->f(0), $rt->f(1)))};
+            scalar do { @{$normalized} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('/', $rt->swizzle($accum, 'rgb'), $rt->binary('*', $mean, $rt->f(4), 1, 'float'), 3, 'float'), $rt->f(0), $rt->f(1)))}; $normalized };
         } else {
-            @{$normalized} = map { $rt->f32($_) } @{($rt->swizzle($accum, 'rgb'))};
+            scalar do { @{$normalized} = map { $rt->f32($_) } @{($rt->swizzle($accum, 'rgb'))}; $normalized };
         }
         $sqrtVal = $rt->component_wise('sqrt', $normalized);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('mix', $rt->swizzle($src, 'rgb'), $sqrtVal, $_u_alpha), $rt->swizzle($src, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('mix', $rt->swizzle($src, 'rgb'), $sqrtVal, $_u_alpha), $rt->swizzle($src, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

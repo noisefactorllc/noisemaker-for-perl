@@ -11,6 +11,7 @@ package Math::Fractal::Noisemaker::Transpiler::Build;
 use strict;
 use warnings;
 use Digest::SHA    ();
+use Encode         ();
 use File::Basename ();
 use File::Path     ();
 use File::Spec     ();
@@ -219,6 +220,11 @@ sub build {
     my $metadata_path = File::Spec->catfile($out_dir, 'metadata.json');
     my $old         = _read_json($lock_path) || { hashes => {} };
     my $old_bundle  = _read_json($metadata_path) || { effects => {}, provenance => {} };
+    my %authored = map { $_ => $old_bundle->{effects}{$_} } grep {
+        $_AUTHORED_STATEFUL{$_} && $old_bundle->{effects}{$_}{iterated}
+    } keys %{ $old_bundle->{effects} || {} };
+    my %requested = map { $_ => 1 } @$ids;
+    my @build_ids = (@$ids, grep { !$requested{$_} } sort keys %authored);
     my %hashes    = %{ $old->{hashes} || {} };
     my @drift;
     my $bundle = {
@@ -231,15 +237,25 @@ sub build {
     };
     my $n_ok = 0;
     my %files;
-    for my $eid (@$ids) {
+    for my $eid (@build_ids) {
         my $eff = eval { fetch_effect($eid) };
         if (!$eff) {
             die "cannot fetch $eid: " . ($@ || "no effect returned\n");
         }
         _resolve_shared_enums($eff->{params});
         my $defines = runtime_defines($eff->{params});
+        my $source_passes = $eff->{passes};
+        if ($authored{$eid}) {
+            my %seen;
+            $source_passes = [map {
+                my $key = $_->{key};
+                my ($program) = $key =~ /^\Q$eid\E:(.+)$/;
+                die "invalid authored kernel key $key for $eid\n" unless defined $program;
+                +{program => $program};
+            } grep { defined $_->{key} && !$seen{$_->{key}}++ } @{ $authored{$eid}{passes} || [] }];
+        }
         my @passes;
-        for my $p (@{ $eff->{passes} }) {
+        for my $p (@$source_passes) {
             my $glsl = $eff->{programs}{ $p->{program} };
             if (!defined $glsl) {
                 # A pass without GLSL is a CPU-only draw op (e.g. wormhole's
@@ -258,11 +274,27 @@ sub build {
             }
             my $key = _key($eid, $p->{program});
             (my $stripped = $glsl) =~ s/^\s+|\s+$//g;
-            my $h = Digest::SHA::sha256_hex($stripped);
+            my $h = Digest::SHA::sha256_hex(Encode::encode('UTF-8', $stripped));
+            if ($authored{$eid}) {
+                my $locked = $old->{hashes}{$key};
+                die "authored source hash is missing for $key\n" unless defined $locked;
+                if ($h ne $locked) {
+                    # Decode observed template escapes in one pass, preserving
+                    # backslash pairs. The authored lock must verify the result.
+                    (my $decoded = $glsl) =~ s{(\\\\)|\\(?:u([0-9A-Fa-f]{4})|x([0-9A-Fa-f]{2})|(`))}{
+                        defined $1 ? $1 : defined $2 ? chr(hex($2)) : defined $3 ? chr(hex($3)) : $4
+                    }ge;
+                    (my $trimmed = $decoded) =~ s/^\s+|\s+$//g;
+                    my $decoded_hash = Digest::SHA::sha256_hex(Encode::encode('UTF-8', $trimmed));
+                    die "authored source hash drift for $key\n" unless $decoded_hash eq $locked;
+                    ($glsl, $h) = ($decoded, $decoded_hash);
+                }
+            }
             my $perl = eval {
                 my $norm = normalize($glsl, $defines, $key);
-                my $ast  = parse($norm->{source});
-                _oracle_compatibility($key, emit_perl($ast, $norm->{outputs}, $norm->{varyings}, $eid));
+                my $ast  = parse($norm->{source}, $glsl);
+                _oracle_compatibility($key, emit_perl($ast, $norm->{outputs}, $norm->{varyings}, $eid,
+                    {constant_divisors => $defines}));
             };
             if (!defined $perl) {
                 die "cannot compile $key: $@";
@@ -280,6 +312,7 @@ sub build {
             $pass{uniforms} ||= {};
             push @passes, \%pass;
         }
+        next if $authored{$eid};
         die "effect $eid has no renderable passes\n" unless @passes;
         $bundle->{effects}{$eid} = {
             namespace => $eff->{namespace},

@@ -117,39 +117,39 @@ my $run_pixel = sub {
         $cX_df = $rt->copy($cX_df, 'float');
         $cY_df = $rt->copy($cY_df, 'float');
         if ($rt->binary('==', $index, $rt->i(1))) {
-            @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(0.74453985691070557)), $rt->unary('-', $rt->f(3.4452027897000001e-09))))};
-            @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.12172377109527588), $rt->f(2.7991489404000002e-09)))};
+            scalar do { @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(0.74453985691070557)), $rt->unary('-', $rt->f(3.4452027897000001e-09))))}; $cX_df };
+            scalar do { @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.12172377109527588), $rt->f(2.7991489404000002e-09)))}; $cY_df };
         } else {
             if ($rt->binary('==', $index, $rt->i(2))) {
-                @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.29833000898361206), $rt->unary('-', $rt->f(8.9836120765000006e-09))))};
-                @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.0011099999537691474), $rt->f(4.6230852696000003e-11)))};
+                scalar do { @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.29833000898361206), $rt->unary('-', $rt->f(8.9836120765000006e-09))))}; $cX_df };
+                scalar do { @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.0011099999537691474), $rt->f(4.6230852696000003e-11)))}; $cY_df };
             } else {
                 if ($rt->binary('==', $index, $rt->i(3))) {
-                    @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(1.7548776865005493)), $rt->f(2.0253856592e-08)))};
-                    @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(0)))};
+                    scalar do { @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(1.7548776865005493)), $rt->f(2.0253856592e-08)))}; $cX_df };
+                    scalar do { @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(0)))}; $cY_df };
                 } else {
                     if ($rt->binary('==', $index, $rt->i(4))) {
-                        @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(1.7400623559951782)), $rt->unary('-', $rt->f(2.6584161760999999e-08))))};
-                        @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.028175339102745056), $rt->f(6.7646594229000005e-10)))};
+                        scalar do { @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(1.7400623559951782)), $rt->unary('-', $rt->f(2.6584161760999999e-08))))}; $cX_df };
+                        scalar do { @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.028175339102745056), $rt->f(6.7646594229000005e-10)))}; $cY_df };
                     } else {
                         if ($rt->binary('==', $index, $rt->i(5))) {
-                            @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(1.4011552333831787)), $rt->f(4.4291128098000002e-08)))};
-                            @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(0)))};
+                            scalar do { @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(1.4011552333831787)), $rt->f(4.4291128098000002e-08)))}; $cX_df };
+                            scalar do { @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(0)))}; $cY_df };
                         } else {
                             if ($rt->binary('==', $index, $rt->i(6))) {
-                                @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.37500011920928955), $rt->f(8.5257595428000001e-10)))};
-                                @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(0.21663938462734222)), $rt->unary('-', $rt->f(3.8103704636000004e-09))))};
+                                scalar do { @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.37500011920928955), $rt->f(8.5257595428000001e-10)))}; $cX_df };
+                                scalar do { @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(0.21663938462734222)), $rt->unary('-', $rt->f(3.8103704636000004e-09))))}; $cY_df };
                             } else {
                                 if ($rt->binary('==', $index, $rt->i(7))) {
-                                    @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(0.74453890323638916)), $rt->unary('-', $rt->f(1.6763610832999999e-08))))};
-                                    @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.12172418087720871), $rt->unary('-', $rt->f(8.7720870844999997e-10))))};
+                                    scalar do { @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(0.74453890323638916)), $rt->unary('-', $rt->f(1.6763610832999999e-08))))}; $cX_df };
+                                    scalar do { @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0.12172418087720871), $rt->unary('-', $rt->f(8.7720870844999997e-10))))}; $cY_df };
                                 } else {
                                     if ($rt->binary('==', $index, $rt->i(8))) {
-                                        @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(1.2553445100784302)), $rt->unary('-', $rt->f(1.4721569741000001e-08))))};
-                                        @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(0.3822004497051239)), $rt->unary('-', $rt->f(1.3294876088999999e-08))))};
+                                        scalar do { @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(1.2553445100784302)), $rt->unary('-', $rt->f(1.4721569741000001e-08))))}; $cX_df };
+                                        scalar do { @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->f(0.3822004497051239)), $rt->unary('-', $rt->f(1.3294876088999999e-08))))}; $cY_df };
                                     } else {
-                                        @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $_u_centerHiX, $_u_centerLoX))};
-                                        @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $_u_centerHiY, $_u_centerLoY))};
+                                        scalar do { @{$cX_df} = map { $rt->f32($_) } @{($rt->construct(2, $_u_centerHiX, $_u_centerLoX))}; $cX_df };
+                                        scalar do { @{$cY_df} = map { $rt->f32($_) } @{($rt->construct(2, $_u_centerHiY, $_u_centerLoY))}; $cY_df };
                                     }
                                 }
                             }
@@ -168,14 +168,14 @@ my $run_pixel = sub {
         $re_df = $rt->copy($re_df, 'float');
         $im_df = $rt->copy($im_df, 'float');
         my ($angle, $c, $s, $scale, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->binary('-', $fragCoord, $rt->binary('*', $rt->f(0.5), $_u_fullResolution, 2, 'float'), 2, 'float'), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'))));
         $angle = $rt->binary('/', $rt->binary('*', $rt->unary('-', $rot), $g->{TAU}, 1, 'float'), $rt->f(360), 1, 'float');
         $c = $rt->component_wise('cos', $angle);
         $s = $rt->component_wise('sin', $angle);
-        @{$uv} = map { $rt->f32($_) } @{($rt->matrix_mult($rt->construct(4, $c, $rt->unary('-', $s), $s, $c), $uv, 2))};
+        scalar do { @{$uv} = map { $rt->f32($_) } @{($rt->matrix_mult($rt->construct(4, $c, $rt->unary('-', $s), $s, $c), $uv, 2))}; $uv };
         $scale = $rt->binary('/', $rt->f(2.5), $z, 1, 'float');
-        @{$re_df} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_from__float->($rt->binary('*', $rt->swizzle($uv, 'x'), $scale, 1, 'float')), $cX_df))};
-        @{$im_df} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_from__float->($rt->binary('*', $rt->swizzle($uv, 'y'), $scale, 1, 'float')), $cY_df))};
+        scalar do { @{$re_df} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_from__float->($rt->binary('*', $rt->swizzle($uv, 'x'), $scale, 1, 'float')), $cX_df))}; $re_df };
+        scalar do { @{$im_df} = map { $rt->f32($_) } @{($df64_add__vec2_vec2->($df64_from__float->($rt->binary('*', $rt->swizzle($uv, 'y'), $scale, 1, 'float')), $cY_df))}; $im_df };
         return (undef, $re_df, $im_df);
     };
     $inCardioid__float_float = sub {
@@ -216,8 +216,8 @@ my $run_pixel = sub {
         if ((($inCardioid__float_float->($cx, $cy)) || ($inPeriod2Bulb__float_float->($cx, $cy)) ? 1 : 0)) {
             $smoothIter = $rt->construct(1, $maxIter);
             $rawIter = $rt->construct(1, $maxIter);
-            @{$z_final} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0)))};
-            @{$dz_final} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0)))};
+            scalar do { @{$z_final} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0)))}; $z_final };
+            scalar do { @{$dz_final} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0)))}; $dz_final };
             $stripeAcc = $rt->f(0);
             $trapMin = $rt->f(1e+20);
             return (undef, $smoothIter, $rawIter, $z_final, $dz_final, $stripeAcc, $trapMin);
@@ -243,14 +243,14 @@ my $run_pixel = sub {
             }
             $zx = $df64_to_float__vec2->($zr);
             $zy = $df64_to_float__vec2->($zi);
-            @{$dz} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('+', $rt->binary('*', $rt->f(2), $rt->binary('-', $rt->binary('*', $zx, $rt->swizzle($dz, 'x'), 1, 'float'), $rt->binary('*', $zy, $rt->swizzle($dz, 'y'), 1, 'float'), 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), $rt->binary('*', $rt->f(2), $rt->binary('+', $rt->binary('*', $zx, $rt->swizzle($dz, 'y'), 1, 'float'), $rt->binary('*', $zy, $rt->swizzle($dz, 'x'), 1, 'float'), 1, 'float'), 1, 'float')))};
+            scalar do { @{$dz} = map { $rt->f32($_) } @{($rt->construct(2, $rt->binary('+', $rt->binary('*', $rt->f(2), $rt->binary('-', $rt->binary('*', $zx, $rt->swizzle($dz, 'x'), 1, 'float'), $rt->binary('*', $zy, $rt->swizzle($dz, 'y'), 1, 'float'), 1, 'float'), 1, 'float'), $rt->f(1), 1, 'float'), $rt->binary('*', $rt->f(2), $rt->binary('+', $rt->binary('*', $zx, $rt->swizzle($dz, 'y'), 1, 'float'), $rt->binary('*', $zy, $rt->swizzle($dz, 'x'), 1, 'float'), 1, 'float'), 1, 'float')))}; $dz };
             $zr2 = $df64_mul__vec2_vec2->($zr, $zr);
             $zi2 = $df64_mul__vec2_vec2->($zi, $zi);
             $zri = $df64_mul__vec2_vec2->($zr, $zi);
             $new_zr = $df64_add__vec2_vec2->($df64_sub__vec2_vec2->($zr2, $zi2), $c_re);
             $new_zi = $df64_add__vec2_vec2->($df64_mul_f__vec2_float->($zri, $rt->f(2)), $c_im);
-            @{$zr} = map { $rt->f32($_) } @{($new_zr)};
-            @{$zi} = map { $rt->f32($_) } @{($new_zi)};
+            scalar do { @{$zr} = map { $rt->f32($_) } @{($new_zr)}; $zr };
+            scalar do { @{$zi} = map { $rt->f32($_) } @{($new_zi)}; $zi };
             $post_zx = $df64_to_float__vec2->($zr);
             $post_zy = $df64_to_float__vec2->($zi);
             $post_mag2 = $rt->binary('+', $rt->binary('*', $post_zx, $post_zx, 1, 'float'), $rt->binary('*', $post_zy, $post_zy, 1, 'float'), 1, 'float');
@@ -266,8 +266,8 @@ my $run_pixel = sub {
         $rawIter = $i;
         $fx = $df64_to_float__vec2->($zr);
         $fy = $df64_to_float__vec2->($zi);
-        @{$z_final} = map { $rt->f32($_) } @{($rt->construct(2, $fx, $fy))};
-        @{$dz_final} = map { $rt->f32($_) } @{($dz)};
+        scalar do { @{$z_final} = map { $rt->f32($_) } @{($rt->construct(2, $fx, $fy))}; $z_final };
+        scalar do { @{$dz_final} = map { $rt->f32($_) } @{($dz)}; $dz_final };
         $stripeAcc = $stripe;
         $trapMin = $trap;
         $mag2 = $rt->dot($z_final, $z_final);
@@ -347,7 +347,7 @@ my $run_pixel = sub {
         $cX_df = $rt->copy($cX_df, 'float');
         $cY_df = $rt->copy($cY_df, 'float');
         my ($diffuse, $eps, $h0, $hx, $hy, $lightDir, $normal, $rad);
-        $eps = $rt->binary('/', $rt->f(1), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')), 1, 'float');
+        $eps = $rt->metal_divide($rt->f(1), $rt->component_wise('min', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y')));
         $h0 = $computeValueAt_df64__vec2_vec2_vec2_float_float_int->($fragCoord, $cX_df, $cY_df, $z_zoom, $rot, $maxIter);
         $hx = $computeValueAt_df64__vec2_vec2_vec2_float_float_int->($rt->construct(2, $rt->binary('+', $fragCoord, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float')), $cX_df, $cY_df, $z_zoom, $rot, $maxIter);
         $hy = $computeValueAt_df64__vec2_vec2_vec2_float_float_int->($rt->construct(2, $rt->binary('+', $fragCoord, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float')), $cX_df, $cY_df, $z_zoom, $rot, $maxIter);
@@ -421,7 +421,7 @@ my $run_pixel = sub {
         if ($rt->binary('>', $_u_invert, $rt->f(0.5))) {
             $value = $rt->binary('-', $rt->f(1), $value, 1, 'float');
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $value), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->construct(3, $value), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

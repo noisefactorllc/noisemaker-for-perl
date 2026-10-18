@@ -41,9 +41,9 @@ my $run_pixel = sub {
         $texSize = $rt->texture_size($_u_inputTex);
         $tileDims = $rt->construct(2, $texSize);
         $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims)));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes));
         $centered = $rt->construct(2, $rt->binary('-', $uv, $rt->f(0.5), 2, 'float'));
-        $aspectRatio = $rt->binary('/', $rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y'), 1, 'float');
+        $aspectRatio = $rt->metal_divide($rt->swizzle($fullRes, 'x'), $rt->swizzle($fullRes, 'y'));
         if ($_u_aspectLens) {
             $centered = $rt->assign_swizzle($centered, 'x', $rt->binary('*', $rt->swizzle($centered, 'x'), $aspectRatio, 1, 'float'));
         }
@@ -80,14 +80,14 @@ my $run_pixel = sub {
         if ($_u_antialias) {
             $dx = $rt->dFdx($tunnelCoords);
             $dy = $rt->dFdy($tunnelCoords);
-            @{$color} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
-            @{$color} = map { $rt->f32($_) } @{($rt->binary('+', $color, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $tunnelCoords, $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float')), 4, 'float'))};
-            @{$color} = map { $rt->f32($_) } @{($rt->binary('+', $color, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $tunnelCoords, $rt->binary('*', $dx, $rt->f(0.125), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float')), 4, 'float'))};
-            @{$color} = map { $rt->f32($_) } @{($rt->binary('+', $color, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $tunnelCoords, $rt->binary('*', $dx, $rt->f(0.375), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.125), 2, 'float'), 2, 'float')), 4, 'float'))};
-            @{$color} = map { $rt->f32($_) } @{($rt->binary('+', $color, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $tunnelCoords, $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.375), 2, 'float'), 2, 'float')), 4, 'float'))};
-            @{$color} = map { $rt->f32($_) } @{($rt->binary('*', $color, $rt->f(0.25), 4, 'float'))};
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $color };
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->binary('+', $color, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $tunnelCoords, $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float')), 4, 'float'))}; $color };
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->binary('+', $color, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $tunnelCoords, $rt->binary('*', $dx, $rt->f(0.125), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float')), 4, 'float'))}; $color };
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->binary('+', $color, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $tunnelCoords, $rt->binary('*', $dx, $rt->f(0.375), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.125), 2, 'float'), 2, 'float')), 4, 'float'))}; $color };
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->binary('+', $color, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $tunnelCoords, $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.375), 2, 'float'), 2, 'float')), 4, 'float'))}; $color };
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->binary('*', $color, $rt->f(0.25), 4, 'float'))}; $color };
         } else {
-            @{$color} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $tunnelCoords))};
+            scalar do { @{$color} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $tunnelCoords))}; $color };
         }
         $amt = $rt->f(0.0);
         $centerMask = $rt->f(0.0);
@@ -100,7 +100,7 @@ my $run_pixel = sub {
                 $color = $rt->assign_swizzle($color, 'rgb', $rt->component_wise('mix', $rt->swizzle($color, 'rgb'), $rt->construct(3, $rt->f(1)), $rt->binary('*', $rt->binary('-', $rt->f(1), $centerMask, 1, 'float'), $amt, 1, 'float')));
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

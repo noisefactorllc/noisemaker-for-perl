@@ -38,7 +38,7 @@ my $run_pixel = sub {
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_colorTex);
         if ((($rt->binary('==', $rt->swizzle($texSize, 'x'), $rt->i(0))) || ($rt->binary('==', $rt->swizzle($texSize, 'y'), $rt->i(0))) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
             return;
         }
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
@@ -76,7 +76,7 @@ my $run_pixel = sub {
         $gy = $rt->binary('+', $rt->binary('+', $rt->binary('+', $rt->binary('-', $rt->binary('-', $rt->unary('-', $samples->[int($rt->i(0))]), $rt->binary('*', $rt->f(2), $samples->[int($rt->i(1))], 1, 'float'), 1, 'float'), $samples->[int($rt->i(2))], 1, 'float'), $samples->[int($rt->i(6))], 1, 'float'), $rt->binary('*', $rt->f(2), $samples->[int($rt->i(7))], 1, 'float'), 1, 'float'), $samples->[int($rt->i(8))], 1, 'float');
         $magnitude = $rt->component_wise('sqrt', $rt->binary('+', $rt->binary('*', $gx, $gx, 1, 'float'), $rt->binary('*', $gy, $gy, 1, 'float'), 1, 'float'));
         $edge = $rt->component_wise('smoothstep', $rt->binary('*', $_u_edgeThreshold, $rt->f(0.5), 1, 'float'), $rt->binary('*', $_u_edgeThreshold, $rt->f(1.5), 1, 'float'), $magnitude);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $edge, $edge, $edge, $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $edge, $edge, $edge, $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

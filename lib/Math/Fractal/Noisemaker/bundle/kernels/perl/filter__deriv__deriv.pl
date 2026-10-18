@@ -25,7 +25,7 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($bottom, $center, $color, $dist, $dx, $dy, $localUV, $radiusPixels, $right, $texSize, $texelSize);
         $texSize = $rt->texture_size($_u_inputTex);
-        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $texelSize = $rt->construct(2, $rt->metal_divide($rt->f(1), $rt->construct_raw(2, $rt->construct(2, $texSize))));
         $localUV = $rt->construct(2, $rt->binary('*', $rt->swizzle($ctx->{frag_coord}, 'xy'), $texelSize, 2, 'float'));
         $radiusPixels = $rt->binary('*', $_u_amount, $_u_renderScale, 1, 'float');
         $radiusPixels = $rt->component_wise('min', $radiusPixels, $rt->f(256));
@@ -36,7 +36,7 @@ my $run_pixel = sub {
         $dx = $rt->construct(3, $rt->binary('-', $center, $right, 3, 'float'));
         $dy = $rt->construct(3, $rt->binary('-', $center, $bottom, 3, 'float'));
         $dist = $rt->binary('*', $rt->distance($dx, $dy), $rt->f(2.5), 1, 'float');
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $rt->binary('*', $rt->swizzle($color, 'rgb'), $dist, 3, 'float'), $rt->f(0), $rt->f(1)), $rt->swizzle($color, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->component_wise('clamp', $rt->binary('*', $rt->swizzle($color, 'rgb'), $dist, 3, 'float'), $rt->f(0), $rt->f(1)), $rt->swizzle($color, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

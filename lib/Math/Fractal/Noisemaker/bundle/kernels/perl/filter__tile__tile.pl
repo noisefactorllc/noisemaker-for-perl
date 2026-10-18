@@ -62,43 +62,43 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($aspect, $effectiveScale, $globalCoord, $globalUV, $local, $localUV, $rep, $st);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $globalUV = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
-        $aspect = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
+        $globalUV = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
+        $aspect = $rt->metal_divide($rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'));
         $st = $rt->construct(2, $rt->binary('-', $globalUV, $rt->f(0.5), 2, 'float'));
         if ($_u_aspectLens) {
             $st = $rt->assign_swizzle($st, 'x', $rt->binary('*', $rt->swizzle($st, 'x'), $aspect, 1, 'float'));
         }
-        @{$st} = map { $rt->f32($_) } @{($rot__vec2_float->($st, $rt->binary('/', $rt->binary('*', $_u_angle, $g->{PI}, 1, 'float'), $rt->f(180), 1, 'float')))};
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rot__vec2_float->($st, $rt->binary('/', $rt->binary('*', $_u_angle, $g->{PI}, 1, 'float'), $rt->f(180), 1, 'float')))}; $st };
         if ($_u_aspectLens) {
             $st = $rt->assign_swizzle($st, 'x', $rt->binary('/', $rt->swizzle($st, 'x'), $aspect, 1, 'float'));
         }
-        @{$st} = map { $rt->f32($_) } @{($rt->binary('+', $st, $rt->f(0.5), 2, 'float'))};
+        scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('+', $st, $rt->f(0.5), 2, 'float'))}; $st };
         $rep = $rt->construct(2, (($_u_aspectLens) ? ($rt->construct(2, $rt->binary('*', $_u_repeat, $aspect, 1, 'float'), $_u_repeat)) : ($rt->construct(2, $_u_repeat))));
         $effectiveScale = $rt->f(0.0);
         $local = $rt->construct(2, 0.0);
         if ($rt->binary('==', $_u_symmetry, $rt->i(3))) {
             $local = $hexCoord__vec2->($rt->construct(2, $rt->binary('*', $rt->binary('+', $st, $rt->construct_raw(2, $_u_offsetX, $_u_offsetY), 2, 'float'), $rep, 2, 'float')));
-            @{$local} = map { $rt->f32($_) } @{($rt->binary('/', $local, $_u_scale, 2, 'float'))};
-            @{$st} = map { $rt->f32($_) } @{($rotationalFold__vec2_int->($rt->construct(2, $rt->binary('+', $local, $rt->f(0.5), 2, 'float')), $rt->i(6)))};
+            scalar do { @{$local} = map { $rt->f32($_) } @{($rt->metal_divide($local, $_u_scale))}; $local };
+            scalar do { @{$st} = map { $rt->f32($_) } @{($rotationalFold__vec2_int->($rt->construct(2, $rt->binary('+', $local, $rt->f(0.5), 2, 'float')), $rt->i(6)))}; $st };
         } else {
-            @{$st} = map { $rt->f32($_) } @{($rt->binary('*', $st, $rep, 2, 'float'))};
-            @{$st} = map { $rt->f32($_) } @{($rt->component_wise('fract', $st))};
+            scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('*', $st, $rep, 2, 'float'))}; $st };
+            scalar do { @{$st} = map { $rt->f32($_) } @{($rt->component_wise('fract', $st))}; $st };
             $effectiveScale = (($rt->binary('==', $_u_symmetry, $rt->i(0))) ? ($rt->binary('*', $_u_scale, $rt->f(0.5), 1, 'float')) : ($_u_scale));
-            @{$st} = map { $rt->f32($_) } @{($rt->binary('/', $rt->binary('-', $st, $rt->f(0.5), 2, 'float'), $effectiveScale, 2, 'float'))};
-            @{$st} = map { $rt->f32($_) } @{($rt->binary('+', $st, $rt->binary('+', $rt->f(0.5), $rt->construct_raw(2, $_u_offsetX, $_u_offsetY), 2, 'float'), 2, 'float'))};
+            scalar do { @{$st} = map { $rt->f32($_) } @{($rt->metal_divide($rt->binary('-', $st, $rt->f(0.5), 2, 'float'), $effectiveScale))}; $st };
+            scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('+', $st, $rt->binary('+', $rt->f(0.5), $rt->construct_raw(2, $_u_offsetX, $_u_offsetY), 2, 'float'), 2, 'float'))}; $st };
             if ($rt->binary('==', $_u_symmetry, $rt->i(0))) {
                 $st = $rt->assign_swizzle($st, 'x', $mirrorFold__float->($rt->swizzle($st, 'x')));
                 $st = $rt->assign_swizzle($st, 'y', $mirrorFold__float->($rt->swizzle($st, 'y')));
             } else {
                 if ($rt->binary('==', $_u_symmetry, $rt->i(1))) {
-                    @{$st} = map { $rt->f32($_) } @{($rotationalFold__vec2_int->($rt->component_wise('fract', $st), $rt->i(2)))};
+                    scalar do { @{$st} = map { $rt->f32($_) } @{($rotationalFold__vec2_int->($rt->component_wise('fract', $st), $rt->i(2)))}; $st };
                 } else {
-                    @{$st} = map { $rt->f32($_) } @{($rotationalFold__vec2_int->($rt->component_wise('fract', $st), $rt->i(4)))};
+                    scalar do { @{$st} = map { $rt->f32($_) } @{($rotationalFold__vec2_int->($rt->component_wise('fract', $st), $rt->i(4)))}; $st };
                 }
             }
         }
         $localUV = $rt->component_wise('fract', $st);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($rt->texture($_u_inputTex, $localUV), 'rgb'), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($rt->texture($_u_inputTex, $localUV), 'rgb'), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

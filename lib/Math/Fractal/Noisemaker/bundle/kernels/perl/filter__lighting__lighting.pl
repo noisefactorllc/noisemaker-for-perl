@@ -66,15 +66,15 @@ my $run_pixel = sub {
         $sobel_y->[int($rt->i(7))] = $rt->f(2);
         $sobel_y->[int($rt->i(8))] = $rt->f(1);
         $offsets = $rt->new_array($rt->i(9), 2);
-        @{$offsets->[int($rt->i(0))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->unary('-', $rt->swizzle($sampleSize, 'y'))))};
-        @{$offsets->[int($rt->i(1))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->unary('-', $rt->swizzle($sampleSize, 'y'))))};
-        @{$offsets->[int($rt->i(2))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->unary('-', $rt->swizzle($sampleSize, 'y'))))};
-        @{$offsets->[int($rt->i(3))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->f(0)))};
-        @{$offsets->[int($rt->i(4))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(0)))};
-        @{$offsets->[int($rt->i(5))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->f(0)))};
-        @{$offsets->[int($rt->i(6))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->swizzle($sampleSize, 'y')))};
-        @{$offsets->[int($rt->i(7))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->swizzle($sampleSize, 'y')))};
-        @{$offsets->[int($rt->i(8))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->swizzle($sampleSize, 'y')))};
+        scalar do { @{$offsets->[int($rt->i(0))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->unary('-', $rt->swizzle($sampleSize, 'y'))))}; $offsets->[int($rt->i(0))] };
+        scalar do { @{$offsets->[int($rt->i(1))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->unary('-', $rt->swizzle($sampleSize, 'y'))))}; $offsets->[int($rt->i(1))] };
+        scalar do { @{$offsets->[int($rt->i(2))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->unary('-', $rt->swizzle($sampleSize, 'y'))))}; $offsets->[int($rt->i(2))] };
+        scalar do { @{$offsets->[int($rt->i(3))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->f(0)))}; $offsets->[int($rt->i(3))] };
+        scalar do { @{$offsets->[int($rt->i(4))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->f(0)))}; $offsets->[int($rt->i(4))] };
+        scalar do { @{$offsets->[int($rt->i(5))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->f(0)))}; $offsets->[int($rt->i(5))] };
+        scalar do { @{$offsets->[int($rt->i(6))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->unary('-', $rt->swizzle($sampleSize, 'x')), $rt->swizzle($sampleSize, 'y')))}; $offsets->[int($rt->i(6))] };
+        scalar do { @{$offsets->[int($rt->i(7))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->f(0), $rt->swizzle($sampleSize, 'y')))}; $offsets->[int($rt->i(7))] };
+        scalar do { @{$offsets->[int($rt->i(8))]} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($sampleSize, 'x'), $rt->swizzle($sampleSize, 'y')))}; $offsets->[int($rt->i(8))] };
         $dx = $rt->f(0);
         $dy = $rt->f(0);
         $i = $rt->i(0);
@@ -102,7 +102,7 @@ my $run_pixel = sub {
         $normal = $rt->copy($normal, 'float');
         my ($refractionOffset);
         $refractionOffset = $rt->construct(2, $rt->binary('*', $rt->swizzle($normal, 'xy'), $rt->binary('*', $_u_refraction, $rt->f(0.012500000000000001), 1, 'float'), 2, 'float'));
-        return $rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $refractionOffset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
+        return $rt->texture($_u_inputTex, $rt->construct(2, $rt->metal_divide($rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $refractionOffset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)))));
     };
     $applyReflection__vec2_vec2_vec3 = sub {
         my ($uv, $globalUV, $normal) = @_;
@@ -116,10 +116,10 @@ my $run_pixel = sub {
         $redOffset = $rt->construct(2, $rt->binary('*', $reflectionOffset, $rt->binary('+', $rt->f(1), $rt->binary('*', $_u_aberration, $rt->f(0.0074999999999999997), 1, 'float'), 1, 'float'), 2, 'float'));
         $greenOffset = $rt->fresh($reflectionOffset);
         $blueOffset = $rt->construct(2, $rt->binary('*', $reflectionOffset, $rt->binary('-', $rt->f(1), $rt->binary('*', $_u_aberration, $rt->f(0.0074999999999999997), 1, 'float'), 1, 'float'), 2, 'float'));
-        $redChannel = $rt->swizzle($rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $redOffset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'))), 'r');
-        $greenChannel = $rt->swizzle($rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $greenOffset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'))), 'g');
-        $blueChannel = $rt->swizzle($rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $blueOffset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'))), 'b');
-        $alphaChannel = $rt->swizzle($rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $reflectionOffset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float'))), 'a');
+        $redChannel = $rt->swizzle($rt->texture($_u_inputTex, $rt->construct(2, $rt->metal_divide($rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $redOffset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex))))), 'r');
+        $greenChannel = $rt->swizzle($rt->texture($_u_inputTex, $rt->construct(2, $rt->metal_divide($rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $greenOffset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex))))), 'g');
+        $blueChannel = $rt->swizzle($rt->texture($_u_inputTex, $rt->construct(2, $rt->metal_divide($rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $blueOffset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex))))), 'b');
+        $alphaChannel = $rt->swizzle($rt->texture($_u_inputTex, $rt->construct(2, $rt->metal_divide($rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->binary('+', $uv, $reflectionOffset, 2, 'float'), $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float')), $rt->construct(2, $rt->texture_size($_u_inputTex))))), 'a');
         return $rt->construct(4, $redChannel, $greenChannel, $blueChannel, $alphaChannel);
     };
     $main__void = sub {
@@ -128,10 +128,10 @@ my $run_pixel = sub {
         $texSize = $rt->texture_size($_u_inputTex);
         $resolution = $rt->construct(2, $texSize);
         $fullRes = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($resolution)));
-        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
-        $globalUV = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes, 2, 'float'));
-        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $resolution, 2, 'float'));
-        $origColor = $rt->texture($_u_inputTex, $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)), 2, 'float')));
+        $uv = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
+        $globalUV = $rt->construct(2, $rt->metal_divide($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $fullRes));
+        $texelSize = $rt->construct(2, $rt->metal_divide($rt->f(1), $resolution));
+        $origColor = $rt->texture($_u_inputTex, $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->texture_size($_u_inputTex)))));
         $normal = $calculateNormal__vec2_vec2->($uv, $texelSize);
         $lightDir = $rt->normalize($_u_lightDirection);
         $viewDir = $rt->construct(3, $rt->f(0), $rt->f(0), $rt->f(1));
@@ -147,14 +147,14 @@ my $run_pixel = sub {
         $refractedColor = $rt->construct(4, 0.0);
         if ($rt->binary('>', $_u_refraction, $rt->f(0))) {
             $refractedColor = $applyRefraction__vec2_vec3->($uv, $normal);
-            @{$workingColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $workingColor, $refractedColor, $rt->binary('/', $_u_refraction, $rt->f(100), 1, 'float')))};
+            scalar do { @{$workingColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $workingColor, $refractedColor, $rt->binary('/', $_u_refraction, $rt->f(100), 1, 'float')))}; $workingColor };
         }
         $reflectedColor = $rt->construct(4, 0.0);
         if ((($rt->binary('>', $_u_reflection, $rt->f(0))) || ($rt->binary('>', $_u_aberration, $rt->f(0))) ? 1 : 0)) {
             $reflectedColor = $applyReflection__vec2_vec2_vec3->($uv, $globalUV, $normal);
-            @{$workingColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $workingColor, $reflectedColor, $rt->binary('/', $_u_reflection, $rt->f(100), 1, 'float')))};
+            scalar do { @{$workingColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $workingColor, $reflectedColor, $rt->binary('/', $_u_reflection, $rt->f(100), 1, 'float')))}; $workingColor };
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($workingColor)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($workingColor)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

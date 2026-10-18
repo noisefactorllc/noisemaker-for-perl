@@ -17,7 +17,7 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($alpha, $inputColor, $matteAlpha, $rgb, $t, $trailColor, $trailPresence, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $inputColor = $rt->texture($_u_inputTex, $uv);
         $trailColor = $rt->texture($_u_trailTex, $uv);
         $t = $rt->binary('/', $_u_inputIntensity, $rt->f(100), 1, 'float');
@@ -25,7 +25,7 @@ my $run_pixel = sub {
         $trailPresence = $rt->component_wise('max', $rt->component_wise('max', $rt->swizzle($trailColor, 'r'), $rt->swizzle($trailColor, 'g')), $rt->swizzle($trailColor, 'b'));
         $rgb = $rt->construct(3, $rt->binary('+', $rt->swizzle($trailColor, 'rgb'), $rt->binary('*', $rt->binary('*', $rt->swizzle($inputColor, 'rgb'), $t, 3, 'float'), $matteAlpha, 3, 'float'), 3, 'float'));
         $alpha = $rt->component_wise('max', $trailPresence, $matteAlpha);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->construct(4, $rgb, $alpha), $rt->f(0), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->construct(4, $rgb, $alpha), $rt->f(0), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

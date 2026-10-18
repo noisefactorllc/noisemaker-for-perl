@@ -106,13 +106,13 @@ my $run_pixel = sub {
         $mW = $rt->binary('/', $mW, $totalWeight, 1, 'float');
         $hW = $rt->binary('/', $hW, $totalWeight, 1, 'float');
         $colorShift = $rt->construct(3, $rt->f(0));
-        @{$colorShift} = map { $rt->f32($_) } @{($rt->binary('+', $colorShift, $rt->binary('*', $rt->binary('*', $shadowOffset, $sW, 3, 'float'), $rt->f(0.5), 3, 'float'), 3, 'float'))};
-        @{$colorShift} = map { $rt->f32($_) } @{($rt->binary('+', $colorShift, $rt->binary('*', $rt->binary('*', $midOffset, $mW, 3, 'float'), $rt->f(0.5), 3, 'float'), 3, 'float'))};
-        @{$colorShift} = map { $rt->f32($_) } @{($rt->binary('+', $colorShift, $rt->binary('*', $rt->binary('*', $highOffset, $hW, 3, 'float'), $rt->f(0.5), 3, 'float'), 3, 'float'))};
+        scalar do { @{$colorShift} = map { $rt->f32($_) } @{($rt->binary('+', $colorShift, $rt->binary('*', $rt->binary('*', $shadowOffset, $sW, 3, 'float'), $rt->f(0.5), 3, 'float'), 3, 'float'))}; $colorShift };
+        scalar do { @{$colorShift} = map { $rt->f32($_) } @{($rt->binary('+', $colorShift, $rt->binary('*', $rt->binary('*', $midOffset, $mW, 3, 'float'), $rt->f(0.5), 3, 'float'), 3, 'float'))}; $colorShift };
+        scalar do { @{$colorShift} = map { $rt->f32($_) } @{($rt->binary('+', $colorShift, $rt->binary('*', $rt->binary('*', $highOffset, $hW, 3, 'float'), $rt->f(0.5), 3, 'float'), 3, 'float'))}; $colorShift };
         $result = $rt->construct(3, $rt->binary('+', $rgb, $colorShift, 3, 'float'));
         $newLuma = $rt->dot($result, $g->{LUMA_WEIGHTS});
         $lumaDiff = $rt->binary('-', $luma, $newLuma, 1, 'float');
-        @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $result, $rt->binary('*', $lumaDiff, $rt->f(0.29999999999999999), 1, 'float'), 3, 'float'))};
+        scalar do { @{$result} = map { $rt->f32($_) } @{($rt->binary('+', $result, $rt->binary('*', $lumaDiff, $rt->f(0.29999999999999999), 1, 'float'), 3, 'float'))}; $result };
         return $result;
     };
     $main__void = sub {
@@ -121,9 +121,9 @@ my $run_pixel = sub {
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $color = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         $rgb = $srgbToLinear__vec3->($rt->swizzle($color, 'rgb'));
-        @{$rgb} = map { $rt->f32($_) } @{($applyWheels__vec3_vec3_vec3_vec3_float->($rgb, $_u_wheelShadows, $_u_wheelMidtones, $_u_wheelHighlights, $_u_wheelBalance))};
-        @{$rgb} = map { $rt->f32($_) } @{($linearToSrgb__vec3->($rt->component_wise('max', $rgb, $rt->construct(3, $rt->f(0)))))};
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rgb, $rt->swizzle($color, 'a')))};
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($applyWheels__vec3_vec3_vec3_vec3_float->($rgb, $_u_wheelShadows, $_u_wheelMidtones, $_u_wheelHighlights, $_u_wheelBalance))}; $rgb };
+        scalar do { @{$rgb} = map { $rt->f32($_) } @{($linearToSrgb__vec3->($rt->component_wise('max', $rgb, $rt->construct(3, $rt->f(0)))))}; $rgb };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rgb, $rt->swizzle($color, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -14,8 +14,8 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($texSize, $uv);
         $texSize = $rt->texture_size($_u_srcTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_srcTex, $uv))};
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize))));
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_srcTex, $uv))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

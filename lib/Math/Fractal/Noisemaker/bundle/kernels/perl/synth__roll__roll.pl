@@ -24,13 +24,13 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($_for0_first, $brightness, $channel, $col, $dk, $edgeWidth, $globalCoord, $gridUv, $k, $key, $keyExact, $keyFrac, $keyLow, $keyRange, $keysPerPixel, $laneEdge, $laneF, $laneLocal, $lanePixels, $laneSep, $maxVel, $noteData, $noteVal, $prev, $prevBright, $scrollAmount, $scrollUv, $spread, $uv);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
         $scrollAmount = $rt->binary('*', $rt->binary('*', $_u_speed, $_u_deltaTime, 1, 'float'), $rt->f(0.5), 1, 'float');
         $scrollUv = $rt->construct(2, $rt->binary('-', $rt->swizzle($uv, 'x'), $scrollAmount, 1, 'float'), $rt->swizzle($uv, 'y'));
         $prev = $rt->construct(4, $rt->f(0));
         if ($rt->binary('>=', $rt->swizzle($scrollUv, 'x'), $rt->f(0))) {
-            @{$prev} = map { $rt->f32($_) } @{($rt->texture($_u_feedbackTex, $scrollUv))};
-            @{$prev} = map { $rt->f32($_) } @{($rt->binary('*', $prev, $rt->f(0.997), 4, 'float'))};
+            scalar do { @{$prev} = map { $rt->f32($_) } @{($rt->texture($_u_feedbackTex, $scrollUv))}; $prev };
+            scalar do { @{$prev} = map { $rt->f32($_) } @{($rt->binary('*', $prev, $rt->f(0.997), 4, 'float'))}; $prev };
         }
         $laneF = $rt->binary('*', $rt->swizzle($uv, 'y'), $rt->f(16), 1, 'float');
         $channel = $rt->construct(1, $rt->component_wise('floor', $laneF), 'int');
@@ -42,7 +42,7 @@ my $run_pixel = sub {
         $keyFrac = $rt->component_wise('fract', $keyExact);
         $maxVel = $rt->f(0);
         $lanePixels = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'y'), $rt->f(16), 1, 'float');
-        $keysPerPixel = $rt->binary('/', $rt->construct(1, $keyRange), $lanePixels, 1, 'float');
+        $keysPerPixel = $rt->metal_divide($rt->construct(1, $keyRange), $lanePixels);
         $spread = $rt->component_wise('max', $rt->i(1), $rt->construct(1, $rt->component_wise('ceil', $keysPerPixel), 'int'));
         $dk = $rt->unary('-', $spread);
         $_for0_first = 1;
@@ -61,7 +61,7 @@ my $run_pixel = sub {
                 $maxVel = $rt->component_wise('max', $maxVel, $rt->swizzle($noteData, 'r'));
             }
         }
-        $edgeWidth = $rt->binary('/', $rt->f(4), $rt->swizzle($_u_fullResolution, 'x'), 1, 'float');
+        $edgeWidth = $rt->metal_divide($rt->f(4), $rt->swizzle($_u_fullResolution, 'x'));
         $noteVal = $rt->f(0);
         if ((($rt->binary('<', $rt->swizzle($uv, 'x'), $edgeWidth)) && ($rt->binary('>', $maxVel, $rt->f(0))) ? 1 : 0)) {
             $noteVal = $rt->binary('*', $maxVel, $_u_gain, 1, 'float');
@@ -74,7 +74,7 @@ my $run_pixel = sub {
         $prevBright = $rt->component_wise('max', $rt->swizzle($prev, 'r'), $rt->component_wise('max', $rt->swizzle($prev, 'g'), $rt->swizzle($prev, 'b')));
         $brightness = $rt->component_wise('max', $prevBright, $rt->component_wise('max', $noteVal, $laneSep));
         $col = $rt->construct(3, $rt->binary('*', $_u_lineColor, $brightness, 3, 'float'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $col, $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $col, $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

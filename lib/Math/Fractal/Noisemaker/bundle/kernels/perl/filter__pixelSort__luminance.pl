@@ -36,7 +36,7 @@ my $run_pixel = sub {
         $size = $rt->texture_size($_u_inputTex);
         $texel = $rt->texel_fetch($_u_inputTex, $coord, $rt->i(0));
         $lum = $oklab_l__vec3->($rt->swizzle($texel, 'rgb'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $lum, $rt->binary('/', $rt->construct(1, $rt->swizzle($coord, 'x')), $rt->construct(1, $rt->binary('-', $rt->swizzle($size, 'x'), $rt->i(1), 1, 'int')), 1, 'float'), $rt->f(0), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $lum, $rt->metal_divide($rt->construct(1, $rt->swizzle($coord, 'x')), $rt->construct(1, $rt->binary('-', $rt->swizzle($size, 'x'), $rt->i(1), 1, 'int'))), $rt->f(0), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

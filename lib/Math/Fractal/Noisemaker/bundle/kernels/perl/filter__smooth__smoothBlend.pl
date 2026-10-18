@@ -130,7 +130,7 @@ my $run_pixel = sub {
                 last;
             }
             $offset = $rt->construct(2, $rt->binary('*', $getSampleOffset__int_int->($i, $count), $_u_radius, 2, 'float'));
-            @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $sampleBilinear__vec2_ivec2->($rt->construct(2, $rt->binary('+', $uv, $rt->binary('*', $offset, $texelSize, 2, 'float'), 2, 'float')), $texSize), 4, 'float'))};
+            scalar do { @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $sampleBilinear__vec2_ivec2->($rt->construct(2, $rt->binary('+', $uv, $rt->binary('*', $offset, $texelSize, 2, 'float'), 2, 'float')), $texSize), 4, 'float'))}; $sum };
         }
         return $rt->construct(4, $rt->binary('/', $sum, $rt->construct(1, $count), 4, 'float'));
     };
@@ -186,7 +186,7 @@ my $run_pixel = sub {
             $edgeLength = $rt->binary('+', $rt->binary('+', $distLeft, $distRight, 1, 'float'), $rt->f(1), 1, 'float');
             $weight = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('*', $_u_radius, $rt->f(0.5), 1, 'float'), $rt->component_wise('sqrt', $edgeLength), 1, 'float'), $rt->f(0), $rt->f(0.5));
             $neighbor = $rt->texel_fetch($_u_inputTex, $rt->component_wise('clamp', $rt->binary('+', $coord, $rt->construct(2, $rt->i(0), $rt->i(1), 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $maxC), $rt->i(0));
-            @{$blended} = map { $rt->f32($_) } @{($rt->component_wise('mix', $blended, $neighbor, $weight))};
+            scalar do { @{$blended} = map { $rt->f32($_) } @{($rt->component_wise('mix', $blended, $neighbor, $weight))}; $blended };
         }
         $distDown = $rt->f(0.0);
         $distUp = $rt->f(0.0);
@@ -196,7 +196,7 @@ my $run_pixel = sub {
             $edgeLength = $rt->binary('+', $rt->binary('+', $distUp, $distDown, 1, 'float'), $rt->f(1), 1, 'float');
             $weight = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('*', $_u_radius, $rt->f(0.5), 1, 'float'), $rt->component_wise('sqrt', $edgeLength), 1, 'float'), $rt->f(0), $rt->f(0.5));
             $neighbor = $rt->texel_fetch($_u_inputTex, $rt->component_wise('clamp', $rt->binary('+', $coord, $rt->construct(2, $rt->i(1), $rt->i(0), 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $maxC), $rt->i(0));
-            @{$blended} = map { $rt->f32($_) } @{($rt->component_wise('mix', $blended, $neighbor, $weight))};
+            scalar do { @{$blended} = map { $rt->f32($_) } @{($rt->component_wise('mix', $blended, $neighbor, $weight))}; $blended };
         }
         return $blended;
     };
@@ -244,7 +244,7 @@ my $run_pixel = sub {
                 }
                 $d = $rt->construct(1, $rt->binary('+', $rt->binary('*', $dx, $dx, 1, 'int'), $rt->binary('*', $dy, $dy, 1, 'int'), 1, 'int'));
                 $w = $rt->component_wise('exp', $rt->binary('/', $rt->unary('-', $d), $sigma2, 1, 'float'));
-                @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->construct(4, $rt->binary('*', $rt->texel_fetch($_u_inputTex, $rt->component_wise('clamp', $rt->binary('+', $coord, $rt->construct(2, $dx, $dy, 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $maxC), $rt->i(0)), $w, 4, 'float')), 4, 'float'))};
+                scalar do { @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->construct(4, $rt->binary('*', $rt->texel_fetch($_u_inputTex, $rt->component_wise('clamp', $rt->binary('+', $coord, $rt->construct(2, $dx, $dy, 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $maxC), $rt->i(0)), $w, 4, 'float')), 4, 'float'))}; $sum };
                 $totalWeight = $rt->binary('+', $totalWeight, $w, 1, 'float');
             }
         }
@@ -254,20 +254,20 @@ my $run_pixel = sub {
         my ($globalCoord, $original, $result, $texSize, $texelSize, $uv);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
-        $texelSize = $rt->construct(2, $rt->binary('/', $rt->f(1), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize))));
+        $texelSize = $rt->construct(2, $rt->metal_divide($rt->f(1), $rt->construct_raw(2, $rt->construct(2, $texSize))));
         $original = $rt->texel_fetch($_u_inputTex, $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int'), $rt->i(0));
         $result = $rt->construct(4, 0.0);
         if ($rt->binary('==', $_u_smoothType, $rt->i(0))) {
-            @{$result} = map { $rt->f32($_) } @{($msaaBlend__vec2_vec2_ivec2->($uv, $texelSize, $texSize))};
+            scalar do { @{$result} = map { $rt->f32($_) } @{($msaaBlend__vec2_vec2_ivec2->($uv, $texelSize, $texSize))}; $result };
         } else {
             if ($rt->binary('==', $_u_smoothType, $rt->i(1))) {
-                @{$result} = map { $rt->f32($_) } @{($smaaBlend__ivec2->($texSize))};
+                scalar do { @{$result} = map { $rt->f32($_) } @{($smaaBlend__ivec2->($texSize))}; $result };
             } else {
-                @{$result} = map { $rt->f32($_) } @{($edgeBlur__ivec2->($texSize))};
+                scalar do { @{$result} = map { $rt->f32($_) } @{($edgeBlur__ivec2->($texSize))}; $result };
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('mix', $original, $result, $_u_strength))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('mix', $original, $result, $_u_strength))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

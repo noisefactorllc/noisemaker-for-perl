@@ -38,21 +38,21 @@ my $run_pixel = sub {
         $m = $rt->binary('-', $v, $c, 1, 'float');
         $rgb = $rt->construct(3, 0.0);
         if ($rt->binary('<', $h, $rt->binary('/', $rt->f(1), $rt->f(6), 1, 'float'))) {
-            @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $c, $x, $rt->f(0)))};
+            scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $c, $x, $rt->f(0)))}; $rgb };
         } else {
             if ($rt->binary('<', $h, $rt->binary('/', $rt->f(2), $rt->f(6), 1, 'float'))) {
-                @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $x, $c, $rt->f(0)))};
+                scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $x, $c, $rt->f(0)))}; $rgb };
             } else {
                 if ($rt->binary('<', $h, $rt->binary('/', $rt->f(3), $rt->f(6), 1, 'float'))) {
-                    @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $c, $x))};
+                    scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $c, $x))}; $rgb };
                 } else {
                     if ($rt->binary('<', $h, $rt->binary('/', $rt->f(4), $rt->f(6), 1, 'float'))) {
-                        @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $x, $c))};
+                        scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $rt->f(0), $x, $c))}; $rgb };
                     } else {
                         if ($rt->binary('<', $h, $rt->binary('/', $rt->f(5), $rt->f(6), 1, 'float'))) {
-                            @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $x, $rt->f(0), $c))};
+                            scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $x, $rt->f(0), $c))}; $rgb };
                         } else {
-                            @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $c, $rt->f(0), $x))};
+                            scalar do { @{$rgb} = map { $rt->f32($_) } @{($rt->construct(3, $c, $rt->f(0), $x))}; $rgb };
                         }
                     }
                 }
@@ -119,9 +119,9 @@ my $run_pixel = sub {
         my ($C, $H, $L, $a, $b, $color, $contrastFactor, $globalCoord, $hsv, $texSize, $uv);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize))));
         $color = $rt->texture($_u_inputTex, $uv);
-        $color = $rt->assign_swizzle($color, 'rgb', (($rt->binary('>', $rt->swizzle($color, 'a'), $rt->f(0))) ? ($rt->binary('/', $rt->swizzle($color, 'rgb'), $rt->swizzle($color, 'a'), 3, 'float')) : ($rt->construct(3, $rt->f(0)))));
+        $color = $rt->assign_swizzle($color, 'rgb', (($rt->binary('>', $rt->swizzle($color, 'a'), $rt->f(0))) ? ($rt->metal_divide($rt->swizzle($color, 'rgb'), $rt->swizzle($color, 'a'))) : ($rt->construct(3, $rt->f(0)))));
         $C = $rt->f(0.0);
         $H = $rt->f(0.0);
         $L = $rt->f(0.0);
@@ -154,7 +154,7 @@ my $run_pixel = sub {
         $color = $rt->assign_swizzle($color, 'rgb', $rt->binary('*', $rt->swizzle($color, 'rgb'), $_u_brightness, 3, 'float'));
         $contrastFactor = $rt->binary('*', $_u_contrast, $rt->f(2), 1, 'float');
         $color = $rt->assign_swizzle($color, 'rgb', $rt->binary('+', $rt->binary('*', $rt->binary('-', $rt->swizzle($color, 'rgb'), $rt->f(0.5), 3, 'float'), $contrastFactor, 3, 'float'), $rt->f(0.5), 3, 'float'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rt->swizzle($color, 'rgb'), $rt->swizzle($color, 'a'), 3, 'float'), $rt->swizzle($color, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rt->swizzle($color, 'rgb'), $rt->swizzle($color, 'a'), 3, 'float'), $rt->swizzle($color, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

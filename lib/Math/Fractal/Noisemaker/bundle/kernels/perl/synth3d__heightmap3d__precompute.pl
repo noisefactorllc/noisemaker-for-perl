@@ -43,18 +43,18 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($atlas, $color, $normal, $occupied, $p);
         $atlas = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
-        $p = $rt->construct(3, $rt->swizzle($atlas, 'x'), $rt->binary('%', $rt->swizzle($atlas, 'y'), $_u_volumeSize, 1, 'int'), $rt->binary('/', $rt->swizzle($atlas, 'y'), $_u_volumeSize, 1, 'int'), 'int');
+        $p = $rt->construct(3, $rt->swizzle($atlas, 'x'), $rt->binary('%', $rt->swizzle($atlas, 'y'), $_u_volumeSize, 1, 'int'), $rt->binary('/', $rt->swizzle($atlas, 'y'), $_u_volumeSize, 1, 'float'), 'int');
         $occupied = $density__ivec3->($p);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
-        @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(1), $rt->f(0.5), $rt->f(0)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
+        scalar do { @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0.5), $rt->f(1), $rt->f(0.5), $rt->f(0)))}; $g->{geoOut} };
         if ($rt->binary('==', $occupied, $rt->f(0))) {
             return;
         }
         $color = $rt->swizzle($rt->texel_fetch($_u_tex, $imageTexel__ivec2_ivec2->($rt->swizzle($p, 'xz'), $rt->texture_size($_u_tex)), $rt->i(0)), 'rgb');
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $occupied))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $color, $occupied))}; $g->{fragColor} };
         $normal = $rt->construct(3, $rt->binary('-', $density__ivec3->($rt->binary('-', $p, $rt->construct(3, $rt->i(1), $rt->i(0), $rt->i(0), 'int'), 3, 'int')), $density__ivec3->($rt->binary('+', $p, $rt->construct(3, $rt->i(1), $rt->i(0), $rt->i(0), 'int'), 3, 'int')), 1, 'float'), $rt->binary('-', $density__ivec3->($rt->binary('-', $p, $rt->construct(3, $rt->i(0), $rt->i(1), $rt->i(0), 'int'), 3, 'int')), $density__ivec3->($rt->binary('+', $p, $rt->construct(3, $rt->i(0), $rt->i(1), $rt->i(0), 'int'), 3, 'int')), 1, 'float'), $rt->binary('-', $density__ivec3->($rt->binary('-', $p, $rt->construct(3, $rt->i(0), $rt->i(0), $rt->i(1), 'int'), 3, 'int')), $density__ivec3->($rt->binary('+', $p, $rt->construct(3, $rt->i(0), $rt->i(0), $rt->i(1), 'int'), 3, 'int')), 1, 'float'));
-        @{$normal} = map { $rt->f32($_) } @{((($rt->binary('>', $rt->dot($normal, $normal), $rt->f(0))) ? ($rt->normalize($normal)) : ($rt->construct(3, $rt->f(0), $rt->f(1), $rt->f(0)))))};
-        @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->binary('*', $normal, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'), $occupied))};
+        scalar do { @{$normal} = map { $rt->f32($_) } @{((($rt->binary('>', $rt->dot($normal, $normal), $rt->f(0))) ? ($rt->normalize($normal)) : ($rt->construct(3, $rt->f(0), $rt->f(1), $rt->f(0)))))}; $normal };
+        scalar do { @{$g->{geoOut}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $rt->binary('*', $normal, $rt->f(0.5), 3, 'float'), $rt->f(0.5), 3, 'float'), $occupied))}; $g->{geoOut} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

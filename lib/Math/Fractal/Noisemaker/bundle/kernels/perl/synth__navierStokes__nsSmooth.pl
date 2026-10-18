@@ -68,7 +68,7 @@ my $run_pixel = sub {
         $texSize = $rt->texture_size($_u_canvasTex);
         $minIdx = $rt->construct(2, $rt->i(0), 'int');
         $maxIdx = $rt->binary('-', $texSize, $rt->construct(2, $rt->i(1), 'int'), 2, 'int');
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $texelPos = $rt->construct(2, $rt->binary('-', $rt->binary('*', $uv, $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'), $rt->construct_raw(2, $rt->f(0.5)), 2, 'float'));
         $baseI = $rt->construct(2, $rt->component_wise('floor', $texelPos), 'int');
         $f = $rt->component_wise('fract', $texelPos);
@@ -88,7 +88,7 @@ my $run_pixel = sub {
         $w = $rt->construct(2, 0.0);
         if ($rt->binary('==', $_u_smoothing, $rt->i(0))) {
             $idx = $rt->component_wise('clamp', $rt->construct(2, $rt->component_wise('floor', $rt->binary('+', $texelPos, $rt->f(0.5), 2, 'float')), 'int'), $minIdx, $maxIdx);
-            @{$sampled} = map { $rt->f32($_) } @{($rt->texel_fetch($_u_canvasTex, $idx, $rt->i(0)))};
+            scalar do { @{$sampled} = map { $rt->f32($_) } @{($rt->texel_fetch($_u_canvasTex, $idx, $rt->i(0)))}; $sampled };
         } else {
             if ($rt->binary('==', $_u_smoothing, $rt->i(2))) {
                 $v00 = $fetchTex__ivec2_ivec2_ivec2->($baseI, $minIdx, $maxIdx);
@@ -98,7 +98,7 @@ my $run_pixel = sub {
                 $w = $rt->component_wise('smoothstep', $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->f(1)), $f);
                 $v0 = $rt->component_wise('mix', $v00, $v10, $rt->swizzle($w, 'x'));
                 $v1 = $rt->component_wise('mix', $v01, $v11, $rt->swizzle($w, 'x'));
-                @{$sampled} = map { $rt->f32($_) } @{($rt->component_wise('mix', $v0, $v1, $rt->swizzle($w, 'y')))};
+                scalar do { @{$sampled} = map { $rt->f32($_) } @{($rt->component_wise('mix', $v0, $v1, $rt->swizzle($w, 'y')))}; $sampled };
             } else {
                 if ($rt->binary('==', $_u_smoothing, $rt->i(3))) {
                     $p = $rt->new_array($rt->i(9), 4);
@@ -122,13 +122,13 @@ my $run_pixel = sub {
                             if (!($rt->binary('<', $i, $rt->i(3)))) {
                                 last;
                             }
-                            @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(3), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))};
+                            scalar do { @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(3), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))}; $p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(3), 1, 'int'), $i, 1, 'int'))] };
                         }
                     }
                     $r0 = $catmull3v__vec4_vec4_vec4_float->($p->[int($rt->i(0))], $p->[int($rt->i(1))], $p->[int($rt->i(2))], $rt->swizzle($f, 'x'));
                     $r1 = $catmull3v__vec4_vec4_vec4_float->($p->[int($rt->i(3))], $p->[int($rt->i(4))], $p->[int($rt->i(5))], $rt->swizzle($f, 'x'));
                     $r2 = $catmull3v__vec4_vec4_vec4_float->($p->[int($rt->i(6))], $p->[int($rt->i(7))], $p->[int($rt->i(8))], $rt->swizzle($f, 'x'));
-                    @{$sampled} = map { $rt->f32($_) } @{($catmull3v__vec4_vec4_vec4_float->($r0, $r1, $r2, $rt->swizzle($f, 'y')))};
+                    scalar do { @{$sampled} = map { $rt->f32($_) } @{($catmull3v__vec4_vec4_vec4_float->($r0, $r1, $r2, $rt->swizzle($f, 'y')))}; $sampled };
                 } else {
                     if ($rt->binary('==', $_u_smoothing, $rt->i(4))) {
                         $p = $rt->new_array($rt->i(16), 4);
@@ -152,14 +152,14 @@ my $run_pixel = sub {
                                 if (!($rt->binary('<', $i, $rt->i(4)))) {
                                     last;
                                 }
-                                @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(4), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))};
+                                scalar do { @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(4), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))}; $p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(4), 1, 'int'), $i, 1, 'int'))] };
                             }
                         }
                         $r0 = $catmull4v__vec4_vec4_vec4_vec4_float->($p->[int($rt->i(0))], $p->[int($rt->i(1))], $p->[int($rt->i(2))], $p->[int($rt->i(3))], $rt->swizzle($f, 'x'));
                         $r1 = $catmull4v__vec4_vec4_vec4_vec4_float->($p->[int($rt->i(4))], $p->[int($rt->i(5))], $p->[int($rt->i(6))], $p->[int($rt->i(7))], $rt->swizzle($f, 'x'));
                         $r2 = $catmull4v__vec4_vec4_vec4_vec4_float->($p->[int($rt->i(8))], $p->[int($rt->i(9))], $p->[int($rt->i(10))], $p->[int($rt->i(11))], $rt->swizzle($f, 'x'));
                         $r3 = $catmull4v__vec4_vec4_vec4_vec4_float->($p->[int($rt->i(12))], $p->[int($rt->i(13))], $p->[int($rt->i(14))], $p->[int($rt->i(15))], $rt->swizzle($f, 'x'));
-                        @{$sampled} = map { $rt->f32($_) } @{($catmull4v__vec4_vec4_vec4_vec4_float->($r0, $r1, $r2, $r3, $rt->swizzle($f, 'y')))};
+                        scalar do { @{$sampled} = map { $rt->f32($_) } @{($catmull4v__vec4_vec4_vec4_vec4_float->($r0, $r1, $r2, $r3, $rt->swizzle($f, 'y')))}; $sampled };
                     } else {
                         if ($rt->binary('==', $_u_smoothing, $rt->i(5))) {
                             $p = $rt->new_array($rt->i(9), 4);
@@ -183,13 +183,13 @@ my $run_pixel = sub {
                                     if (!($rt->binary('<', $i, $rt->i(3)))) {
                                         last;
                                     }
-                                    @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(3), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))};
+                                    scalar do { @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(3), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))}; $p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(3), 1, 'int'), $i, 1, 'int'))] };
                                 }
                             }
                             $r0 = $quad3v__vec4_vec4_vec4_float->($p->[int($rt->i(0))], $p->[int($rt->i(1))], $p->[int($rt->i(2))], $rt->swizzle($f, 'x'));
                             $r1 = $quad3v__vec4_vec4_vec4_float->($p->[int($rt->i(3))], $p->[int($rt->i(4))], $p->[int($rt->i(5))], $rt->swizzle($f, 'x'));
                             $r2 = $quad3v__vec4_vec4_vec4_float->($p->[int($rt->i(6))], $p->[int($rt->i(7))], $p->[int($rt->i(8))], $rt->swizzle($f, 'x'));
-                            @{$sampled} = map { $rt->f32($_) } @{($quad3v__vec4_vec4_vec4_float->($r0, $r1, $r2, $rt->swizzle($f, 'y')))};
+                            scalar do { @{$sampled} = map { $rt->f32($_) } @{($quad3v__vec4_vec4_vec4_float->($r0, $r1, $r2, $rt->swizzle($f, 'y')))}; $sampled };
                         } else {
                             if ($rt->binary('==', $_u_smoothing, $rt->i(6))) {
                                 $p = $rt->new_array($rt->i(16), 4);
@@ -213,14 +213,14 @@ my $run_pixel = sub {
                                         if (!($rt->binary('<', $i, $rt->i(4)))) {
                                             last;
                                         }
-                                        @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(4), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))};
+                                        scalar do { @{$p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(4), 1, 'int'), $i, 1, 'int'))]} = map { $rt->f32($_) } @{($fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->binary('-', $i, $rt->i(1), 1, 'int'), $rt->binary('-', $j, $rt->i(1), 1, 'int'), 'int'), 2, 'int'), $minIdx, $maxIdx))}; $p->[int($rt->binary('+', $rt->binary('*', $j, $rt->i(4), 1, 'int'), $i, 1, 'int'))] };
                                     }
                                 }
                                 $r0 = $bicubic4v__vec4_vec4_vec4_vec4_float->($p->[int($rt->i(0))], $p->[int($rt->i(1))], $p->[int($rt->i(2))], $p->[int($rt->i(3))], $rt->swizzle($f, 'x'));
                                 $r1 = $bicubic4v__vec4_vec4_vec4_vec4_float->($p->[int($rt->i(4))], $p->[int($rt->i(5))], $p->[int($rt->i(6))], $p->[int($rt->i(7))], $rt->swizzle($f, 'x'));
                                 $r2 = $bicubic4v__vec4_vec4_vec4_vec4_float->($p->[int($rt->i(8))], $p->[int($rt->i(9))], $p->[int($rt->i(10))], $p->[int($rt->i(11))], $rt->swizzle($f, 'x'));
                                 $r3 = $bicubic4v__vec4_vec4_vec4_vec4_float->($p->[int($rt->i(12))], $p->[int($rt->i(13))], $p->[int($rt->i(14))], $p->[int($rt->i(15))], $rt->swizzle($f, 'x'));
-                                @{$sampled} = map { $rt->f32($_) } @{($bicubic4v__vec4_vec4_vec4_vec4_float->($r0, $r1, $r2, $r3, $rt->swizzle($f, 'y')))};
+                                scalar do { @{$sampled} = map { $rt->f32($_) } @{($bicubic4v__vec4_vec4_vec4_vec4_float->($r0, $r1, $r2, $r3, $rt->swizzle($f, 'y')))}; $sampled };
                             } else {
                                 $v00 = $fetchTex__ivec2_ivec2_ivec2->($baseI, $minIdx, $maxIdx);
                                 $v10 = $fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->i(1), $rt->i(0), 'int'), 2, 'int'), $minIdx, $maxIdx);
@@ -228,14 +228,14 @@ my $run_pixel = sub {
                                 $v11 = $fetchTex__ivec2_ivec2_ivec2->($rt->binary('+', $baseI, $rt->construct(2, $rt->i(1), $rt->i(1), 'int'), 2, 'int'), $minIdx, $maxIdx);
                                 $v0 = $rt->component_wise('mix', $v00, $v10, $rt->swizzle($f, 'x'));
                                 $v1 = $rt->component_wise('mix', $v01, $v11, $rt->swizzle($f, 'x'));
-                                @{$sampled} = map { $rt->f32($_) } @{($rt->component_wise('mix', $v0, $v1, $rt->swizzle($f, 'y')))};
+                                scalar do { @{$sampled} = map { $rt->f32($_) } @{($rt->component_wise('mix', $v0, $v1, $rt->swizzle($f, 'y')))}; $sampled };
                             }
                         }
                     }
                 }
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($sampled)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($sampled)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -23,7 +23,7 @@ my $run_pixel = sub {
         $p = $rt->copy($p, 'float');
         my ($p3);
         $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
-        @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))};
+        scalar do { @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))}; $p3 };
         return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
     };
     $rotateAround__vec2_vec2_float_float = sub {
@@ -35,19 +35,19 @@ my $run_pixel = sub {
         $p = $rt->assign_swizzle($p, 'x', $rt->binary('*', $rt->swizzle($p, 'x'), $aspectRatio, 1, 'float'));
         $c = $rt->fresh($center);
         $c = $rt->assign_swizzle($c, 'x', $rt->binary('*', $rt->swizzle($c, 'x'), $aspectRatio, 1, 'float'));
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('-', $p, $c, 2, 'float'))};
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('-', $p, $c, 2, 'float'))}; $p };
         $s = $rt->component_wise('sin', $angle);
         $co = $rt->component_wise('cos', $angle);
-        @{$p} = map { $rt->f32($_) } @{($rt->matrix_mult($rt->construct(4, $co, $rt->unary('-', $s), $s, $co), $p, 2))};
-        @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $c, 2, 'float'))};
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->matrix_mult($rt->construct(4, $co, $rt->unary('-', $s), $s, $co), $p, 2))}; $p };
+        scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('+', $p, $c, 2, 'float'))}; $p };
         $p = $rt->assign_swizzle($p, 'x', $rt->binary('/', $rt->swizzle($p, 'x'), $aspectRatio, 1, 'float'));
         return $p;
     };
     $main__void = sub {
         my ($_for0_first, $angularStep, $arc, $aspectRatio, $center, $distorted, $globalCoord, $i, $jitter, $jitterCoord, $sampleUV, $sum, $theta, $uv);
-        $aspectRatio = $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'), 1, 'float');
+        $aspectRatio = $rt->metal_divide($rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_fullResolution, 'y'));
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->binary('/', $globalCoord, $_u_fullResolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_fullResolution));
         $center = $rt->construct(2, $_u_centerX, $_u_centerY);
         $arc = $rt->component_wise('radians', $_u_amount);
         $angularStep = $rt->binary('/', $arc, $rt->construct(1, $rt->binary('-', $g->{N}, $rt->i(1), 1, 'int')), 1, 'float');
@@ -66,10 +66,10 @@ my $run_pixel = sub {
             }
             $theta = $rt->binary('+', $rt->binary('*', $rt->binary('-', $rt->binary('/', $rt->construct(1, $i), $rt->construct(1, $rt->binary('-', $g->{N}, $rt->i(1), 1, 'int')), 1, 'float'), $rt->f(0.5), 1, 'float'), $arc, 1, 'float'), $jitter, 1, 'float');
             $distorted = $rt->component_wise('clamp', $rotateAround__vec2_vec2_float_float->($uv, $center, $theta, $aspectRatio), $rt->f(0), $rt->f(1));
-            $sampleUV = $rt->component_wise('clamp', $rt->binary('/', $rt->binary('-', $rt->binary('*', $distorted, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $_u_resolution, 2, 'float'), $rt->f(0), $rt->f(1));
-            @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->texture($_u_inputTex, $sampleUV), 4, 'float'))};
+            $sampleUV = $rt->component_wise('clamp', $rt->metal_divide($rt->binary('-', $rt->binary('*', $distorted, $_u_fullResolution, 2, 'float'), $_u_tileOffset, 2, 'float'), $_u_resolution), $rt->f(0), $rt->f(1));
+            scalar do { @{$sum} = map { $rt->f32($_) } @{($rt->binary('+', $sum, $rt->texture($_u_inputTex, $sampleUV), 4, 'float'))}; $sum };
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('/', $sum, $rt->construct(1, $g->{N}), 4, 'float'))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('/', $sum, $rt->construct(1, $g->{N}), 4, 'float'))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

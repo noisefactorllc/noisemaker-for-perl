@@ -25,7 +25,7 @@ my $run_pixel = sub {
         $overlay = $rt->texel_fetch($_u_overlayTex, $rt->component_wise('clamp', $coord, $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $overlaySize, $rt->i(1), 2, 'int')), $rt->i(0));
         $a = $rt->binary('*', $rt->swizzle($overlay, 'a'), $_u_alpha, 1, 'float');
         $result = $rt->construct(3, $rt->binary('+', $rt->binary('*', $rt->swizzle($base, 'rgb'), $rt->binary('-', $rt->f(1), $a, 1, 'float'), 3, 'float'), $rt->binary('*', $rt->swizzle($overlay, 'rgb'), $a, 3, 'float'), 3, 'float'));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($base, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($base, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

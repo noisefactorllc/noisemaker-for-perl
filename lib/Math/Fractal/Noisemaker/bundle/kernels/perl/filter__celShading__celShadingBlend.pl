@@ -21,13 +21,13 @@ my $run_pixel = sub {
         my ($celColor, $edgeStrength, $finalColor, $globalCoord, $origColor, $texSize, $uv);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
         $texSize = $rt->texture_size($_u_inputTex);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize)), 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct_raw(2, $rt->construct(2, $texSize))));
         $origColor = $rt->texture($_u_inputTex, $uv);
         $celColor = $rt->texture($_u_colorTex, $uv);
         $edgeStrength = $rt->swizzle($rt->texture($_u_edgeTex, $uv), 'r');
         $finalColor = $rt->component_wise('mix', $rt->swizzle($celColor, 'rgb'), $_u_edgeColor, $edgeStrength);
-        @{$finalColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rt->swizzle($origColor, 'rgb'), $finalColor, $_u_mixAmount))};
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $finalColor, $rt->swizzle($origColor, 'a')))};
+        scalar do { @{$finalColor} = map { $rt->f32($_) } @{($rt->component_wise('mix', $rt->swizzle($origColor, 'rgb'), $finalColor, $_u_mixAmount))}; $finalColor };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $finalColor, $rt->swizzle($origColor, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

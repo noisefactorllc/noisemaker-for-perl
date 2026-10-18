@@ -31,12 +31,12 @@ my $run_pixel = sub {
     };
     $main__void = sub {
         my ($decay, $trailColor, $uv);
-        $uv = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $trailColor = $rt->texture($_u_trailTex, $uv);
         $decay = $rt->component_wise('clamp', $rt->binary('/', $_u_intensity, $rt->f(100), 1, 'float'), $rt->f(0), $rt->f(1));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('*', $trailColor, $decay, 4, 'float'), $rt->f(0), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $rt->binary('*', $trailColor, $decay, 4, 'float'), $rt->f(0), $rt->f(1)))}; $g->{fragColor} };
         if ((((($rt->binary('==', $_u_blendMode, $rt->i(0))) && ($rt->binary('>', $_u_aperture, $rt->f(0))) ? 1 : 0)) && ($rt->binary('!=', $_u_viewMode, $rt->i(0))) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('+', $g->{fragColor}, $sampleDefocus__vec2->($uv), 4, 'float'))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('+', $g->{fragColor}, $sampleDefocus__vec2->($uv), 4, 'float'))}; $g->{fragColor} };
         }
     };
     $main__void->();

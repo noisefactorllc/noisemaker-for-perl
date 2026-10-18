@@ -17,7 +17,7 @@ my $run_pixel = sub {
     $g->{fragColor} = $rt->construct(4, 0.0);
     $main__void = sub {
         my ($a, $accum, $blended, $i, $inputColor, $result, $st);
-        $st = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution, 2, 'float'));
+        $st = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         $inputColor = $rt->texture($_u_inputTex, $st);
         $accum = $rt->texture($_u_accumTex, $st);
         $a = $rt->binary('/', $_u_alpha, $rt->f(100), 1, 'float');
@@ -25,7 +25,7 @@ my $run_pixel = sub {
         $blended = $rt->component_wise('max', $inputColor, $rt->binary('*', $accum, $i, 4, 'float'));
         $result = $rt->component_wise('mix', $inputColor, $blended, $a);
         $result = $rt->assign_swizzle($result, 'a', $rt->component_wise('max', $rt->swizzle($inputColor, 'a'), $rt->swizzle($accum, 'a')));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($result)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($result)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

@@ -23,7 +23,7 @@ my $run_pixel = sub {
         $brightestXNorm = $rt->swizzle($rt->texel_fetch($_u_brightestTex, $rt->construct(2, $rt->i(0), $y, 'int'), $rt->i(0)), 'r');
         $brightestX = $rt->construct(1, $rt->component_wise('round', $rt->binary('*', $brightestXNorm, $rt->construct(1, $rt->binary('-', $width, $rt->i(1), 1, 'int')), 1, 'float')), 'int');
         $sortedIndex = $rt->binary('%', $rt->binary('+', $rt->binary('-', $x, $brightestX, 1, 'int'), $width, 1, 'int'), $width, 1, 'int');
-        $targetRank = $rt->binary('/', $rt->construct(1, $sortedIndex), $rt->construct(1, $rt->binary('-', $width, $rt->i(1), 1, 'int')), 1, 'float');
+        $targetRank = $rt->metal_divide($rt->construct(1, $sortedIndex), $rt->construct(1, $rt->binary('-', $width, $rt->i(1), 1, 'int')));
         $NUM_SAMPLES = $rt->i(64);
         $bestDiff = $rt->f(2);
         $bestX = $x;
@@ -37,7 +37,7 @@ my $run_pixel = sub {
             if (!($rt->binary('<', $s, $NUM_SAMPLES))) {
                 last;
             }
-            $sampleX = $rt->binary('/', $rt->binary('*', $s, $width, 1, 'int'), $NUM_SAMPLES, 1, 'int');
+            $sampleX = $rt->binary('/', $rt->binary('*', $s, $width, 1, 'int'), $NUM_SAMPLES, 1, 'float');
             $rankData = $rt->texel_fetch($_u_rankTex, $rt->construct(2, $sampleX, $y, 'int'), $rt->i(0));
             $pixelRank = $rt->swizzle($rankData, 'r');
             $diff = $rt->component_wise('abs', $rt->binary('-', $pixelRank, $targetRank, 1, 'float'));
@@ -47,7 +47,7 @@ my $run_pixel = sub {
             }
         }
         $result = $rt->texel_fetch($_u_preparedTex, $rt->construct(2, $bestX, $y, 'int'), $rt->i(0));
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($result)};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($result)}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

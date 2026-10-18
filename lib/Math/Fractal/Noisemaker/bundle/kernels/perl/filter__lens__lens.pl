@@ -23,9 +23,9 @@ my $run_pixel = sub {
         $texSize = $rt->texture_size($_u_inputTex);
         $tileDims = $rt->construct(2, $texSize);
         $dims = $rt->construct(2, (($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) ? ($_u_fullResolution) : ($tileDims)));
-        $uv = $rt->construct(2, $rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $dims, 2, 'float'));
+        $uv = $rt->construct(2, $rt->metal_divide($rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $dims));
         $zoom = (($rt->binary('<', $_u_lensDisplacement, $rt->f(0))) ? ($rt->binary('*', $_u_lensDisplacement, $rt->unary('-', $rt->f(0.25)), 1, 'float')) : ($rt->f(0)));
-        $aspect = $rt->binary('/', $rt->swizzle($dims, 'x'), $rt->swizzle($dims, 'y'), 1, 'float');
+        $aspect = $rt->metal_divide($rt->swizzle($dims, 'x'), $rt->swizzle($dims, 'y'));
         $dist = $rt->construct(2, $rt->binary('-', $uv, $g->{HALF_FRAME}, 2, 'float'));
         $aDist = $rt->fresh($dist);
         if ($_u_aspectLens) {
@@ -33,7 +33,7 @@ my $run_pixel = sub {
         }
         $maxDist = $rt->length($rt->construct(2, (($_u_aspectLens) ? ($rt->binary('*', $aspect, $rt->f(0.5), 1, 'float')) : ($rt->f(0.5))), $rt->f(0.5)));
         $distFromCenter = $rt->length($aDist);
-        $normalizedDist = $rt->component_wise('clamp', $rt->binary('/', $distFromCenter, $maxDist, 1, 'float'), $rt->f(0), $rt->f(1));
+        $normalizedDist = $rt->component_wise('clamp', $rt->metal_divide($distFromCenter, $maxDist), $rt->f(0), $rt->f(1));
         $centerWeight = $rt->binary('-', $rt->f(1), $normalizedDist, 1, 'float');
         $centerWeightSq = $rt->binary('*', $centerWeight, $centerWeight, 1, 'float');
         $displacement = $rt->construct(2, $rt->binary('+', $rt->binary('*', $aDist, $zoom, 2, 'float'), $rt->binary('*', $rt->binary('*', $aDist, $centerWeightSq, 2, 'float'), $_u_lensDisplacement, 2, 'float'), 2, 'float'));
@@ -47,11 +47,11 @@ my $run_pixel = sub {
             $maxDispPixels = $rt->f(256);
             $dispPixels = $rt->length($rt->binary('*', $displacement, $dims, 2, 'float'));
             if ($rt->binary('>', $dispPixels, $maxDispPixels)) {
-                @{$displacement} = map { $rt->f32($_) } @{($rt->binary('*', $displacement, $rt->binary('/', $maxDispPixels, $dispPixels, 1, 'float'), 2, 'float'))};
+                scalar do { @{$displacement} = map { $rt->f32($_) } @{($rt->binary('*', $displacement, $rt->metal_divide($maxDispPixels, $dispPixels), 2, 'float'))}; $displacement };
             }
         }
         $warpedGlobalUV = $rt->construct(2, (($isTileRendering) ? ($rt->binary('-', $uv, $displacement, 2, 'float')) : ($rt->component_wise('fract', $rt->binary('-', $uv, $displacement, 2, 'float')))));
-        $offset = $rt->construct(2, $rt->binary('/', $rt->binary('-', $rt->binary('*', $warpedGlobalUV, $dims, 2, 'float'), $_u_tileOffset, 2, 'float'), $tileDims, 2, 'float'));
+        $offset = $rt->construct(2, $rt->metal_divide($rt->binary('-', $rt->binary('*', $warpedGlobalUV, $dims, 2, 'float'), $_u_tileOffset, 2, 'float'), $tileDims));
         $sampledUV = $rt->fresh($offset);
         $col = $rt->construct(4, 0.0);
         $dx = $rt->construct(2, 0.0);
@@ -60,13 +60,13 @@ my $run_pixel = sub {
             $dx = $rt->dFdx($sampledUV);
             $dy = $rt->dFdy($sampledUV);
             $col = $rt->construct(4, $rt->f(0));
-            @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $sampledUV, $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float')), 4, 'float'))};
-            @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $sampledUV, $rt->binary('*', $dx, $rt->f(0.125), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float')), 4, 'float'))};
-            @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $sampledUV, $rt->binary('*', $dx, $rt->f(0.375), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.125), 2, 'float'), 2, 'float')), 4, 'float'))};
-            @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $sampledUV, $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.375), 2, 'float'), 2, 'float')), 4, 'float'))};
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('*', $col, $rt->f(0.25), 4, 'float'))};
+            scalar do { @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $sampledUV, $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float')), 4, 'float'))}; $col };
+            scalar do { @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $sampledUV, $rt->binary('*', $dx, $rt->f(0.125), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->unary('-', $rt->f(0.375)), 2, 'float'), 2, 'float')), 4, 'float'))}; $col };
+            scalar do { @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $sampledUV, $rt->binary('*', $dx, $rt->f(0.375), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.125), 2, 'float'), 2, 'float')), 4, 'float'))}; $col };
+            scalar do { @{$col} = map { $rt->f32($_) } @{($rt->binary('+', $col, $rt->texture($_u_inputTex, $rt->binary('+', $rt->binary('+', $sampledUV, $rt->binary('*', $dx, $rt->unary('-', $rt->f(0.125)), 2, 'float'), 2, 'float'), $rt->binary('*', $dy, $rt->f(0.375), 2, 'float'), 2, 'float')), 4, 'float'))}; $col };
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->binary('*', $col, $rt->f(0.25), 4, 'float'))}; $g->{fragColor} };
         } else {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $sampledUV))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $sampledUV))}; $g->{fragColor} };
         }
     };
     $main__void->();

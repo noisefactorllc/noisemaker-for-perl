@@ -61,7 +61,7 @@ my $run_pixel = sub {
         $localX = $rt->binary('%', $rt->swizzle($fragCoord, 'x'), $g->{TILE_SIZE}, 1, 'int');
         $localY = $rt->binary('%', $rt->swizzle($fragCoord, 'y'), $g->{TILE_SIZE}, 1, 'int');
         if ((($rt->binary('!=', $localX, $rt->i(0))) || ($rt->binary('!=', $localY, $rt->i(0))) ? 1 : 0)) {
-            @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))};
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0)))}; $g->{fragColor} };
             return;
         }
         $texSize = $rt->texture_size($_u_inputTex);
@@ -102,7 +102,7 @@ my $run_pixel = sub {
                 $maxValue = $rt->component_wise('max', $maxValue, $value);
             }
         }
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $minValue, $maxValue, $rt->f(0), $rt->f(1)))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $minValue, $maxValue, $rt->f(0), $rt->f(1)))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

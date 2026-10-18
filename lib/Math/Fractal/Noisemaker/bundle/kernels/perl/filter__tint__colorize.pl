@@ -68,26 +68,26 @@ my $run_pixel = sub {
     $main__void = sub {
         my ($base, $base_hsv, $base_rgb, $globalCoord, $m, $rgb, $st, $tintHue, $tinted);
         $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $st = $rt->construct(2, $rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->component_wise('max', $rt->texture_size($_u_inputTex), $rt->construct(2, $rt->i(1), 'int'))), 2, 'float'));
+        $st = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $rt->construct(2, $rt->component_wise('max', $rt->texture_size($_u_inputTex), $rt->construct(2, $rt->i(1), 'int')))));
         $base = $rt->texture($_u_inputTex, $st);
-        $base_rgb = $rt->construct(3, (($rt->binary('>', $rt->swizzle($base, 'a'), $rt->f(0))) ? ($rt->component_wise('clamp', $rt->binary('/', $rt->swizzle($base, 'rgb'), $rt->swizzle($base, 'a'), 3, 'float'), $rt->f(0), $rt->f(1))) : ($rt->construct(3, $rt->f(0)))));
+        $base_rgb = $rt->construct(3, (($rt->binary('>', $rt->swizzle($base, 'a'), $rt->f(0))) ? ($rt->component_wise('clamp', $rt->metal_divide($rt->swizzle($base, 'rgb'), $rt->swizzle($base, 'a')), $rt->f(0), $rt->f(1))) : ($rt->construct(3, $rt->f(0)))));
         $m = $rt->construct(1, $_u_mode, 'int');
         $tinted = $rt->construct(3, 0.0);
         $base_hsv = $rt->construct(3, 0.0);
         $tintHue = $rt->f(0.0);
         if ($rt->binary('==', $m, $rt->i(1))) {
-            @{$tinted} = map { $rt->f32($_) } @{($rt->binary('*', $base_rgb, $_u_color, 3, 'float'))};
+            scalar do { @{$tinted} = map { $rt->f32($_) } @{($rt->binary('*', $base_rgb, $_u_color, 3, 'float'))}; $tinted };
         } else {
             if ($rt->binary('==', $m, $rt->i(2))) {
                 $tintHue = $rt->swizzle($rgb_to_hsv__vec3->($_u_color), 'x');
                 $base_hsv = $rgb_to_hsv__vec3->($base_rgb);
-                @{$tinted} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $hsv_to_rgb__vec3->($rt->construct(3, $tintHue, $rt->component_wise('clamp', $rt->swizzle($base_rgb, 'y'), $rt->f(0), $rt->f(1)), $rt->component_wise('clamp', $rt->swizzle($base_hsv, 'z'), $rt->f(0), $rt->f(1)))), $rt->f(0), $rt->f(1)))};
+                scalar do { @{$tinted} = map { $rt->f32($_) } @{($rt->component_wise('clamp', $hsv_to_rgb__vec3->($rt->construct(3, $tintHue, $rt->component_wise('clamp', $rt->swizzle($base_rgb, 'y'), $rt->f(0), $rt->f(1)), $rt->component_wise('clamp', $rt->swizzle($base_hsv, 'z'), $rt->f(0), $rt->f(1)))), $rt->f(0), $rt->f(1)))}; $tinted };
             } else {
-                @{$tinted} = map { $rt->f32($_) } @{($_u_color)};
+                scalar do { @{$tinted} = map { $rt->f32($_) } @{($_u_color)}; $tinted };
             }
         }
         $rgb = $rt->component_wise('mix', $base_rgb, $tinted, $_u_alpha);
-        @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rgb, $rt->swizzle($base, 'a'), 3, 'float'), $rt->swizzle($base, 'a')))};
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rgb, $rt->swizzle($base, 'a'), 3, 'float'), $rt->swizzle($base, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};
