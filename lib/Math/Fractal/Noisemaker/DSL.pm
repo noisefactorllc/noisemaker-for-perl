@@ -47,6 +47,10 @@ use Math::Fractal::Noisemaker::Automation qw(
 
 our @EXPORT_OK = qw(tokenize_dsl parse_dsl compile_dsl);
 
+my $_UNSUPPORTED_INPUT = bless {}, __PACKAGE__ . '::UnsupportedInput';
+sub _is_unsupported_input { ref($_[0]) eq __PACKAGE__ . '::UnsupportedInput' }
+
+
 # JSON-style string quoting for diagnostic text, matching Python json.dumps
 # (ascii mode mirrors ensure_ascii=True) so error messages stay byte-equal.
 my $_JSON_STR = JSON::PP->new->allow_nonref->ascii;
@@ -376,7 +380,7 @@ sub parse_call {
             my $is_named = $self->peek->{type} eq 'identifier' && $self->peek(1)->{lexeme} eq ':';
             my $next_mode = $is_named ? 'named' : 'positional';
             _throw('Cannot mix positional and named arguments', _location($self->peek))
-                if defined $mode && $mode ne $next_mode;
+                if defined $mode && $mode ne $next_mode && $name->{lexeme} !~ /\A(?:midi|audio)\z/;
             $mode = $next_mode;
             my $arg_name;
             if ($is_named) {
@@ -470,11 +474,8 @@ sub parse_value_primary {
     if ($token->{type} eq 'identifier') {
         $self->{current}++;
         my $name = $token->{lexeme};
-        # `osc(...)` is the one value-position call the DSL supports (oscillator
-        # automation, matching upstream's parser); it parses as a regular call and
-        # the compiler turns it into an Oscillator automation value. Every other
-        # call in a value position stays a parse error via the dangling "(".
-        if ($name eq 'osc' && $self->peek->{lexeme} eq '(') {
+        # MIDI/audio calls are parsed only for unsupported-input warnings.
+        if ($name =~ /\A(?:osc|midi|audio)\z/ && $self->peek->{lexeme} eq '(') {
             $self->{current}--;
             return $self->parse_call;
         }
@@ -608,6 +609,7 @@ sub _compile_oscillator {
         my ($node, $name, $fallback, $clamp) = @_;
         return $fallback unless defined $node;
         my $value = _evaluate_value($node, $bindings, $depth + 1);
+        return $fallback if _is_unsupported_input($value);
         return $value if is_automation_value($value);
         return $value if !ref $value && _is_number($value) && is_finite_number($value);
         _throw("osc() $name must be a number or a nested osc()", $loc);
@@ -641,6 +643,10 @@ sub _evaluate_value {
     my $kind = defined $value->{kind} ? $value->{kind} : '';
     if ($kind eq 'surface') { return $value }
     if ($kind eq 'Call') {
+        if ($value->{name} =~ /\A(?:midi|audio)\z/) {
+            warn "Warning: $value->{name}() is unsupported in CPU ports; real-time input is unavailable. Ignoring this unsupported input value.\n";
+            return $_UNSUPPORTED_INPUT;
+        }
         if ($value->{name} eq 'osc') { return _compile_oscillator($value, $bindings, $osc_depth) }
         _throw("Unsupported DSL value $kind \"$value->{name}\"", $value->{loc});
     }
@@ -753,6 +759,7 @@ sub _normalize_effect {
             _throw("Unknown parameter \"$bad\" for $effect_id; accepted: " . join(', ', @$param_names),
                 $arg->{loc});
         }
+        next if _is_unsupported_input($arg->{value});
         $provided{$supplied} = 1;
         my $pspec = $param_specs->{$supplied};
         if (ref $pspec eq 'HASH' && defined $pspec->{type} && $pspec->{type} eq 'surface') {
@@ -889,7 +896,7 @@ sub compile_dsl {
             if exists $bindings{ $binding->{name} };
         my $value = $binding->{value};
         if (ref $value eq 'HASH' && defined $value->{kind} && $value->{kind} eq 'Call'
-            && $value->{name} ne 'osc') {
+            && $value->{name} !~ /\A(?:osc|midi|audio)\z/) {
             $bindings{ $binding->{name} } = {
                 kind => 'partial',
                 call => { %$value, args => _resolve_args($value->{args}, \%bindings) },

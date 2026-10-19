@@ -238,4 +238,23 @@ sub dsl_error {
     is($bound->to_rgba8, $numeric->to_rgba8, 'a binding can hold an osc() value for reuse across steps');
 }
 
+for my $call ('midi(channel: 1, min: 0.8)', 'audio(band: audioBand.low, min: 0.8)') {
+    for my $binding (0, 1) {
+        my $prefix = $binding ? "let input = $call\n" : '';
+        my $value = $binding ? 'input' : $call;
+        my $warnings = '';
+        my $result;
+        {
+            local $SIG{__WARN__} = sub { $warnings .= $_[0] };
+            $result = render_dsl("search synth\n${prefix}noise(seed: 1, scaleX: $value).write(o0)\nrender(o0)",
+                width => 8, height => 8, seed => 1, time => 0.25);
+        }
+        like($warnings, qr/Warning: (midi|audio)\(\) is unsupported in CPU ports; real-time input is unavailable/,
+            'unsupported realtime input warns');
+        my $baseline = render_dsl("search synth\nnoise(seed: 1).write(o0)\nrender(o0)",
+            width => 8, height => 8, seed => 1, time => 0.25);
+        is($result->to_rgba8, $baseline->to_rgba8, 'unsupported input preserves the offline default');
+    }
+}
+
 done_testing();
