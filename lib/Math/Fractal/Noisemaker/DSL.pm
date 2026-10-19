@@ -62,8 +62,8 @@ sub _throw { Math::Fractal::Noisemaker::DSL::Error->throw(@_) }
 
 # ---- tokenizer (port of dsl/tokenizer.py tokenize_dsl) ----
 
-my %KEYWORDS    = map { $_ => 1 } qw(search let render true false);
-my %PUNCTUATION = map { $_ => 1 } split //, '()[],.:=;';
+my %KEYWORDS    = map { $_ => 1 } qw(search let render true false subchain);
+my %PUNCTUATION = map { $_ => 1 } split //, '(){}[],.:=;';
 my %OPERATORS   = map { $_ => 1 } split //, '+-*/';
 
 sub tokenize_dsl {
@@ -125,6 +125,19 @@ sub tokenize_dsl {
             _throw('Colors must use #RGB, #RRGGBB, or #RRGGBBAA', $location)
                 unless $len == 4 || $len == 7 || $len == 9;
             $push_tok->('color', $lexeme, $location, undef);
+            next;
+        }
+        if ($char eq '"' && $at->(1) eq '"' && $at->(2) eq '"') {
+            # A triple-quoted string may span lines. The lexer keeps its
+            # content raw, without escape processing, and the unparser
+            # writes a multi-line string in this form.
+            my $location = $start->();
+            my $search_start = $index + 3;
+            my $end = index($source, '"""', $search_start);
+            _throw('Unterminated string', $location) if $end < 0;
+            my $value = substr($source, $search_start, $end - $search_start);
+            while ($index < $end + 3) { $advance->() }
+            $push_tok->('string', $value, $location, $value);
             next;
         }
         if ($char eq '"') {
