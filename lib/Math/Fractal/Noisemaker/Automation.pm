@@ -6,12 +6,13 @@ package Math::Fractal::Noisemaker::Automation;
 # 0..1 loop time; this port resolves them per render in Renderer::_run_state_once
 # with the same `time` the canonical kernels receive as their `time` uniform.
 #
-# The upstream Midi/Audio automation nodes are not compiled by the DSL (value-position
-# calls other than osc() are rejected at compile time), so only the Oscillator branch
-# of upstream's evaluateAutomation is reachable here. The math below is a verbatim
-# port of the upstream oscillator evaluation, including the noise2d two-stage
-# periodic noise (speed applied once, after the first periodic wrap, matching the
-# osc2d shader).
+# The DSL also compiles upstream's `midi(...)` and `audio(...)` value calls into
+# Midi and Audio automation values. The CPU port has no live MIDI or audio input,
+# so they take upstream's no-input branch: evaluateMidi and evaluateAudio return
+# the resolved `min` field, and an invalid Audio value returns its literal `min`
+# (or 0). The math below is a verbatim port of the upstream oscillator evaluation,
+# including the noise2d two-stage periodic noise (speed applied once, after the
+# first periodic wrap, matching the osc2d shader).
 #
 # Float fidelity: JS numbers are float64 and `%` follows the dividend's sign, so
 # every JS remainder is POSIX::fmod and every Math.* call maps to its libc
@@ -92,7 +93,7 @@ sub is_automation_value {
     return 0 unless ref $value eq 'HASH';
     my $type = $value->{type};
     return 0 if ref $type;
-    return defined $type && $type eq 'Oscillator' ? 1 : 0;
+    return defined $type && ($type eq 'Oscillator' || $type eq 'Midi' || $type eq 'Audio') ? 1 : 0;
 }
 
 sub is_finite_number {
@@ -101,6 +102,15 @@ sub is_finite_number {
     return 0 if !defined $value || ref $value;
     return 0 unless looks_like_number($value);
     return POSIX::isfinite(0 + $value) ? 1 : 0;
+}
+
+sub _has_dynamic_automation_fields {
+    my ($config) = @_;
+    my @fields = $config->{type} eq 'Midi' ? ('min', 'max', 'sensitivity') : ('min', 'max');
+    for my $field (@fields) {
+        return 1 if is_automation_value($config->{$field});
+    }
+    return 0;
 }
 
 sub _scale {
@@ -163,8 +173,13 @@ sub _integrate_simple {
 sub _integrate_automation {
     my ($config, $normalized_time, $range, $depth, $stack) = @_;
     my $integral;
-    if (_can_integrate_exactly($config)) {
+    if ($config->{type} eq 'Oscillator' && _can_integrate_exactly($config)) {
         $integral = _integrate_simple($config, $normalized_time);
+    }
+    elsif (($config->{type} eq 'Midi' || $config->{type} eq 'Audio') && !_has_dynamic_automation_fields($config)) {
+        # External inputs expose the current snapshot rather than a history.
+        # Treat that snapshot as constant across the requested interval.
+        $integral = evaluate_automation($config, $normalized_time, undef, $depth + 1, $stack) * $normalized_time;
     }
     else {
         # Decrease the quadrature order as rate modulators nest. This bounds an
@@ -298,7 +313,24 @@ sub evaluate_automation {
         return _scale(0, $range);
     }
     $stack->{ $config + 0 } = 1;
-    my $value = eval { _evaluate_oscillator($config, $normalized_time, $depth, $stack) };
+    my $value = eval {
+        if ($config->{type} eq 'Oscillator') {
+            _evaluate_oscillator($config, $normalized_time, $depth, $stack);
+        }
+        elsif ($config->{type} eq 'Midi') {
+            # Upstream resolves min, max and sensitivity, then evaluateMidi returns min
+            # without MIDI state. Max and sensitivity do not change that result.
+            _resolve_field($config->{min}, $normalized_time, $RANGES->{unit}, $depth, $stack, 0);
+        }
+        elsif ($config->{_invalid}) {
+            is_finite_number($config->{min}) ? $config->{min} : 0;
+        }
+        else {
+            # Upstream resolves min and max, then evaluateAudio returns min without
+            # audio state.
+            _resolve_field($config->{min}, $normalized_time, $RANGES->{unit}, $depth, $stack, 0);
+        }
+    };
     my $error = $@;
     delete $stack->{ $config + 0 };
     die $error if $error;

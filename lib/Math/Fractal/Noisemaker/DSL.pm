@@ -37,6 +37,7 @@ use strict;
 use warnings;
 use JSON::PP     ();
 use Scalar::Util qw(looks_like_number);
+use B ();
 use Exporter 'import';
 
 use Math::Fractal::Noisemaker::Automation qw(
@@ -377,9 +378,117 @@ sub parse_chain {
     my $first = $self->parse_call;
     my $calls = [$first];
     while ($self->match('.')) {
-        push @$calls, $self->parse_call;
+        if ($self->at_subchain) {
+            push @$calls, $self->parse_subchain;
+        }
+        elsif ($self->peek->{lexeme} eq 'write3d' && $self->peek->{type} eq 'identifier') {
+            push @$calls, $self->parse_write3d;
+        }
+        else {
+            push @$calls, $self->parse_call;
+        }
     }
     return { kind => 'Chain', calls => $calls, loc => $first->{loc} };
+}
+
+# Port of upstream parseWriteCall for write3d: two positional references, a
+# volume and a geometry (`write3d(vol0, geo0)`), each an identifier or a surface.
+sub parse_write3d {
+    my ($self) = @_;
+    my $name = $self->identifier;
+    $self->consume('(');
+    my $reference = sub {
+        my $token = $self->peek;
+        if ($token->{type} eq 'surface') {
+            return $self->parse_surface;
+        }
+        _throw('Expected surface reference', _location($token))
+            unless $token->{type} eq 'identifier';
+        $self->{current}++;
+        return { kind => 'identifier', name => $token->{lexeme}, loc => _location($token) };
+    };
+    my $volume = $reference->();
+    $self->consume(',');
+    my $geometry = $reference->();
+    $self->consume(')');
+    return {
+        kind    => 'Call',
+        name    => 'write3d',
+        args    => [ map { { name => undef, value => $_, loc => $_->{loc} } } ($volume, $geometry) ],
+        argMode => 'positional',
+        loc     => _location($name),
+    };
+}
+
+sub at_subchain {
+    my ($self) = @_;
+    return $self->peek->{type} eq 'keyword' && $self->peek->{lexeme} eq 'subchain';
+}
+
+sub is_punctuation {
+    my ($self, $lexeme) = @_;
+    return $self->peek->{type} eq 'punctuation' && $self->peek->{lexeme} eq $lexeme;
+}
+
+# A chain in a value position (upstream parseChain in its 'expression' context).
+# It may hold subchain blocks, and it cannot hold write() or write3d().
+sub parse_expression_chain {
+    my ($self, $first) = @_;
+    my $calls = [$first];
+    while ($self->is_punctuation('.')) {
+        $self->{current}++;
+        if ($self->at_subchain) {
+            push @$calls, $self->parse_subchain;
+            next;
+        }
+        my $call = $self->parse_call;
+        _throw('Expected effect or IO function name', $call->{loc})
+            if $call->{name} eq 'write' || $call->{name} eq 'write3d';
+        push @$calls, $call;
+    }
+    return { kind => 'Chain', calls => $calls, loc => $first->{loc} };
+}
+
+# Port of upstream parseSubchainCall: `subchain(name: "...", id: "...") { .a() .b() }`.
+# A single leading string is shorthand for `name`. Unknown keys, duplicate keys and
+# a missing ',' between keys are upstream warnings (P008-P010): the program still
+# compiles, an unknown key's value is discarded and the last duplicate wins. The
+# body holds one or more '.'-prefixed calls and cannot hold write(), write3d() or
+# another subchain, which upstream's lexer reserves as keywords.
+sub parse_subchain {
+    my ($self) = @_;
+    my $start = $self->{tokens}[ $self->{current}++ ];
+    $self->consume('(');
+    my %meta = (name => undef, id => undef);
+    if ($self->peek->{type} eq 'string') {
+        $meta{name} = $self->{tokens}[ $self->{current}++ ]{value};
+    }
+    else {
+        while ($self->peek->{type} eq 'identifier' && $self->peek(1)->{lexeme} eq ':') {
+            my $key = $self->identifier->{lexeme};
+            $self->consume(':');
+            # A value that is not a string ends the arguments, so the closing ')'
+            # check below reports it.
+            last if $self->peek->{type} ne 'string';
+            my $value = $self->{tokens}[ $self->{current}++ ]{value};
+            $meta{$key} = $value if $key eq 'name' || $key eq 'id';
+            $self->match(',');
+        }
+    }
+    $self->consume(')');
+    $self->consume('{');
+    # The body holds at least one element, so an empty block fails on its
+    # missing '.'.
+    my @body;
+    do {
+        $self->consume('.');
+        my $call = $self->parse_call;
+        _throw('Expected effect or IO function name', $call->{loc})
+            if $call->{name} eq 'write' || $call->{name} eq 'write3d';
+        push @body, $call;
+    } while (!$self->check('}'));
+    $self->consume('}');
+    return { kind => 'Subchain', name => $meta{name}, id => $meta{id}, body => \@body, loc => _location($start) };
 }
 
 sub parse_call {
@@ -392,9 +501,13 @@ sub parse_call {
         while (1) {
             my $is_named = $self->peek->{type} eq 'identifier' && $self->peek(1)->{lexeme} eq ':';
             my $next_mode = $is_named ? 'named' : 'positional';
+            # Upstream's parseCall lets the midi() and audio() value calls mix
+            # positional and keyword arguments (`allowMixed`); every other call
+            # keeps one form.
+            my $allow_mixed = $name->{lexeme} eq 'midi' || $name->{lexeme} eq 'audio';
             _throw('Cannot mix positional and named arguments', _location($self->peek))
-                if defined $mode && $mode ne $next_mode && $name->{lexeme} !~ /\A(?:midi|audio)\z/;
-            $mode = $next_mode;
+                if defined $mode && $mode ne $next_mode && !$allow_mixed;
+            $mode = (defined $mode && $mode ne $next_mode) ? 'mixed' : $next_mode;
             my $arg_name;
             if ($is_named) {
                 $arg_name = $self->identifier->{lexeme};
@@ -406,7 +519,27 @@ sub parse_call {
         }
     }
     $self->consume(')');
-    return { kind => 'Call', name => $name->{lexeme}, args => \@args, argMode => $mode, loc => _location($name) };
+    my $call = { kind => 'Call', name => $name->{lexeme}, args => \@args, argMode => $mode, loc => _location($name) };
+    return $call->{name} eq 'from' ? _from_call($call) : $call;
+}
+
+# Port of upstream transformFromInvocation: `from(namespace, effect(...))` is the
+# effect call, resolved in that one namespace instead of the search order. It
+# takes exactly two positional arguments, an identifier and one call; upstream's
+# read(), read3d(), osc(), midi() and audio() nodes are not Call nodes. Any
+# other from(...) stays a call named `from`, which no namespace defines, so the
+# compiler rejects it as an unknown effect.
+sub _from_call {
+    my ($call) = @_;
+    return $call if ($call->{argMode} // '') ne 'positional' || @{ $call->{args} } != 2;
+    my ($namespace, $target) = map { $_->{value} } @{ $call->{args} };
+    my $inner = (ref $target eq 'HASH' && ($target->{kind} // '') eq 'Chain' && @{ $target->{calls} } == 1)
+        ? $target->{calls}[0] : undef;
+    return $call
+        if !ref $namespace || ($namespace->{kind} // '') ne 'identifier'
+        || !ref $inner || ($inner->{kind} // '') ne 'Call'
+        || grep { ($inner->{name} // '') eq $_ } ('read', 'read3d', 'write', 'write3d');
+    return { %$inner, namespace => $namespace->{name} };
 }
 
 sub parse_value_expression {
@@ -457,9 +590,12 @@ sub parse_value_primary {
         return $token->{value};
     }
     if ($token->{lexeme} eq 'true' || $token->{lexeme} eq 'false') {
-        # Python returns bool; Perl has none, so true/false lower to 1/0.
+        # Upstream keeps JS booleans in the AST; the Perl parser keeps the
+        # 'true'/'false' token string so automation fields can gate boolean
+        # coercion (allowBoolean). _evaluate_value lowers it to 1/0 where a
+        # raw value is consumed.
         $self->{current}++;
-        return $token->{lexeme} eq 'true' ? 1 : 0;
+        return $token->{lexeme};
     }
     if ($token->{type} eq 'color') {
         $self->{current}++;
@@ -484,9 +620,29 @@ sub parse_value_primary {
         $self->consume(')');
         return $value;
     }
+    # `Math.PI` is the one numeric constant of upstream's grammar
+    # (`NumberExpr ::= Number | 'Math.PI' | ...`). Match the three-token
+    # sequence `Math` `.` `PI` before the generic identifier handling.
+    if ($token->{type} eq 'identifier' && $token->{lexeme} eq 'Math'
+        && $self->peek(1)->{type} eq 'punctuation' && $self->peek(1)->{lexeme} eq '.'
+        && $self->peek(2)->{type} eq 'identifier' && $self->peek(2)->{lexeme} eq 'PI') {
+        $self->{current} += 3;
+        return 4 * atan2(1, 1);
+    }
     if ($token->{type} eq 'identifier') {
         $self->{current}++;
         my $name = $token->{lexeme};
+        # A one-argument `read3d(vol0)` names a volume or geometry for a parameter,
+        # as upstream's validator reads it. With two arguments it starts a chain.
+        if ($name eq 'read3d' && $self->is_punctuation('(')) {
+            $self->{current}--;
+            my $call = $self->parse_call;
+            if (@{ $call->{args} } == 1 && ref($call->{args}[0]{value}) eq 'HASH'
+                && ($call->{args}[0]{value}{kind} // '') eq 'identifier') {
+                return $call->{args}[0]{value};
+            }
+            return $self->parse_expression_chain($call);
+        }
         # MIDI/audio calls are parsed only for unsupported-input warnings.
         if ($name =~ /\A(?:osc|midi|audio)\z/ && $self->peek->{lexeme} eq '(') {
             $self->{current}--;
@@ -503,6 +659,18 @@ sub parse_value_primary {
             }
             my $surface = $self->parse_surface;
             $self->consume(')');
+            # `read(oN).effect()` in a value position is a chain argument that starts
+            # from the surface. A bare `read(oN)` stays a plain surface reference.
+            if ($self->is_punctuation('.')) {
+                my $read = {
+                    kind    => 'Call',
+                    name    => 'read',
+                    args    => [ { name => undef, value => $surface, loc => $surface->{loc} } ],
+                    argMode => 'positional',
+                    loc     => _location($token),
+                };
+                return $self->parse_expression_chain($read);
+            }
             return $surface;
         }
         if (($name eq 'vec2' || $name eq 'vec3' || $name eq 'vec4') && $self->match('(')) {
@@ -515,6 +683,11 @@ sub parse_value_primary {
             }
             $self->consume(')');
             return { kind => 'vector', width => 0 + substr($name, -1), values => \@values, loc => _location($token) };
+        }
+        # (upstream `Expr ::= Chain`), for example `tex: solid(color: #f00)`.
+        if ($self->is_punctuation('(')) {
+            $self->{current}--;
+            return $self->parse_expression_chain($self->parse_call);
         }
         my $path = $name;
         while ($self->match('.')) {
@@ -553,6 +726,12 @@ sub _is_number {
     # they pass (documented deviation, see module header).
     my ($value) = @_;
     return 0 if ref $value;
+    # A string token (e.g. "1") must not pass as a number, even if it
+    # looks like one: string-only scalars are rejected.
+    my $sv = B::svref_2object(\$value);
+    if (($sv->FLAGS & B::SVf_POK) && !($sv->FLAGS & B::SVf_IOK || $sv->FLAGS & B::SVf_NOK)) {
+        return 0;
+    }
     return Scalar::Util::looks_like_number($value) ? 1 : 0;
 }
 
@@ -565,6 +744,30 @@ sub _is_surface {
 # noise2d is the two-stage periodic noise).
 my %_OSC_KINDS = (sine => 0, tri => 1, saw => 2, sawInv => 3, square => 4, noise => 5, noise1d => 5, noise2d => 6);
 my @_OSC_PARAM_ORDER = ('type', 'min', 'max', 'speed', 'offset', 'seed');
+
+# The upstream std_enums.js enums that automation descriptors resolve. A dotted
+# path or bare name outside these tables does not resolve, which upstream reports
+# as a warning (S002) and replaces with the field's fallback.
+my %_STD_ENUMS = (
+    oscKind  => \%_OSC_KINDS,
+    midiMode => {
+        noteChange => 0, gateNote => 1, gateVelocity => 2, triggerNote => 3, velocity => 4,
+        cc => 5, cc14 => 6, nrpn => 7, pitchBend => 8, pressure => 9, polyPressure => 10,
+    },
+    midiZone  => { lower => 0, upper => 1 },
+    audioBand => { low => 0, mid => 1, high => 2, vol => 3, raw => 4 },
+    oscType   => { sine => 0, linear => 1, sawtooth => 2, sawtoothInv => 3, square => 4, noise1d => 5, noise2d => 6 },
+    channel   => { r => 0, g => 1, b => 2, a => 3 },
+    color     => { mono => 0, rgb => 1, hsv => 2 },
+);
+
+# Splits a midi()/audio() call into upstream's resolved fields: positional
+# arguments fill the positional order densely, keyword arguments take their
+# own slots (the last duplicate keyword wins), and omitted fields take defaults.
+my @_MIDI_POSITIONAL  = ('channel', 'mode', 'min', 'max', 'sensitivity');
+my @_MIDI_KEYWORD_ONLY = ('name', 'id', 'cc', 'nrpn', 'zone', 'members');
+my @_AUDIO_POSITIONAL  = ('band', 'min', 'max');
+my @_AUDIO_KEYWORD_ONLY = ('channel', 'name', 'id');
 
 # Compiles an `osc(...)` value-position call into the automation value shape the
 # runtime evaluator consumes ({type: 'Oscillator', oscType, min, max, speed,
@@ -646,20 +849,326 @@ sub _compile_oscillator {
     };
 }
 
+# The selector strings must be non-empty string literals (upstream parser).
+sub _check_selector_strings {
+    my ($call, $fields) = @_;
+    for my $field ('name', 'id') {
+        next unless exists $fields->{$field};
+        my $value = $fields->{$field};
+        _throw("Unsupported DSL value Call \"$call->{name}\"", $call->{loc})
+            if !defined $value || ref $value || !length($value);
+    }
+}
+
+# Port of upstream resolveAutomationEnum. Returns the resolved numeric value or
+# the fallback (a bare identifier/string outside the enum table is upstream's
+# S002 warning; a string literal is an error).
+sub _resolve_automation_enum {
+    my ($node, $enum_name, $fallback, $valid_values, $call, $field) = @_;
+    my $resolved;
+    if (_is_number($node)) {
+        $resolved = $node;
+    }
+    elsif (ref $node eq 'HASH' && ($node->{kind} // '') eq 'identifier') {
+        $resolved = _resolve_std_enum($node->{name});
+        if (!defined $resolved) {
+            $resolved = _resolve_std_enum("$enum_name.$node->{name}");
+        }
+    }
+    if (defined $resolved && _is_number($resolved) && exists $valid_values->{$resolved}) {
+        return $resolved;
+    }
+    if (!ref $node && defined $node && !looks_like_number($node)) {
+        _throw("Parameter \"$field\" must be an enum value", $call->{loc});
+    }
+    return $fallback;
+}
+
+# Port of upstream resolveAutomationNumber. Returns a hash with `value` and
+# `valid`; `valid` is false where upstream reports a warning and keeps the
+# field's fallback.
+sub _resolve_automation_number {
+    my ($node, $bindings, $depth, $call, $field, $fallback, $options) = @_;
+    $options //= {};
+    return { value => $fallback, valid => 1 } unless defined $node;
+    my $invalid = { value => $fallback, valid => 0 };
+    my $value;
+    if (_is_number($node)) {
+        $value = $node;
+    }
+    elsif (ref $node eq 'HASH' && ($node->{type} // '') =~ /\A(?:Oscillator|Midi|Audio)\z/) {
+        # An already-compiled automation value (bound by `let`, whose bindings are
+        # evaluated eagerly). Returned as the field's value; the runtime evaluator
+        # resolves nested automation recursively, as upstream does.
+        return { value => $node, valid => (defined $node->{_invalid} ? 0 : 1) };
+    }
+    elsif (!ref $node && ($node eq 'true' || $node eq 'false')) {
+        # Upstream keeps booleans in the AST; a boolean coerces only where
+        # upstream passes allowBoolean (midi()'s min and max). Otherwise the
+        # field keeps its fallback value and is flagged invalid, without a
+        # throw (upstream returns { value: fallback, valid: false }).
+        return $invalid unless $options->{allowBoolean};
+        $value = $node eq 'true' ? 1 : 0;
+    }
+    elsif (ref $node eq 'HASH' && ($node->{kind} // '') eq 'identifier'
+        && $node->{name} =~ /\./ && ($options->{allowMember} // 1)) {
+        $value = _resolve_std_enum($node->{name});
+    }
+    elsif (ref $node eq 'HASH' && ($node->{kind} // '') eq 'Call'
+        && $node->{name} =~ /\A(?:osc|midi|audio)\z/ && $options->{allowAutomation}) {
+        my $compiled = _compile_automation_call($node, $bindings, $depth + 1);
+        return { value => $compiled, valid => (defined $compiled->{_invalid} ? 0 : 1) };
+    }
+    elsif (!ref $node && defined $node
+        || (ref $node eq 'HASH' && ($node->{kind} // '') eq 'identifier' && $node->{name} !~ /\./)) {
+        _throw("Parameter \"$field\" must be a finite number", $call->{loc});
+    }
+    else {
+        return $invalid;
+    }
+    return $invalid if !defined $value || ref $value || !_is_number($value) || !is_finite_number($value);
+    return $invalid if $options->{integer} && $value != int($value);
+    return $invalid if defined $options->{min} && $value < $options->{min};
+    return $invalid if defined $options->{max} && $value > $options->{max};
+    $value = $value < 0 ? 0 : $value > 1 ? 1 : $value if $options->{clamp01};
+    return { value => $value, valid => 1 };
+}
+
+# Splits a midi()/audio() call into upstream's resolved fields: positional
+# arguments fill the positional order densely, keyword arguments take their
+# own slots (the last duplicate keyword wins), and omitted fields take defaults.
+sub _automation_fields {
+    my ($call, $bindings, $positional_order, $keyword_only, $defaults) = @_;
+    my %valid = map { $_ => 1 } (@$positional_order, @$keyword_only);
+    my (@positional, %kwargs);
+    for my $arg (@{ $call->{args} }) {
+        if (defined $arg->{name}) { $kwargs{ $arg->{name} } = $arg->{value} }
+        else { push @positional, $arg }
+    }
+    # Upstream: the keyword-only fields cannot take a positional argument.
+    # excess() reports the arg's 1-based position in the full argument list.
+    my $excess = sub {
+        my ($arg) = @_;
+        my ($index) = grep { $call->{args}[$_] == $arg } 0 .. $#{ $call->{args} };
+        _throw("Unknown parameter \"argument " . ($index + 1) . "\" for $call->{name}(); accepted: "
+            . join(', ', @$positional_order, @$keyword_only), $call->{loc});
+    };
+    $excess->($positional[ @$positional_order ]) if @positional > @$positional_order;
+    for my $key (keys %kwargs) {
+        unless ($valid{$key}) {
+            _throw("Unknown parameter \"$key\" for $call->{name}(); accepted: "
+                . join(', ', @$positional_order, @$keyword_only), $call->{loc});
+        }
+    }
+    my %fields;
+    my $cursor = 0;
+    for my $field (@$positional_order) {
+        if (exists $kwargs{$field}) { $fields{$field} = $kwargs{$field} }
+        elsif ($cursor < @positional) { $fields{$field} = $positional[ $cursor++ ]->{value} }
+        elsif (exists $defaults->{$field}) { $fields{$field} = $defaults->{$field} }
+    }
+    $excess->($positional[$cursor]) if $cursor < @positional;
+    for my $field (@$keyword_only) {
+        $fields{$field} = $kwargs{$field} if exists $kwargs{$field};
+    }
+    for my $field (keys %fields) {
+        next if $field eq 'name' || $field eq 'id';
+        $fields{$field} = _substitute_field($fields{$field}, $bindings);
+    }
+    return \%fields;
+}
+
+# Replaces an identifier bound by `let` with the bound expression, as upstream's
+# validator substitutes symbols before it compiles an automation descriptor, and
+# folds arithmetic to a number, as upstream's parser does.
+sub _substitute_field {
+    my ($node, $bindings, $seen) = @_;
+    $seen //= {};
+    return _evaluate_value($node, $bindings) if ref $node eq 'HASH' && ($node->{kind} // '') =~ /\A(?:unary|binary)\z/;
+    return $node if !ref $node || ref $node ne 'HASH' || ($node->{kind} // '') ne 'identifier'
+        || $node->{name} =~ /\./;
+    my $binding = $bindings->{ $node->{name} };
+    return $node if !defined $binding || $seen->{ $node->{name} };
+    $seen->{ $node->{name} } = 1;
+    if (($binding->{kind} // '') eq 'value') {
+        return $binding->{value};
+    }
+    if (($binding->{kind} // '') eq 'alias') {
+        return { kind => 'identifier', name => $binding->{name}, loc => $node->{loc} };
+    }
+    # An effect partial is a call that is not an automation source.
+    return { kind => 'Call', name => $binding->{call}{name}, args => [], argMode => undef, loc => $node->{loc} };
+}
+
+# Resolves a dotted enum path in the standard enum tables. Returns undef for
+# any path that is not exactly `enumName.member` in a known table.
+sub _resolve_std_enum {
+    my ($path) = @_;
+    return undef unless defined $path && length $path;
+    my ($head, $rest) = split /\./, $path, 2;
+    return undef unless defined $rest && $rest !~ /\./ && exists $_STD_ENUMS{$head};
+    return exists $_STD_ENUMS{$head}->{$rest} ? $_STD_ENUMS{$head}->{$rest} : undef;
+}
+
+sub _compile_midi {
+    my ($call, $bindings, $depth) = @_;
+    my $loc = $call->{loc};
+    if ($depth > MAX_AUTOMATION_DEPTH) {
+        _throw("Automation nesting exceeds the maximum depth of " . MAX_AUTOMATION_DEPTH, $loc);
+    }
+    my $fields = _automation_fields($call, $bindings, \@_MIDI_POSITIONAL, \@_MIDI_KEYWORD_ONLY,
+        { mode => 4, min => 0, max => 1, sensitivity => 1 });
+    my $has_zone = exists $fields->{zone};
+    if (!exists $fields->{channel} && !$has_zone) {
+        _throw('Missing required parameter "channel" for midi()', $loc);
+    }
+    if (exists $fields->{channel} && $has_zone) {
+        _throw("Unsupported DSL value Call \"$call->{name}\"", $loc);
+    }
+    if (exists $fields->{members} && !$has_zone) {
+        _throw('Missing required parameter "zone" for midi()', $loc);
+    }
+    if (exists $fields->{id} && !exists $fields->{name}) {
+        _throw('Missing required parameter "name" for midi()', $loc);
+    }
+    _check_selector_strings($call, $fields);
+
+    my %midi_modes = map { $_ => 1 } (0 .. 10);
+    my $mode = _resolve_automation_enum($fields->{mode}, 'midiMode', 4, \%midi_modes, $call, 'mode');
+    my $zone = $has_zone
+        ? _resolve_automation_enum($fields->{zone}, 'midiZone', undef, { map { $_ => 1 } (0 .. 1) }, $call, 'zone')
+        : undef;
+    my $valid_selection = !$has_zone || defined $zone;
+    my $members;
+    if (exists $fields->{members}) {
+        my $result = _resolve_automation_number($fields->{members}, $bindings, $depth, $call,
+            'members', undef, { integer => 1, min => 1, max => 15, allowMember => 0 });
+        $members = $result->{value};
+        $valid_selection = 0 unless $result->{valid};
+    }
+    my $valid_channel = 1;
+    my $channel;
+    if (!$has_zone) {
+        my $result = _resolve_automation_number($fields->{channel}, $bindings, $depth, $call,
+            'channel', 1, { integer => 1, min => 1, max => 16, allowMember => 0 });
+        $channel       = $result->{value};
+        $valid_channel = $result->{valid};
+    }
+    my $valid_cc = 1;
+    my $cc;
+    if (exists $fields->{cc} || $mode == 5 || $mode == 6) {
+        my $max_cc = $mode == 6 ? 31 : 127;
+        my $result = _resolve_automation_number((exists $fields->{cc} ? $fields->{cc} : undef),
+            $bindings, $depth, $call, 'cc', 1, { integer => 1, min => 0, max => $max_cc, allowMember => 0 });
+        $cc       = $result->{value};
+        $valid_cc = $result->{valid};
+    }
+    my $nrpn;
+    if (exists $fields->{nrpn} || $mode == 7) {
+        $valid_selection = 0 unless exists $fields->{nrpn};
+        my $result = _resolve_automation_number((exists $fields->{nrpn} ? $fields->{nrpn} : undef),
+            $bindings, $depth, $call, 'nrpn', undef, { integer => 1, min => 0, max => 16382, allowMember => 0 });
+        $nrpn = $result->{value};
+        $valid_selection = 0 unless $result->{valid};
+    }
+    my %number_options = (allowBoolean => 1, allowAutomation => 1);
+    my %descriptor = (
+        type    => 'Midi',
+        channel => $channel,
+        mode    => $mode,
+        min     => _resolve_automation_number($fields->{min}, $bindings, $depth, $call, 'min', 0,
+            { %number_options, clamp01 => 1 })->{value},
+        max         => _resolve_automation_number($fields->{max}, $bindings, $depth, $call, 'max', 1,
+            { %number_options, clamp01 => 1 })->{value},
+        sensitivity => _resolve_automation_number($fields->{sensitivity}, $bindings, $depth, $call,
+            'sensitivity', 1, \%number_options)->{value},
+        name => $fields->{name},
+        id   => $fields->{id},
+    );
+    $descriptor{cc}      = $cc    if defined $cc;
+    $descriptor{nrpn}    = $nrpn  if defined $nrpn;
+    $descriptor{zone}    = $zone  if $has_zone;
+    $descriptor{members} = $members if exists $fields->{members};
+    $descriptor{_invalid} = 1 if !$valid_cc || !$valid_channel || !$valid_selection;
+    return \%descriptor;
+}
+
+sub _compile_audio {
+    my ($call, $bindings, $depth) = @_;
+    my $loc = $call->{loc};
+    if ($depth > MAX_AUTOMATION_DEPTH) {
+        _throw("Automation nesting exceeds the maximum depth of " . MAX_AUTOMATION_DEPTH, $loc);
+    }
+    my $fields = _automation_fields($call, $bindings, \@_AUDIO_POSITIONAL, \@_AUDIO_KEYWORD_ONLY,
+        { min => 0, max => 1 });
+    if (!exists $fields->{band}) {
+        _throw('Missing required parameter "band" for audio()', $loc);
+    }
+    if (exists $fields->{id} && !exists $fields->{name}) {
+        _throw('Missing required parameter "name" for audio()', $loc);
+    }
+    if (exists $fields->{name} && !exists $fields->{channel}) {
+        _throw('Missing required parameter "channel" for audio()', $loc);
+    }
+    _check_selector_strings($call, $fields);
+    my %audio_bands = map { $_ => 1 } (0 .. 4);
+    my $band = _resolve_automation_enum($fields->{band}, 'audioBand', undef, \%audio_bands, $call, 'band');
+    # Upstream audio fields reject booleans and reject dotted enum members.
+    my %number_options = (allowAutomation => 1, allowMember => 0, clamp01 => 1);
+    my $min = _resolve_automation_number($fields->{min}, $bindings, $depth, $call, 'min', 0, \%number_options);
+    my $max = _resolve_automation_number($fields->{max}, $bindings, $depth, $call, 'max', 1, \%number_options);
+    my $channel;
+    my $valid_channel = 1;
+    if (exists $fields->{channel}) {
+        my $node = $fields->{channel};
+        if (_is_number($node)) {
+            _throw('Parameter "channel" must be an integer', $loc) if $node != int($node);
+            if ($node >= 1 && $node <= 32) { $channel = $node }
+            else { $valid_channel = 0 }
+        }
+        elsif (!ref $node && defined $node) {
+            _throw('Parameter "channel" must be an integer', $loc);
+        }
+        else {
+            $valid_channel = 0;
+        }
+    }
+    return {
+        type     => 'Audio',
+        band     => $band,
+        min      => $min->{value},
+        max      => $max->{value},
+        channel  => $channel,
+        name     => $fields->{name},
+        id       => $fields->{id},
+        _invalid => (!defined $band || !$min->{valid} || !$max->{valid} || !$valid_channel) ? 1 : 0,
+    };
+}
+
+sub _compile_automation_call {
+    my ($call, $bindings, $depth) = @_;
+    return _compile_midi($call, $bindings, $depth) if ($call->{name} // '') eq 'midi';
+    return _compile_audio($call, $bindings, $depth) if ($call->{name} // '') eq 'audio';
+    return _compile_oscillator($call, $bindings, $depth);
+}
+
 sub _evaluate_value {
     my ($value, $bindings, $osc_depth) = @_;
     $osc_depth = 0 unless defined $osc_depth;
     if (ref $value eq 'ARRAY') {
         return [map { _evaluate_value($_, $bindings, $osc_depth) } @$value];
     }
+    if (!ref $value && ($value eq 'true' || $value eq 'false')) {
+        # A boolean literal lowers to 1/0 where a raw value is consumed
+        # (effect args, let bindings, osc() number fields).
+        return $value eq 'true' ? 1 : 0;
+    }
     return $value unless ref $value eq 'HASH';
     my $kind = defined $value->{kind} ? $value->{kind} : '';
     if ($kind eq 'surface') { return $value }
     if ($kind eq 'Call') {
-        if ($value->{name} =~ /\A(?:midi|audio)\z/) {
-            warn "Warning: $value->{name}() is unsupported in CPU ports; real-time input is unavailable. Ignoring this unsupported input value.\n";
-            return $_UNSUPPORTED_INPUT;
-        }
+        if ($value->{name} eq 'midi') { return _compile_midi($value, $bindings, $osc_depth) }
+        if ($value->{name} eq 'audio') { return _compile_audio($value, $bindings, $osc_depth) }
         if ($value->{name} eq 'osc') { return _compile_oscillator($value, $bindings, $osc_depth) }
         _throw("Unsupported DSL value $kind \"$value->{name}\"", $value->{loc});
     }
@@ -793,6 +1302,36 @@ sub _normalize_effect {
     return (\%params, \%surfaces);
 }
 
+sub _volume_references {
+    my ($call) = @_;
+    return undef if ($call->{argMode} // '') ne 'positional' || @{ $call->{args} } != 2;
+    my @names;
+    for my $arg (@{ $call->{args} }) {
+        my $value = $arg->{value};
+        if (ref $value eq 'HASH' && $value->{kind} eq 'surface') {
+            push @names, $value->{name};
+        }
+        elsif (ref $value eq 'HASH' && ($value->{kind} // '') eq 'identifier' && index($value->{name}, '.') < 0) {
+            push @names, $value->{name};
+        }
+        else {
+            return undef;
+        }
+    }
+    return \@names;
+}
+
+sub _read3d_references {
+    my ($call) = @_;
+    return _volume_references($call) if ($call->{argMode} // '') ne 'named';
+    my %named = map { $_->{name} => $_ } @{ $call->{args} };
+    return undef unless exists $named{tex3d} && exists $named{geo};
+    return _volume_references({
+        argMode => 'positional',
+        args    => [ $named{tex3d}, $named{geo} ],
+    });
+}
+
 sub _compile_chain {
     my ($chain, $bindings, $search, $effects) = @_;
     my @steps;
@@ -804,6 +1343,21 @@ sub _compile_chain {
     my $calls = $chain->{calls};
     for my $index (0 .. $#$calls) {
         my $call = $calls->[$index];
+        if (($call->{kind} // '') eq 'Subchain') {
+            # Upstream compiles a subchain body as part of the enclosing chain:
+            # expand its calls into this loop so the following calls keep their
+            # positional indexes and domain checks.
+            my $binding = $bindings->{ $call->{name} };
+            if (defined $binding) {
+                _throw("Binding \"$call->{name}\" is not callable", $call->{loc})
+                    unless $binding->{kind} eq 'partial';
+                $call = _merge_partial($binding->{call}, $call);
+            }
+            for my $sub_call (@{ $call->{body} }) {
+                push @steps, @{ _compile_chain({ calls => [$sub_call], loc => $call->{loc} }, $bindings, $search, $effects)->{steps} };
+            }
+            next;
+        }
         my $binding = $bindings->{ $call->{name} };
         if (defined $binding) {
             _throw("Binding \"$call->{name}\" is not callable", $call->{loc})
@@ -828,7 +1382,39 @@ sub _compile_chain {
             push @steps, { kind => 'write', surface => $args->[0]{value}{name}, loc => $call->{loc} };
             next;
         }
-        my $effect_id = _resolve_effect($call->{name}, $search, $effects);
+        # Built-in volume I/O (upstream `_write3d` and `_read3d`). write3d stores the
+        # current volume and geometry under the two names and passes the chain through;
+        # read3d starts a chain from them. A mid-chain read3d() is not a starter, so it
+        # fails below as an unknown effect, as a one-argument read3d() at a chain start
+        # does.
+        if ($call->{name} eq 'write3d') {
+            # Upstream's lexer reserves write3d, so it cannot start a chain.
+            _throw('Expected effect or IO function name', $call->{loc}) if $index == 0;
+            _throw('loopBegin must be closed by loopEnd before write', $call->{loc}) if $open_loop;
+            my $references = _volume_references($call);
+            _throw('Expected surface reference', $call->{loc}) unless $references;
+            push @steps, {
+                kind     => 'write3d',
+                volume   => $references->[0],
+                geometry => $references->[1],
+                loc      => $call->{loc},
+            };
+            next;
+        }
+        if ($index == 0 && $call->{name} eq 'read3d' && (my $references = _read3d_references($call))) {
+            push @steps, {
+                kind     => 'read3d',
+                volume   => $references->[0],
+                geometry => $references->[1],
+                loc      => $call->{loc},
+            };
+            $has_input = 1;
+            $has_volume = 1;
+            $has_image = 1;
+            next;
+        }
+        my $effect_id = _resolve_effect($call->{name},
+            $call->{namespace} ? [ $call->{namespace} ] : $search, $effects);
         if (!defined $effect_id) {
             _throw("Unknown effect \"$call->{name}\" in search namespaces " . join(', ', @$search),
                 $call->{loc});

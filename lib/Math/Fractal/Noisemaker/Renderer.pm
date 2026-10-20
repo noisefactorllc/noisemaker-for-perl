@@ -1245,6 +1245,32 @@ sub render_dsl {
                 die "write($step->{surface}) requires a current image\n" unless defined $image;
                 $surfaces{ $step->{surface} } = $image;
             }
+            elsif ($step && $step->{kind} eq 'write3d') {
+                # Upstream `write3d` stores the current bundle's volume and geometry
+                # under the two surface names (`none` stores nothing) and passes the
+                # chain through.
+                my $bundle = _chain_bundle($current);
+                if ($step->{volume} ne 'none' && defined $bundle->{volume}) {
+                    $surfaces{ $step->{volume} } = $bundle->{volume};
+                }
+                if ($step->{geometry} ne 'none' && defined $bundle->{geometry}) {
+                    $surfaces{ $step->{geometry} } = $bundle->{geometry};
+                }
+            }
+            elsif ($step && $step->{kind} eq 'read3d') {
+                # Upstream `read3d` starts a chain bundle from a stored volume and
+                # geometry. Both names are required to exist, per the JS surface IO
+                # contract.
+                my $volume = $surfaces{ $step->{volume} };
+                die "Surface $step->{volume} has not been written\n" unless defined $volume;
+                my $geometry = defined $step->{geometry} ? $surfaces{ $step->{geometry} } : undef;
+                $current = {
+                    image      => undef,
+                    volume     => $volume,
+                    geometry   => $geometry,
+                    volumeSize => $volume->{width},
+                };
+            }
             elsif ($group->{iterated}) {
                 $current = _run_iteration_group(
                     $group, $current, \%surfaces, $external_textures,

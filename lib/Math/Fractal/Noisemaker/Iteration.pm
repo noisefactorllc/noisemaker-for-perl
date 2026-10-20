@@ -87,7 +87,7 @@ sub compute_iteration_groups {
         my $role = _definition($step, $effects)->{loopRole} || '';
         if ($open_loop) {
             die "Loop iteration group cannot cross a read/write boundary\n"
-                if $kind eq 'read' || $kind eq 'write';
+                if $kind eq 'read' || $kind eq 'write' || $kind eq 'read3d' || $kind eq 'write3d';
             die "Nested loop iteration groups are not supported\n" if $role eq 'begin';
             push @{ $open_loop->{steps} }, $step;
             if ($role eq 'end') {
@@ -96,7 +96,7 @@ sub compute_iteration_groups {
             }
             next;
         }
-        if ($kind eq 'read' || $kind eq 'write') {
+        if ($kind eq 'read' || $kind eq 'write' || $kind eq 'read3d' || $kind eq 'write3d') {
             $close->();
             push @groups, { steps => [$step], iterated => 0 };
             next;

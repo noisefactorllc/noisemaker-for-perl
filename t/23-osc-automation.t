@@ -112,7 +112,9 @@ sub dsl_error {
     is(evaluate_automation($sine, 0), 0, 'sine at t=0 is 0');
     ok(abs(evaluate_automation($sine, 1)) < 1e-12, 'sine at t=1 is 0');
     ok(is_automation_value($sine), 'is_automation_value accepts an Oscillator');
-    ok(!is_automation_value({ type => 'Midi' }), 'is_automation_value rejects other automation types');
+    ok(is_automation_value({ type => 'Midi' }), 'is_automation_value accepts a Midi value');
+    ok(is_automation_value({ type => 'Audio' }), 'is_automation_value accepts an Audio value');
+    ok(!is_automation_value({ type => 'Unexpected' }), 'is_automation_value rejects other automation types');
     # Depth > 8 collapses nested fields to the range-scaled zero, as upstream's
     # evaluator does; the top-level oscillator still evaluates deterministically.
     my $deep = $sine;
@@ -238,22 +240,91 @@ sub dsl_error {
     is($bound->to_rgba8, $numeric->to_rgba8, 'a binding can hold an osc() value for reuse across steps');
 }
 
-for my $call ('midi(channel: 1, min: 0.8)', 'audio(band: audioBand.low, min: 0.8)') {
-    for my $binding (0, 1) {
-        my $prefix = $binding ? "let input = $call\n" : '';
-        my $value = $binding ? 'input' : $call;
-        my $warnings = '';
-        my $result;
-        {
-            local $SIG{__WARN__} = sub { $warnings .= $_[0] };
-            $result = render_dsl("search synth\n${prefix}noise(seed: 1, scaleX: $value).write(o0)\nrender(o0)",
-                width => 8, height => 8, seed => 1, time => 0.25);
-        }
-        like($warnings, qr/Warning: (midi|audio)\(\) is unsupported in CPU ports; real-time input is unavailable/,
-            'unsupported realtime input warns');
-        my $baseline = render_dsl("search synth\nnoise(seed: 1).write(o0)\nrender(o0)",
+# The DSL compiles upstream's midi()/audio() value calls into Midi/Audio
+# automation values; with no live input they resolve to their `min` field, and
+# an invalid Audio value returns its literal `min` (or 0). Each accepted case
+# renders byte-identically to the resolved numeric literal; each rejected
+# argument is a DslError with the same message template the compiler uses.
+{
+    # Accepted cases: [value, resolved 17g literal] — the resolved value scales
+    # into the parameter's declared range exactly like the literal render.
+    my @ACCEPTED = (
+        [ 'midi(channel: 1, mode: midiMode.velocity, min: 0.25, max: 0.75)', '25.75' ],
+        [ 'midi(channel: 1)', '1' ],
+        [ 'midi(channel: 2, mode: midiMode.cc, cc: 7, min: 0.3, max: 0.8, sensitivity: 2)', '30.7' ],
+        [ 'midi(channel: 1, mode: midiMode.nrpn, nrpn: 300, min: 0.15, sensitivity: 2, name: "Port A", id: "abc")', '15.85' ],
+        [ 'audio(band: audioBand.low, min: 0.25, max: 0.75)', '25.75' ],
+        [ 'audio(band: audioBand.vol, min: 0.55, channel: 3, name: "Mic", id: "dev-1")', '55.45' ],
+        [ 'audio(band: audioBand.raw, min: 0.65)', '65.35000000000001' ],
+        [ 'midi(2, min: 0.3, mode: midiMode.cc, cc: 7)', '30.7' ],
+        [ 'audio(audioBand.mid, 0.35, 0.8)', '35.65' ],
+        [ 'audio(audioBand.high, 0.45, channel: 2)', '45.550000000000004' ],
+        # let variables holding automation values, and nested automation in both
+        # directions.
+        [ 'bass', '25.75',
+          "let bass = audio(band: audioBand.low, min: 0.25, max: 0.75)\n" ],
+        [ 'rate', '30.7',
+          "let floor = audio(band: audioBand.low, min: 0.3)\nlet rate = midi(channel: 1, min: floor, max: 1)\n" ],
+        [ 'osc(type: oscKind.sine, min: 0.25, max: 0.75, speed: audio(band: audioBand.low, min: 0, max: 1))', '25.75' ],
+        [ 'osc(type: oscKind.tri, min: midi(channel: 3, min: 0.2), max: audio(band: audioBand.mid, min: 0.7))', '45.55' ],
+        [ 'midi(channel: 1, min: osc(type: oscKind.tri, min: 0.2, max: 0.6))', '40.6' ],
+        [ 'audio(band: audioBand.low, min: osc(type: oscKind.saw, min: 0.1, max: 0.5))', '20.8' ],
+        # int parameters round the resolved value (upstream uniform1i truncation).
+        [ 'audio(band: audioBand.low, min: 0.5)', '4', '', 'octaves' ],
+        # Upstream S002 warnings keep the field's fallback and mark _invalid; the
+        # resolved value is unchanged where the fallback keeps it.
+        [ 'midi(channel: 20, min: 0.25)', '25.75' ],
+        [ 'midi(channel: 1, mode: midiMode.bogus, min: 0.25)', '25.75' ],
+        [ 'midi(channel: 1, mode: midiMode.nrpn, min: 0.25)', '25.75' ],
+        [ 'midi(zone: midiZone.lower, members: 0)', '1' ],
+        [ 'midi(channel: 1, min: true)', '100' ],
+        [ 'midi(channel: 1, min: 1.5)', '100' ],
+        [ 'audio(band: audioBand.low, min: 0.25, channel: 40)', '25.75' ],
+        [ 'audio(band: audioBand.bogus, min: 0.25)', '25.75' ],
+        [ 'audio(band: audioBand.low, min: true)', '1' ],
+        [ 'audio(band: audioBand.low, min: osc(type: oscKind.saw, min: 0.1, max: 0.5), channel: 40)', '1' ],
+    );
+    for my $case (@ACCEPTED) {
+        my ($value, $resolved, $lets, $param) = @$case;
+        $lets //= '';
+        $param //= 'scaleX';
+        my $source = "search synth\n${lets}noise(seed: 1, $param: $value).write(o0)\nrender(o0)";
+        my $result = render_dsl($source, width => 8, height => 8, seed => 1, time => 0.25);
+        my $numeric = render_dsl("search synth\n${lets}noise(seed: 1, $param: $resolved).write(o0)\nrender(o0)",
             width => 8, height => 8, seed => 1, time => 0.25);
-        is($result->to_rgba8, $baseline->to_rgba8, 'unsupported input preserves the offline default');
+        is($result->to_rgba8, $numeric->to_rgba8, "\"$value\" resolves to $resolved");
+    }
+
+    # Arguments the compiler rejects. Each error names the call (P003) or the
+    # field (S001/S003) with the same message templates the compiler uses.
+    my $MIDI_FIELDS = 'channel, mode, min, max, sensitivity, name, id, cc, nrpn, zone, members';
+    my $AUDIO_FIELDS = 'band, min, max, channel, name, id';
+    my @REJECTED = (
+        [ 'midi(channel: 1, wobble: 2)', qr/Unknown parameter "wobble" for midi\(\); accepted: \Q$MIDI_FIELDS\E$/ ],
+        [ 'midi(min: 0.5)', qr/Missing required parameter "channel" for midi\(\)$/ ],
+        [ 'midi(1, 2, 3, 4, 5, 6)', qr/Unknown parameter "argument 6" for midi\(\); accepted: / ],
+        [ 'midi(channel: 1, zone: midiZone.lower)', qr/Unsupported DSL value Call "midi"$/ ],
+        [ 'midi(channel: 1, members: 0)', qr/Missing required parameter "zone" for midi\(\)$/ ],
+        [ 'midi(zone: midiZone.lower, members: 0, channel: 1)', qr/Unsupported DSL value Call "midi"$/ ],
+        [ 'midi(channel: 1, id: "x")', qr/Missing required parameter "name" for midi\(\)$/ ],
+        [ 'midi(channel: 1, name: "")', qr/Unsupported DSL value Call "midi"$/ ],
+        [ 'midi(channel: 1, name: port)', qr/Unsupported DSL value Call "midi"$/ ],
+        [ 'midi(channel: "1")', qr/Parameter "channel" must be a finite number$/ ],
+        [ 'midi(channel: 1, mode: "cc")', qr/Parameter "mode" must be an enum value$/ ],
+        [ 'midi(channel: foo)', qr/Parameter "channel" must be a finite number$/ ],
+        [ 'audio(min: 0.5)', qr/Missing required parameter "band" for audio\(\)$/ ],
+        [ 'audio(audioBand.low, 0.35, 0.8, 1)', qr/Unknown parameter "argument 4" for audio\(\); accepted: \Q$AUDIO_FIELDS\E$/ ],
+        [ 'audio(band: audioBand.low, name: "Mic")', qr/Missing required parameter "channel" for audio\(\)$/ ],
+        [ 'audio(band: audioBand.low, id: "dev-1")', qr/Missing required parameter "name" for audio\(\)$/ ],
+        [ 'audio(band: audioBand.low, name: "", channel: 1)', qr/Unsupported DSL value Call "audio"$/ ],
+        [ 'audio(band: audioBand.low, name: "Mic", id: "dev-1")', qr/Missing required parameter "channel" for audio\(\)$/ ],
+        [ 'audio(band: audioBand.low, min: osc(type: oscKind.saw, min: 0.1, max: 0.5), channel: "1")', qr/Parameter "channel" must be an integer$/ ],
+    );
+    for my $case (@REJECTED) {
+        my ($value, $pattern) = @$case;
+        my $source = "search synth\nnoise(seed: 1, scaleX: $value).write(o0)\nrender(o0)";
+        my $err = dsl_error($source, width => 8, height => 8, seed => 1, time => 0.25);
+        like($err, $pattern, "\"$value\" is rejected");
     }
 }
 
