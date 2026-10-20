@@ -1341,23 +1341,29 @@ sub _compile_chain {
     my $starts_with_generator = 0;
     my $open_loop;
     my $calls = $chain->{calls};
-    for my $index (0 .. $#$calls) {
-        my $call = $calls->[$index];
+    # A subchain block contributes its body calls in place. Upstream's validator
+    # wraps them in `_subchain_begin`/`_subchain_end` markers, which its expander
+    # passes through without a render pass; the body's calls take the subchain's
+    # position and the following calls shift, as upstream's flatMap does.
+    my @flat_calls;
+    my $pos = 0;
+    while ($pos <= $#$calls) {
+        my $call = $calls->[ $pos++ ];
         if (($call->{kind} // '') eq 'Subchain') {
-            # Upstream compiles a subchain body as part of the enclosing chain:
-            # expand its calls into this loop so the following calls keep their
-            # positional indexes and domain checks.
             my $binding = $bindings->{ $call->{name} };
             if (defined $binding) {
                 _throw("Binding \"$call->{name}\" is not callable", $call->{loc})
                     unless $binding->{kind} eq 'partial';
                 $call = _merge_partial($binding->{call}, $call);
             }
-            for my $sub_call (@{ $call->{body} }) {
-                push @steps, @{ _compile_chain({ calls => [$sub_call], loc => $call->{loc} }, $bindings, $search, $effects)->{steps} };
-            }
+            splice @$calls, $pos, 0, @{ $call->{body} };
             next;
         }
+        push @flat_calls, $call;
+    }
+    $calls = \@flat_calls;
+    for my $index (0 .. $#$calls) {
+        my $call = $calls->[$index];
         my $binding = $bindings->{ $call->{name} };
         if (defined $binding) {
             _throw("Binding \"$call->{name}\" is not callable", $call->{loc})
