@@ -25,12 +25,13 @@ use Math::Fractal::Noisemaker::Automation qw(
     resolve_automation_uniform
 );
 use Math::Fractal::Noisemaker::DSL qw(compile_dsl);
-use Math::Fractal::Noisemaker::ExternalInput qw(external_data_surface);
+use Math::Fractal::Noisemaker::ExternalInput qw(external_data_surface empty_mesh_data);
 use Math::Fractal::Noisemaker::FrameExportQueue;
 use Math::Fractal::Noisemaker::KernelCache;
 use Math::Fractal::Noisemaker::MeshRender;
 use Math::Fractal::Noisemaker::Iteration qw(
     compute_iteration_groups
+    group_owner_state_size
     is_particle_state_name
     iteration_delta_time
     wrap01
@@ -771,8 +772,8 @@ sub _bind_external_inputs {
     }
     my @mesh = grep { /\Aglobal_mesh0_/ } sort keys %pass_inputs;
     return unless @mesh;
-    my $mesh = $external_inputs->{meshData}
-        or die "$state->{effect_id} requires external mesh data (external_inputs meshData)\n";
+    # With no meshData, bind the zero mesh upstream samples before an upload.
+    my $mesh = ($external_inputs->{meshData} ||= empty_mesh_data());
     my $tex_width  = $mesh->{texWidth}  // $MESH_TEX_WIDTH;
     my $tex_height = $mesh->{texHeight} // $MESH_TEX_HEIGHT;
     my %source = (
@@ -906,7 +907,9 @@ sub _run_state_once {
             # The oracle binds resolution from the destination but keeps
             # aspectRatio/aspect/aspectInv/invFullResolution canonical (the
             # full image's aspect and dimensions), so only resolution moves.
-            $pass_uniforms->{resolution} = [0.0 + $dest_width, 0.0 + $dest_height];
+            # Upstream binds the canvas size as `resolution` to every pass; the pixel
+            # loop still covers the state-sized MRT destinations.
+            $pass_uniforms->{resolution} = [0.0 + $width, 0.0 + $height];
 
             if (($pass->{drawMode} || '') eq 'triangles') {
                 # CPU triangle-mesh rasterizer (render/meshRender): the fresh
@@ -1164,17 +1167,15 @@ sub _run_iteration_group {
         $external_inputs) = @_;
     my $group_input_bundle = _chain_bundle($group_input);
     my @states;
-    my $owner_state_size;
+    # The group's stateSize owner is its pointsEmit step, which an animated
+    # input generator may precede (mirrors cpu's groupOwnerStateSize).
+    my $owner_state_size = group_owner_state_size($group, meta()->{effects}, \&_coerce);
     for my $index (0 .. $#{ $group->{steps} }) {
         my $state = _prepare_state(
             $group->{steps}[$index], $width, $height, $seed,
             $index == 0 ? undef : $owner_state_size, $group_input_bundle, $time,
         );
         push @states, $state;
-        if ($index == 0 && @{ $group->{steps} } > 1
-            && exists(($state->{eff}{params} || {})->{stateSize})) {
-            $owner_state_size = $state->{params}{stateSize};
-        }
     }
     # cpu's runIteratedGroupSync takes the iteration count from the first
     # step whose definition is iterated (the merged animated-noise3d +

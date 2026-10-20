@@ -67,6 +67,14 @@ my %KEYWORDS    = map { $_ => 1 } qw(search let render true false subchain);
 my %PUNCTUATION = map { $_ => 1 } split //, '(){}[],.:=;';
 my %OPERATORS   = map { $_ => 1 } split //, '+-*/';
 
+# Names of the program's lets that the statement being compiled has not
+# reached yet. Reading one before its let reports S003 (compiler.js).
+my $_PENDING_NAMES;
+
+# Stack of let names currently resolving lazily, for cycle reports
+# (compiler.js evaluateValue threads a `resolving` chain).
+my $_RESOLVING;
+
 sub tokenize_dsl {
     my ($source, $options) = @_;
     $options = {} unless defined $options;
@@ -338,7 +346,12 @@ sub parse_program {
     while (!$self->at_end) {
         next if $self->match(';');
         if ($self->match('let')) {
-            push @{ $ast->{bindings} }, $self->parse_binding($self->previous);
+            my $binding = $self->parse_binding($self->previous);
+            # Upstream 9cc041d0: statement order matters. A let's planIndex is the
+            # number of chain statements written before it; a chain sees only the
+            # lets declared at or before its own index.
+            $binding->{planIndex} = scalar @{ $ast->{chains} };
+            push @{ $ast->{bindings} }, $binding;
         }
         elsif ($self->match('render')) {
             _throw('Program may only declare one render surface', _location($self->previous))
@@ -745,30 +758,6 @@ sub _is_surface {
 my %_OSC_KINDS = (sine => 0, tri => 1, saw => 2, sawInv => 3, square => 4, noise => 5, noise1d => 5, noise2d => 6);
 my @_OSC_PARAM_ORDER = ('type', 'min', 'max', 'speed', 'offset', 'seed');
 
-# The upstream std_enums.js enums that automation descriptors resolve. A dotted
-# path or bare name outside these tables does not resolve, which upstream reports
-# as a warning (S002) and replaces with the field's fallback.
-my %_STD_ENUMS = (
-    oscKind  => \%_OSC_KINDS,
-    midiMode => {
-        noteChange => 0, gateNote => 1, gateVelocity => 2, triggerNote => 3, velocity => 4,
-        cc => 5, cc14 => 6, nrpn => 7, pitchBend => 8, pressure => 9, polyPressure => 10,
-    },
-    midiZone  => { lower => 0, upper => 1 },
-    audioBand => { low => 0, mid => 1, high => 2, vol => 3, raw => 4 },
-    oscType   => { sine => 0, linear => 1, sawtooth => 2, sawtoothInv => 3, square => 4, noise1d => 5, noise2d => 6 },
-    channel   => { r => 0, g => 1, b => 2, a => 3 },
-    color     => { mono => 0, rgb => 1, hsv => 2 },
-);
-
-# Splits a midi()/audio() call into upstream's resolved fields: positional
-# arguments fill the positional order densely, keyword arguments take their
-# own slots (the last duplicate keyword wins), and omitted fields take defaults.
-my @_MIDI_POSITIONAL  = ('channel', 'mode', 'min', 'max', 'sensitivity');
-my @_MIDI_KEYWORD_ONLY = ('name', 'id', 'cc', 'nrpn', 'zone', 'members');
-my @_AUDIO_POSITIONAL  = ('band', 'min', 'max');
-my @_AUDIO_KEYWORD_ONLY = ('channel', 'name', 'id');
-
 # Compiles an `osc(...)` value-position call into the automation value shape the
 # runtime evaluator consumes ({type: 'Oscillator', oscType, min, max, speed,
 # offset, seed}), mirroring upstream's parser transformOscInvocation plus the
@@ -826,6 +815,7 @@ sub _compile_oscillator {
         return $fallback unless defined $node;
         my $value = _evaluate_value($node, $bindings, $depth + 1);
         return $fallback if _is_unsupported_input($value);
+        return $fallback unless defined $value;
         return $value if is_automation_value($value);
         return $value if !ref $value && _is_number($value) && is_finite_number($value);
         _throw("osc() $name must be a number or a nested osc()", $loc);
@@ -849,306 +839,12 @@ sub _compile_oscillator {
     };
 }
 
-# The selector strings must be non-empty string literals (upstream parser).
-sub _check_selector_strings {
-    my ($call, $fields) = @_;
-    for my $field ('name', 'id') {
-        next unless exists $fields->{$field};
-        my $value = $fields->{$field};
-        _throw("Unsupported DSL value Call \"$call->{name}\"", $call->{loc})
-            if !defined $value || ref $value || !length($value);
-    }
-}
-
-# Port of upstream resolveAutomationEnum. Returns the resolved numeric value or
-# the fallback (a bare identifier/string outside the enum table is upstream's
-# S002 warning; a string literal is an error).
-sub _resolve_automation_enum {
-    my ($node, $enum_name, $fallback, $valid_values, $call, $field) = @_;
-    my $resolved;
-    if (_is_number($node)) {
-        $resolved = $node;
-    }
-    elsif (ref $node eq 'HASH' && ($node->{kind} // '') eq 'identifier') {
-        $resolved = _resolve_std_enum($node->{name});
-        if (!defined $resolved) {
-            $resolved = _resolve_std_enum("$enum_name.$node->{name}");
-        }
-    }
-    if (defined $resolved && _is_number($resolved) && exists $valid_values->{$resolved}) {
-        return $resolved;
-    }
-    if (!ref $node && defined $node && !looks_like_number($node)) {
-        _throw("Parameter \"$field\" must be an enum value", $call->{loc});
-    }
-    return $fallback;
-}
-
-# Port of upstream resolveAutomationNumber. Returns a hash with `value` and
-# `valid`; `valid` is false where upstream reports a warning and keeps the
-# field's fallback.
-sub _resolve_automation_number {
-    my ($node, $bindings, $depth, $call, $field, $fallback, $options) = @_;
-    $options //= {};
-    return { value => $fallback, valid => 1 } unless defined $node;
-    my $invalid = { value => $fallback, valid => 0 };
-    my $value;
-    if (_is_number($node)) {
-        $value = $node;
-    }
-    elsif (ref $node eq 'HASH' && ($node->{type} // '') =~ /\A(?:Oscillator|Midi|Audio)\z/) {
-        # An already-compiled automation value (bound by `let`, whose bindings are
-        # evaluated eagerly). Returned as the field's value; the runtime evaluator
-        # resolves nested automation recursively, as upstream does.
-        return { value => $node, valid => (defined $node->{_invalid} ? 0 : 1) };
-    }
-    elsif (!ref $node && ($node eq 'true' || $node eq 'false')) {
-        # Upstream keeps booleans in the AST; a boolean coerces only where
-        # upstream passes allowBoolean (midi()'s min and max). Otherwise the
-        # field keeps its fallback value and is flagged invalid, without a
-        # throw (upstream returns { value: fallback, valid: false }).
-        return $invalid unless $options->{allowBoolean};
-        $value = $node eq 'true' ? 1 : 0;
-    }
-    elsif (ref $node eq 'HASH' && ($node->{kind} // '') eq 'identifier'
-        && $node->{name} =~ /\./ && ($options->{allowMember} // 1)) {
-        $value = _resolve_std_enum($node->{name});
-    }
-    elsif (ref $node eq 'HASH' && ($node->{kind} // '') eq 'Call'
-        && $node->{name} =~ /\A(?:osc|midi|audio)\z/ && $options->{allowAutomation}) {
-        my $compiled = _compile_automation_call($node, $bindings, $depth + 1);
-        return { value => $compiled, valid => (defined $compiled->{_invalid} ? 0 : 1) };
-    }
-    elsif (!ref $node && defined $node
-        || (ref $node eq 'HASH' && ($node->{kind} // '') eq 'identifier' && $node->{name} !~ /\./)) {
-        _throw("Parameter \"$field\" must be a finite number", $call->{loc});
-    }
-    else {
-        return $invalid;
-    }
-    return $invalid if !defined $value || ref $value || !_is_number($value) || !is_finite_number($value);
-    return $invalid if $options->{integer} && $value != int($value);
-    return $invalid if defined $options->{min} && $value < $options->{min};
-    return $invalid if defined $options->{max} && $value > $options->{max};
-    $value = $value < 0 ? 0 : $value > 1 ? 1 : $value if $options->{clamp01};
-    return { value => $value, valid => 1 };
-}
-
-# Splits a midi()/audio() call into upstream's resolved fields: positional
-# arguments fill the positional order densely, keyword arguments take their
-# own slots (the last duplicate keyword wins), and omitted fields take defaults.
-sub _automation_fields {
-    my ($call, $bindings, $positional_order, $keyword_only, $defaults) = @_;
-    my %valid = map { $_ => 1 } (@$positional_order, @$keyword_only);
-    my (@positional, %kwargs);
-    for my $arg (@{ $call->{args} }) {
-        if (defined $arg->{name}) { $kwargs{ $arg->{name} } = $arg->{value} }
-        else { push @positional, $arg }
-    }
-    # Upstream: the keyword-only fields cannot take a positional argument.
-    # excess() reports the arg's 1-based position in the full argument list.
-    my $excess = sub {
-        my ($arg) = @_;
-        my ($index) = grep { $call->{args}[$_] == $arg } 0 .. $#{ $call->{args} };
-        _throw("Unknown parameter \"argument " . ($index + 1) . "\" for $call->{name}(); accepted: "
-            . join(', ', @$positional_order, @$keyword_only), $call->{loc});
-    };
-    $excess->($positional[ @$positional_order ]) if @positional > @$positional_order;
-    for my $key (keys %kwargs) {
-        unless ($valid{$key}) {
-            _throw("Unknown parameter \"$key\" for $call->{name}(); accepted: "
-                . join(', ', @$positional_order, @$keyword_only), $call->{loc});
-        }
-    }
-    my %fields;
-    my $cursor = 0;
-    for my $field (@$positional_order) {
-        if (exists $kwargs{$field}) { $fields{$field} = $kwargs{$field} }
-        elsif ($cursor < @positional) { $fields{$field} = $positional[ $cursor++ ]->{value} }
-        elsif (exists $defaults->{$field}) { $fields{$field} = $defaults->{$field} }
-    }
-    $excess->($positional[$cursor]) if $cursor < @positional;
-    for my $field (@$keyword_only) {
-        $fields{$field} = $kwargs{$field} if exists $kwargs{$field};
-    }
-    for my $field (keys %fields) {
-        next if $field eq 'name' || $field eq 'id';
-        $fields{$field} = _substitute_field($fields{$field}, $bindings);
-    }
-    return \%fields;
-}
-
-# Replaces an identifier bound by `let` with the bound expression, as upstream's
-# validator substitutes symbols before it compiles an automation descriptor, and
-# folds arithmetic to a number, as upstream's parser does.
-sub _substitute_field {
-    my ($node, $bindings, $seen) = @_;
-    $seen //= {};
-    return _evaluate_value($node, $bindings) if ref $node eq 'HASH' && ($node->{kind} // '') =~ /\A(?:unary|binary)\z/;
-    return $node if !ref $node || ref $node ne 'HASH' || ($node->{kind} // '') ne 'identifier'
-        || $node->{name} =~ /\./;
-    my $binding = $bindings->{ $node->{name} };
-    return $node if !defined $binding || $seen->{ $node->{name} };
-    $seen->{ $node->{name} } = 1;
-    if (($binding->{kind} // '') eq 'value') {
-        return $binding->{value};
-    }
-    if (($binding->{kind} // '') eq 'alias') {
-        return { kind => 'identifier', name => $binding->{name}, loc => $node->{loc} };
-    }
-    # An effect partial is a call that is not an automation source.
-    return { kind => 'Call', name => $binding->{call}{name}, args => [], argMode => undef, loc => $node->{loc} };
-}
-
-# Resolves a dotted enum path in the standard enum tables. Returns undef for
-# any path that is not exactly `enumName.member` in a known table.
-sub _resolve_std_enum {
-    my ($path) = @_;
-    return undef unless defined $path && length $path;
-    my ($head, $rest) = split /\./, $path, 2;
-    return undef unless defined $rest && $rest !~ /\./ && exists $_STD_ENUMS{$head};
-    return exists $_STD_ENUMS{$head}->{$rest} ? $_STD_ENUMS{$head}->{$rest} : undef;
-}
-
-sub _compile_midi {
-    my ($call, $bindings, $depth) = @_;
-    my $loc = $call->{loc};
-    if ($depth > MAX_AUTOMATION_DEPTH) {
-        _throw("Automation nesting exceeds the maximum depth of " . MAX_AUTOMATION_DEPTH, $loc);
-    }
-    my $fields = _automation_fields($call, $bindings, \@_MIDI_POSITIONAL, \@_MIDI_KEYWORD_ONLY,
-        { mode => 4, min => 0, max => 1, sensitivity => 1 });
-    my $has_zone = exists $fields->{zone};
-    if (!exists $fields->{channel} && !$has_zone) {
-        _throw('Missing required parameter "channel" for midi()', $loc);
-    }
-    if (exists $fields->{channel} && $has_zone) {
-        _throw("Unsupported DSL value Call \"$call->{name}\"", $loc);
-    }
-    if (exists $fields->{members} && !$has_zone) {
-        _throw('Missing required parameter "zone" for midi()', $loc);
-    }
-    if (exists $fields->{id} && !exists $fields->{name}) {
-        _throw('Missing required parameter "name" for midi()', $loc);
-    }
-    _check_selector_strings($call, $fields);
-
-    my %midi_modes = map { $_ => 1 } (0 .. 10);
-    my $mode = _resolve_automation_enum($fields->{mode}, 'midiMode', 4, \%midi_modes, $call, 'mode');
-    my $zone = $has_zone
-        ? _resolve_automation_enum($fields->{zone}, 'midiZone', undef, { map { $_ => 1 } (0 .. 1) }, $call, 'zone')
-        : undef;
-    my $valid_selection = !$has_zone || defined $zone;
-    my $members;
-    if (exists $fields->{members}) {
-        my $result = _resolve_automation_number($fields->{members}, $bindings, $depth, $call,
-            'members', undef, { integer => 1, min => 1, max => 15, allowMember => 0 });
-        $members = $result->{value};
-        $valid_selection = 0 unless $result->{valid};
-    }
-    my $valid_channel = 1;
-    my $channel;
-    if (!$has_zone) {
-        my $result = _resolve_automation_number($fields->{channel}, $bindings, $depth, $call,
-            'channel', 1, { integer => 1, min => 1, max => 16, allowMember => 0 });
-        $channel       = $result->{value};
-        $valid_channel = $result->{valid};
-    }
-    my $valid_cc = 1;
-    my $cc;
-    if (exists $fields->{cc} || $mode == 5 || $mode == 6) {
-        my $max_cc = $mode == 6 ? 31 : 127;
-        my $result = _resolve_automation_number((exists $fields->{cc} ? $fields->{cc} : undef),
-            $bindings, $depth, $call, 'cc', 1, { integer => 1, min => 0, max => $max_cc, allowMember => 0 });
-        $cc       = $result->{value};
-        $valid_cc = $result->{valid};
-    }
-    my $nrpn;
-    if (exists $fields->{nrpn} || $mode == 7) {
-        $valid_selection = 0 unless exists $fields->{nrpn};
-        my $result = _resolve_automation_number((exists $fields->{nrpn} ? $fields->{nrpn} : undef),
-            $bindings, $depth, $call, 'nrpn', undef, { integer => 1, min => 0, max => 16382, allowMember => 0 });
-        $nrpn = $result->{value};
-        $valid_selection = 0 unless $result->{valid};
-    }
-    my %number_options = (allowBoolean => 1, allowAutomation => 1);
-    my %descriptor = (
-        type    => 'Midi',
-        channel => $channel,
-        mode    => $mode,
-        min     => _resolve_automation_number($fields->{min}, $bindings, $depth, $call, 'min', 0,
-            { %number_options, clamp01 => 1 })->{value},
-        max         => _resolve_automation_number($fields->{max}, $bindings, $depth, $call, 'max', 1,
-            { %number_options, clamp01 => 1 })->{value},
-        sensitivity => _resolve_automation_number($fields->{sensitivity}, $bindings, $depth, $call,
-            'sensitivity', 1, \%number_options)->{value},
-        name => $fields->{name},
-        id   => $fields->{id},
-    );
-    $descriptor{cc}      = $cc    if defined $cc;
-    $descriptor{nrpn}    = $nrpn  if defined $nrpn;
-    $descriptor{zone}    = $zone  if $has_zone;
-    $descriptor{members} = $members if exists $fields->{members};
-    $descriptor{_invalid} = 1 if !$valid_cc || !$valid_channel || !$valid_selection;
-    return \%descriptor;
-}
-
-sub _compile_audio {
-    my ($call, $bindings, $depth) = @_;
-    my $loc = $call->{loc};
-    if ($depth > MAX_AUTOMATION_DEPTH) {
-        _throw("Automation nesting exceeds the maximum depth of " . MAX_AUTOMATION_DEPTH, $loc);
-    }
-    my $fields = _automation_fields($call, $bindings, \@_AUDIO_POSITIONAL, \@_AUDIO_KEYWORD_ONLY,
-        { min => 0, max => 1 });
-    if (!exists $fields->{band}) {
-        _throw('Missing required parameter "band" for audio()', $loc);
-    }
-    if (exists $fields->{id} && !exists $fields->{name}) {
-        _throw('Missing required parameter "name" for audio()', $loc);
-    }
-    if (exists $fields->{name} && !exists $fields->{channel}) {
-        _throw('Missing required parameter "channel" for audio()', $loc);
-    }
-    _check_selector_strings($call, $fields);
-    my %audio_bands = map { $_ => 1 } (0 .. 4);
-    my $band = _resolve_automation_enum($fields->{band}, 'audioBand', undef, \%audio_bands, $call, 'band');
-    # Upstream audio fields reject booleans and reject dotted enum members.
-    my %number_options = (allowAutomation => 1, allowMember => 0, clamp01 => 1);
-    my $min = _resolve_automation_number($fields->{min}, $bindings, $depth, $call, 'min', 0, \%number_options);
-    my $max = _resolve_automation_number($fields->{max}, $bindings, $depth, $call, 'max', 1, \%number_options);
-    my $channel;
-    my $valid_channel = 1;
-    if (exists $fields->{channel}) {
-        my $node = $fields->{channel};
-        if (_is_number($node)) {
-            _throw('Parameter "channel" must be an integer', $loc) if $node != int($node);
-            if ($node >= 1 && $node <= 32) { $channel = $node }
-            else { $valid_channel = 0 }
-        }
-        elsif (!ref $node && defined $node) {
-            _throw('Parameter "channel" must be an integer', $loc);
-        }
-        else {
-            $valid_channel = 0;
-        }
-    }
-    return {
-        type     => 'Audio',
-        band     => $band,
-        min      => $min->{value},
-        max      => $max->{value},
-        channel  => $channel,
-        name     => $fields->{name},
-        id       => $fields->{id},
-        _invalid => (!defined $band || !$min->{valid} || !$max->{valid} || !$valid_channel) ? 1 : 0,
-    };
-}
-
 sub _compile_automation_call {
     my ($call, $bindings, $depth) = @_;
-    return _compile_midi($call, $bindings, $depth) if ($call->{name} // '') eq 'midi';
-    return _compile_audio($call, $bindings, $depth) if ($call->{name} // '') eq 'audio';
+    if (($call->{name} // '') ne 'osc') {
+        warn "Warning: $call->{name}() is unsupported in CPU ports; real-time input is unavailable. Ignoring this unsupported input value.\n";
+        return undef;
+    }
     return _compile_oscillator($call, $bindings, $depth);
 }
 
@@ -1174,9 +870,7 @@ sub _evaluate_value {
     my $kind = defined $value->{kind} ? $value->{kind} : '';
     if ($kind eq 'surface') { return $value }
     if ($kind eq 'Call') {
-        if ($value->{name} eq 'midi') { return _compile_midi($value, $bindings, $osc_depth) }
-        if ($value->{name} eq 'audio') { return _compile_audio($value, $bindings, $osc_depth) }
-        if ($value->{name} eq 'osc') { return _compile_oscillator($value, $bindings, $osc_depth) }
+        if ($value->{name} =~ /\A(?:osc|midi|audio)\z/) { return _compile_automation_call($value, $bindings, $osc_depth) }
         _throw("Unsupported DSL value $kind \"$value->{name}\"", $value->{loc});
     }
     if ($kind eq 'identifier') {
@@ -1185,7 +879,25 @@ sub _evaluate_value {
             my $binding = $bindings->{$name};
             _throw("Effect partial \"$name\" cannot be used as a value", $value->{loc})
                 if $binding->{kind} eq 'partial';
-            return $binding->{value};
+            # Upstream `let y = noise` makes y an alias of the effect name.
+            return $binding->{name} if $binding->{kind} eq 'alias';
+            # A value binding resolves lazily at its first use. Statement
+            # order lets reassign by name; a cycle reports the resolving
+            # chain (compiler.js evaluateValue).
+            $_RESOLVING //= [];
+            return $binding->{value} if $binding->{resolved};
+            if (grep { $_ eq $name } @$_RESOLVING) {
+                _throw('Automation cycle detected: ' . join(' -> ', @$_RESOLVING, $name), $value->{loc});
+            }
+            push @$_RESOLVING, $name;
+            my $evaluated = _evaluate_value($binding->{expr}, $bindings, $osc_depth);
+            pop @$_RESOLVING;
+            $binding->{value} = $evaluated;
+            $binding->{resolved} = 1;
+            return $evaluated;
+        }
+        if ($_PENDING_NAMES && $_PENDING_NAMES->{$name}) {
+            _throw("Variable used before assignment: '$name'", $value->{loc});
         }
         return $name;
     }
@@ -1392,9 +1104,16 @@ sub _compile_chain {
         my $call = $calls->[$index];
         my $binding = $bindings->{ $call->{name} };
         if (defined $binding) {
-            _throw("Binding \"$call->{name}\" is not callable", $call->{loc})
-                unless $binding->{kind} eq 'partial';
-            $call = _merge_partial($binding->{call}, $call);
+            if ($binding->{kind} eq 'alias') {
+                # Upstream `let x = noise` makes `x` an alias of the effect
+                # function; the call takes the aliased name (compiler.js).
+                $call = { %$call, name => $binding->{name} };
+            }
+            else {
+                _throw("Binding \"$call->{name}\" is not callable", $call->{loc})
+                    unless $binding->{kind} eq 'partial';
+                $call = _merge_partial($binding->{call}, $call);
+            }
         }
         # Chain arguments compile while this call's arguments resolve; they
         # belong to this call (upstream swaps bindings.pending around
@@ -1534,27 +1253,77 @@ sub compile_dsl {
     my $ast = parse_dsl($source, $options);
     _throw('Missing required search directive', $ast->{loc}) if !@{ $ast->{search} };
 
-    # GAP-046: one compile scope per program (upstream's CompileScope).
+    # Statement-order lets: each chain sees only the lets declared at or
+    # before its own index (upstream compiler.js declareThrough); a later let
+    # of the same name reassigns it for later statements only. Value bindings
+    # resolve lazily at first use; partials keep their call unresolved and
+    # merge their arguments where they are called. One compile scope per
+    # program (upstream's CompileScope).
     local $_SCOPE = { search => $ast->{search}, effects => $effects, pending => undef, inline_count => 0 };
 
     my %bindings;
-    for my $binding (@{ $ast->{bindings} }) {
-        _throw("Duplicate binding \"$binding->{name}\"", $binding->{loc})
-            if exists $bindings{ $binding->{name} };
-        my $value = $binding->{value};
-        if (ref $value eq 'HASH' && defined $value->{kind} && $value->{kind} eq 'Call'
-            && $value->{name} !~ /\A(?:osc|midi|audio)\z/) {
-            $bindings{ $binding->{name} } = {
-                kind => 'partial',
-                call => { %$value, args => _resolve_args($value->{args}, \%bindings) },
-            };
-        }
-        else {
-            $bindings{ $binding->{name} } = { kind => 'value', value => _evaluate_value($value, \%bindings) };
-        }
-    }
+    my @all_bindings = @{ $ast->{bindings} };
+    my $next_binding = 0;
+    $_RESOLVING = [];
 
-    my @chains = map { _compile_chain($_, \%bindings, $ast->{search}, $effects) } @{ $ast->{chains} };
+    # Upstream `let x = noise` makes `x` an alias of the effect function, and
+    # `let y = x` copies a partial or an alias (compiler.js aliasBinding).
+    my $alias_binding = sub {
+        my ($expr) = @_;
+        return undef unless ref $expr eq 'HASH'
+            && ($expr->{kind} // '') eq 'identifier'
+            && index($expr->{name}, '.') < 0;
+        my $bound = $bindings{ $expr->{name} };
+        if (defined $bound) {
+            return ($bound->{kind} eq 'partial' || $bound->{kind} eq 'alias') ? $bound : undef;
+        }
+        return defined _resolve_effect($expr->{name}, $ast->{search}, $effects)
+            ? { kind => 'alias', name => $expr->{name} } : undef;
+    };
+
+    my $declare_binding = sub {
+        my ($binding) = @_;
+        my $value = $binding->{value};
+        if (ref $value eq 'HASH' && ($value->{kind} // '') eq 'Call'
+            && $value->{name} !~ /\A(?:osc|midi|audio)\z/) {
+            # A partial keeps its call unresolved. Its arguments resolve where
+            # it is called, as upstream's validator substitutes a symbol at
+            # each use (compiler.js declareBinding).
+            $bindings{ $binding->{name} } = { kind => 'partial', call => $value };
+            return;
+        }
+        if (my $alias = $alias_binding->($value)) {
+            $bindings{ $binding->{name} } = $alias;
+            return;
+        }
+        # A bare identifier value must name something resolvable now (an
+        # earlier binding, an alias, or an effect), as declareVar requires.
+        if (ref $value eq 'HASH' && ($value->{kind} // '') eq 'identifier'
+            && index($value->{name}, '.') < 0
+            && !exists $bindings{ $value->{name} }
+            && !defined _resolve_effect($value->{name}, $ast->{search}, $effects)) {
+            _throw("Variable used before assignment: '$value->{name}'", $value->{loc});
+        }
+        $bindings{ $binding->{name} } = { kind => 'value', expr => $value, resolved => 0, value => undef };
+    };
+
+    my $declare_through = sub {
+        my ($chain_index) = @_;
+        while ($next_binding <= $#all_bindings
+               && ($all_bindings[$next_binding]{planIndex} // 0) <= $chain_index) {
+            $declare_binding->($all_bindings[$next_binding++]);
+        }
+    };
+
+    my @chains;
+    for my $chain_index (0 .. $#{ $ast->{chains} }) {
+        $declare_through->($chain_index);
+        $_PENDING_NAMES = { map { $_->{name} => 1 } @all_bindings[ $next_binding .. $#all_bindings ] };
+        push @chains, _compile_chain($ast->{chains}[$chain_index], \%bindings, $ast->{search}, $effects);
+    }
+    $_PENDING_NAMES = undef;
+    $declare_through->(1e9);
+    $_RESOLVING = undef;
 
     my $last_written;
     for my $chain (@chains) {

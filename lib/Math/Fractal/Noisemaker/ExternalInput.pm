@@ -16,7 +16,7 @@ use warnings;
 use Exporter 'import';
 use Math::Fractal::Noisemaker::Surface;
 
-our @EXPORT_OK = qw(parse_obj pack_mesh_data_for_textures flip_rgba_rows external_data_surface);
+our @EXPORT_OK = qw(parse_obj pack_mesh_data_for_textures empty_mesh_data flip_rgba_rows external_data_surface);
 
 sub _f32 { unpack('f', pack('f', $_[0])) }
 
@@ -328,6 +328,20 @@ sub pack_mesh_data_for_textures {
         normalData   => \@normal_data,
         uvData       => \@uv_data,
         vertexCount  => $used,
+    };
+}
+
+# The mesh a program samples before any OBJ upload. Upstream creates each mesh
+# surface as zero-filled 256x256 rgba32f textures (pipeline.js createSurfaces),
+# so every vertex has w = 0 and no triangle is drawn.
+sub empty_mesh_data {
+    my ($tex_width, $tex_height) = @_;
+    $tex_width  = 256 unless defined $tex_width;
+    $tex_height = 256 unless defined $tex_height;
+    return {
+        %{ pack_mesh_data_for_textures([], [], [], $tex_width, $tex_height) },
+        texWidth  => $tex_width,
+        texHeight => $tex_height,
     };
 }
 

@@ -607,6 +607,12 @@ sub metal_divide {
 
 sub texture {
     my ($self, $sampler, $uv) = @_;
+    # A sampler binding that the pass lists no input for reads transparent
+    # black (upstream be8ed4cd); a non-Surface binding that exists stays an
+    # error (glsl-runtime.js #texture).
+    return [0.0, 0.0, 0.0, 0.0] unless defined $sampler;
+    die "GLSL texture sampler must be a Surface\n"
+        unless Scalar::Util::blessed($sampler) && $sampler->can('data');
     # Sample at f32 coords — JS reads the uv from a stored Float32Array
     # (binary defers the round).
     my $u = f32($uv->[0]);
@@ -624,6 +630,11 @@ sub texture_size {
 
 sub texel_fetch {
     my ($self, $sampler, $coord, $lod) = @_;
+    # Unbound sampler reads transparent black; a non-Surface binding that
+    # exists stays an error (glsl-runtime.js #texelFetch).
+    return [0.0, 0.0, 0.0, 0.0] unless defined $sampler;
+    die "GLSL texelFetch sampler must be a Surface\n"
+        unless Scalar::Util::blessed($sampler) && $sampler->can('data');
     my ($w, $h) = ($sampler->width, $sampler->height);
     my $x = int($coord->[0]);
     $x = 0 if $x < 0;

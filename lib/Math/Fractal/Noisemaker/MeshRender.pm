@@ -25,6 +25,7 @@ use strict;
 use warnings;
 use POSIX ();
 use Math::Fractal::Noisemaker::JsTrig qw(js_sin js_cos);
+use Math::Fractal::Noisemaker::ExternalInput qw(empty_mesh_data);
 
 my %ADAPTERS;
 
@@ -143,8 +144,8 @@ sub fragment_stage {
 
 sub mesh_render_triangles {
     my ($args) = @_;
-    my $mesh = ($args->{external_inputs} || {})->{meshData}
-        or die "render/meshRender requires external mesh data (external_inputs meshData)\n";
+    # With no meshData, draw the zero mesh upstream samples before an upload.
+    my $mesh = ($args->{external_inputs} || {})->{meshData} ||= empty_mesh_data();
     my $positions = $mesh->{positions} // $mesh->{positionData};
     my $normals   = $mesh->{normalData};
     my ($tex_width, $tex_height) = @$mesh{qw(texWidth texHeight)};

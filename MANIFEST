@@ -355,6 +355,7 @@ t/08-iteration.t
 t/09-scatter.t
 t/10-iterated-render.t
 t/11-transpiler-mrt.t
+t/11-unbound-sampler.t
 t/12-stateful-catalog.t
 t/13-stateful-smoke.t
 t/14-volume-catalog.t

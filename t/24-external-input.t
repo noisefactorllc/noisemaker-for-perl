@@ -108,8 +108,11 @@ subtest 'the renderer binds external inputs' => sub {
     my $roll = render_dsl($EXTERNAL_INPUT_SOURCES{'synth/roll'}, %size,
         external_inputs => external_inputs_for('synth/roll'));
     is(length $roll->to_rgba8, 64, 'synth/roll renders with the MIDI fixture');
-    eval { render_effect('render/meshRender', {}, undef, %size) };
-    like($@, qr/requires external mesh data/, 'mesh effects require mesh data');
+    # The authority renders the mesh fixtures with no mesh loaded: one RGBA value.
+    is(render_dsl($EXTERNAL_INPUT_SOURCES{'render/meshRender'}, %size, width => 16, height => 16)->to_rgba8,
+        pack('C4', 25, 25, 38, 255) x 256, 'meshRender renders the zero mesh with no mesh loaded');
+    is(render_dsl($EXTERNAL_INPUT_SOURCES{'render/meshLoader'}, %size, width => 16, height => 16)->to_rgba8,
+        pack('C4', 128, 128, 128, 255) x 256, 'meshLoader renders the zero mesh with no mesh loaded');
     my $mesh = render_dsl($EXTERNAL_INPUT_SOURCES{'render/meshRender'}, %size, width => 16, height => 16,
         external_inputs => external_inputs_for('render/meshRender'))->to_rgba8;
     my %colors = map { substr($mesh, $_ * 4, 4) => 1 } 0 .. 255;

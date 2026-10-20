@@ -289,4 +289,99 @@ like(
         'a four-component DSL color does not consume the separate alpha parameter');
 }
 
+
+# --- statement-order lets (upstream test/dsl-let-order.test.js) --------------
+
+{
+    # A chain sees only the lets declared at or before its own statement
+    # index; a later let of the same name reassigns it for later chains.
+    my $dsl = <<'DSL';
+search synth
+let x = 10
+noise(scaleX: x).write(o0)
+let x = 90
+noise(scaleX: x).write(o1)
+DSL
+    my $plan = compile_dsl($dsl, $effects);
+    is($plan->{chains}[0]{steps}[0]{params}{scaleX}, 10, 'let: first chain uses the first binding');
+    is($plan->{chains}[1]{steps}[0]{params}{scaleX}, 90, 'let: later chain uses the reassigned binding');
+}
+
+my $pending_dsl = <<'DSL';
+search synth
+noise(scaleX: x).write(o0)
+let x = 20
+DSL
+like(
+    err_str(sub { compile_dsl($pending_dsl, $effects) }),
+    qr/Variable used before assignment: 'x'/,
+    'let: a chain reading a let declared by a later statement reports S003',
+);
+
+{
+    # A let may reference a later let inside its value expression.
+    my $dsl = <<'DSL';
+search synth
+let a = b + 1
+let b = 5
+noise(scaleX: a).write(o0)
+DSL
+    my $plan = compile_dsl($dsl, $effects);
+    is($plan->{chains}[0]{steps}[0]{params}{scaleX}, 6, 'let: forward reference inside a value expression');
+}
+
+my $bare_pending_dsl = <<'DSL';
+search synth
+let a = b
+let b = 5
+noise(scaleX: a).write(o0)
+DSL
+like(
+    err_str(sub { compile_dsl($bare_pending_dsl, $effects) }),
+    qr/Variable used before assignment: 'b'/,
+    'let: a bare identifier naming a later let reports S003 at declaration',
+);
+
+# A value call may reference a later let in its arguments (upstream
+# dsl-let-order.test.js): the pending name resolves lazily at first use, so
+# outer's speed field resolves inner's descriptor when noise()'s arguments do.
+my $later_let_in_call_args_dsl = <<'DSL';
+search synth
+let outer = osc(type: oscKind.sine, speed: inner)
+let inner = osc(type: oscKind.tri, speed: 2)
+noise(scaleX: outer).write(o0)
+DSL
+{
+    my $plan = compile_dsl($later_let_in_call_args_dsl, $effects);
+    my $descriptor = $plan->{chains}[0]{steps}[0]{params}{scaleX};
+    is($descriptor->{type}, 'Oscillator', 'let: a value call may reference a later let in its arguments');
+    is($descriptor->{oscType}, 0, 'let: the outer oscillator keeps its kind');
+    is($descriptor->{speed}{type}, 'Oscillator', 'let: the later let resolves inside the call arguments');
+    is($descriptor->{speed}{oscType}, 1, 'let: the resolved let keeps its own kind');
+    is($descriptor->{speed}{speed}, 2, 'let: the resolved let keeps its own fields');
+}
+
+my $cycle_dsl = <<'DSL';
+search synth
+let a = b + 1
+let b = a + 1
+noise(scaleX: a).write(o0)
+DSL
+like(
+    err_str(sub { compile_dsl($cycle_dsl, $effects) }),
+    qr/Automation cycle detected: a -> b -> a/,
+    'let: a cyclic let set fails with a cycle report',
+);
+
+my $unresolved_dsl = <<'DSL';
+search synth
+let y = x
+noise().write(o0)
+DSL
+like(
+    err_str(sub { compile_dsl($unresolved_dsl, $effects) }),
+    qr/Variable used before assignment: 'x'/,
+    'let: a let whose bare identifier names nothing resolvable reports S003 at declaration',
+);
+
 done_testing();

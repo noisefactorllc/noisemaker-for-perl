@@ -9,6 +9,7 @@ use Scalar::Util ();
 
 our @EXPORT_OK = qw(
     compute_iteration_groups
+    group_owner_state_size
     is_particle_state_name
     iteration_delta_time
     wrap01
@@ -70,6 +71,46 @@ sub _zero_param {
         && Scalar::Util::looks_like_number($value) && $value == 0 ? 1 : 0;
 }
 
+# The authority renders the whole chain every frame, and pointsEmit colors each
+# agent it spawns from its input at that frame's time. An animated image
+# generator (a speed parameter that is not 0) that feeds the group therefore
+# re-runs with it, once per iteration (mirrors cpu's isAnimatedImageGenerator).
+sub _is_animated_image_generator {
+    my ($step, $effects) = @_;
+    my $definition = _definition($step, $effects);
+    return ($definition->{kind} || '') eq 'generator'
+        && ($definition->{domain} || '') eq 'image'
+        && !_iterated($step, $effects)
+        && exists($step->{params}{speed})
+        && !_zero_param($step->{params}{speed}) ? 1 : 0;
+}
+
+# JS-coercion mirror for the group's stateSize owner: cpu's groupOwnerStateSize
+# finds the step declaring global_xyz (the group's pointsEmit owner, which an
+# animated input generator may precede) and falls back to the first step.
+sub group_owner_state_size {
+    my ($group, $effects, $coerce) = @_;
+    my $steps = $group->{steps} || [];
+    return undef unless @$steps > 1;
+
+    my $owner;
+    for my $step (@$steps) {
+        my $definition = _definition($step, $effects);
+        if (exists(($definition->{textures} || {})->{global_xyz})) {
+            $owner = $step;
+            last;
+        }
+    }
+    $owner ||= $steps->[0];
+    return undef unless exists $owner->{params}{stateSize};
+    my $spec = (_definition($owner, $effects)->{params} || {})->{stateSize};
+    # Upstream plan params are compile-normalized, so cpu's groupOwnerStateSize
+    # returns a number (x64 -> 64). The port keeps raw DSL values in the plan;
+    # coerce against the owner's own spec so joining steps inherit the resolved
+    # size (a joining step's spec need not share the owner's choices).
+    return $coerce ? $coerce->($spec, $owner->{params}{stateSize}) : $owner->{params}{stateSize};
+}
+
 sub compute_iteration_groups {
     my ($steps, $effects) = @_;
     $effects ||= {};
@@ -109,6 +150,18 @@ sub compute_iteration_groups {
         }
         if (_declares_xyz($step, $effects)) {
             $close->();
+            # The authority renders the whole chain every frame, and pointsEmit colors each
+            # agent it spawns from its input at that frame's time. An animated image generator
+            # that feeds the group therefore re-runs with it, once per iteration.
+            my $previous = $groups[-1];
+            if (_positive_param($step->{params}{iterationCount})
+                && $previous && @{ $previous->{steps} } == 1
+                && !$previous->{iterated}
+                && _is_animated_image_generator($previous->{steps}[0], $effects)) {
+                pop @groups;
+                $open = { steps => [ $previous->{steps}[0], $step ], iterated => _iterated($step, $effects) };
+                next;
+            }
             $open = { steps => [$step], iterated => _iterated($step, $effects) };
             next;
         }
