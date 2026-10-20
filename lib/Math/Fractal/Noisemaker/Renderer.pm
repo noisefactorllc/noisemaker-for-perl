@@ -1218,6 +1218,80 @@ sub _run_iteration_group {
     return $last;
 }
 
+# Runs one compiled chain and returns its final value. A step's `inline_chains`
+# (chain arguments such as `tex: solid(color: #f00)`) run before the iteration
+# group that holds the step, and each writes the hidden surface that the step's
+# argument names. Upstream compiles those chains into steps directly ahead of
+# the consuming effect; they read nothing that the group itself writes.
+sub _run_chain {
+    my ($chain, $surfaces, $external_textures, $width, $height, $seed, $time,
+        $external_inputs) = @_;
+    my $current;
+    for my $group (@{ compute_iteration_groups($chain->{steps}, meta()->{effects}) }) {
+        my $step = @{ $group->{steps} } == 1 ? $group->{steps}[0] : undef;
+        if ($step && $step->{kind} eq 'read') {
+            $current = $surfaces->{ $step->{surface} };
+            die "Surface $step->{surface} has not been written\n" unless defined $current;
+        }
+        elsif ($step && $step->{kind} eq 'write') {
+            my $image = _chain_bundle($current)->{image};
+            die "write($step->{surface}) requires a current image\n" unless defined $image;
+            $surfaces->{ $step->{surface} } = $image;
+        }
+        elsif ($step && $step->{kind} eq 'write3d') {
+            # Upstream `write3d` stores the current bundle's volume and geometry
+            # under the two surface names (`none` stores nothing) and passes the
+            # chain through.
+            my $bundle = _chain_bundle($current);
+            if ($step->{volume} ne 'none' && defined $bundle->{volume}) {
+                $surfaces->{ $step->{volume} } = $bundle->{volume};
+            }
+            if ($step->{geometry} ne 'none' && defined $bundle->{geometry}) {
+                $surfaces->{ $step->{geometry} } = $bundle->{geometry};
+            }
+        }
+        elsif ($step && $step->{kind} eq 'read3d') {
+            # Upstream `read3d` starts a chain bundle from a stored volume and
+            # geometry. Both names are required to exist, per the JS surface IO
+            # contract.
+            my $volume = $surfaces->{ $step->{volume} };
+            die "Surface $step->{volume} has not been written\n" unless defined $volume;
+            my $geometry = defined $step->{geometry} ? $surfaces->{ $step->{geometry} } : undef;
+            $current = {
+                image      => undef,
+                volume     => $volume,
+                geometry   => $geometry,
+                volumeSize => $volume->{width},
+            };
+        }
+        else {
+            # The group's effect steps render their inline chains first: each
+            # writes the hidden surface the consuming step's argument names
+            # (upstream runs step.inlineChains ahead of the iteration group).
+            for my $group_step (@{ $group->{steps} }) {
+                for my $inline (@{ $group_step->{inline_chains} || [] }) {
+                    my $value = _run_chain(
+                        $inline->{chain}, $surfaces, $external_textures,
+                        $width, $height, $seed, $time, $external_inputs,
+                    );
+                    $surfaces->{ $inline->{surface} } = _chain_bundle($value)->{image};
+                }
+            }
+            if ($group->{iterated}) {
+                $current = _run_iteration_group(
+                    $group, $current, $surfaces, $external_textures,
+                    $width, $height, $seed, $time, $external_inputs,
+                );
+            }
+            else {
+                $current = _run_effect_step($step, $current, $surfaces, $external_textures,
+                    $width, $height, $seed, $time, $external_inputs);
+            }
+        }
+    }
+    return $current;
+}
+
 # Render a Polymorphic DSL program on the CPU — the Perl counterpart of
 # noisemaker-cpu's CpuRenderer.render(). Compiles the program to a plan, then
 # threads each chain's `current` surface through read/write/effect steps over
@@ -1233,55 +1307,8 @@ sub render_dsl {
     my %surfaces = %{ $opt{seed_surfaces} || {} };
     my $plan = compile_dsl($source, meta()->{effects});
     for my $chain (@{ $plan->{chains} }) {
-        my $current;
-        for my $group (@{ compute_iteration_groups($chain->{steps}, meta()->{effects}) }) {
-            my $step = @{ $group->{steps} } == 1 ? $group->{steps}[0] : undef;
-            if ($step && $step->{kind} eq 'read') {
-                $current = $surfaces{ $step->{surface} };
-                die "Surface $step->{surface} has not been written\n" unless defined $current;
-            }
-            elsif ($step && $step->{kind} eq 'write') {
-                my $image = _chain_bundle($current)->{image};
-                die "write($step->{surface}) requires a current image\n" unless defined $image;
-                $surfaces{ $step->{surface} } = $image;
-            }
-            elsif ($step && $step->{kind} eq 'write3d') {
-                # Upstream `write3d` stores the current bundle's volume and geometry
-                # under the two surface names (`none` stores nothing) and passes the
-                # chain through.
-                my $bundle = _chain_bundle($current);
-                if ($step->{volume} ne 'none' && defined $bundle->{volume}) {
-                    $surfaces{ $step->{volume} } = $bundle->{volume};
-                }
-                if ($step->{geometry} ne 'none' && defined $bundle->{geometry}) {
-                    $surfaces{ $step->{geometry} } = $bundle->{geometry};
-                }
-            }
-            elsif ($step && $step->{kind} eq 'read3d') {
-                # Upstream `read3d` starts a chain bundle from a stored volume and
-                # geometry. Both names are required to exist, per the JS surface IO
-                # contract.
-                my $volume = $surfaces{ $step->{volume} };
-                die "Surface $step->{volume} has not been written\n" unless defined $volume;
-                my $geometry = defined $step->{geometry} ? $surfaces{ $step->{geometry} } : undef;
-                $current = {
-                    image      => undef,
-                    volume     => $volume,
-                    geometry   => $geometry,
-                    volumeSize => $volume->{width},
-                };
-            }
-            elsif ($group->{iterated}) {
-                $current = _run_iteration_group(
-                    $group, $current, \%surfaces, $external_textures,
-                    $width, $height, $seed, $time, $external_inputs,
-                );
-            }
-            else {
-                $current = _run_effect_step($step, $current, \%surfaces, $external_textures,
-                    $width, $height, $seed, $time, $external_inputs);
-            }
-        }
+        _run_chain($chain, \%surfaces, $external_textures, $width, $height, $seed, $time,
+            $external_inputs);
     }
     my $rendered = $surfaces{ $plan->{render_surface} };
     die "Surface $plan->{render_surface} has not been written\n" unless defined $rendered;

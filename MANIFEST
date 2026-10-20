@@ -349,6 +349,7 @@ t/03-runtime.t
 t/04-kernel-smoke.t
 t/05-parity.t
 t/06-dsl.t
+t/06-subchain.t
 t/07-cli.t
 t/08-iteration.t
 t/09-scatter.t

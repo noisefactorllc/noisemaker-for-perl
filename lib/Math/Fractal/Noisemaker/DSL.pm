@@ -1152,6 +1152,13 @@ sub _compile_automation_call {
     return _compile_oscillator($call, $bindings, $depth);
 }
 
+# GAP-046 compile scope (upstream's CompileScope): search/effects for nested
+# inline chains, the chain-argument accumulator (pending is non-null only while
+# a chain call's arguments resolve, exactly upstream's bindings.pending) and
+# the hidden-surface counter. Dynamically scoped so every nested compile sees
+# its enclosing chain's accumulator.
+our $_SCOPE;
+
 sub _evaluate_value {
     my ($value, $bindings, $osc_depth) = @_;
     $osc_depth = 0 unless defined $osc_depth;
@@ -1206,7 +1213,25 @@ sub _evaluate_value {
         return $left * $right if $operator eq '*';
         return $left / $right;
     }
+    # A chain in an argument (`tex: solid(color: #f00)`) compiles to its own
+    # chain that writes a hidden surface; the consuming step carries it in
+    # inlineChains and the renderer runs it ahead of the step (GAP-046).
+    if ($kind eq 'Chain' && defined $_SCOPE && defined $_SCOPE->{pending}) {
+        return _compile_inline_chain($value, $bindings);
+    }
     _throw("Unsupported DSL value $kind", $value->{loc});
+}
+
+# Upstream CompileScope.compileInlineChain: compile the chain with inline
+# semantics (no write() terminator required), assign it the next hidden
+# surface name, queue it onto the enclosing chain call's pending list, and
+# resolve to a surface reference the consuming step binds.
+sub _compile_inline_chain {
+    my ($chain, $bindings) = @_;
+    my $compiled = _compile_chain($chain, $bindings, $_SCOPE->{search}, $_SCOPE->{effects}, { inline => 1 });
+    my $surface = 'inline:' . $_SCOPE->{inline_count}++;
+    push @{ $_SCOPE->{pending} }, { surface => $surface, chain => $compiled };
+    return { kind => 'surface', name => $surface, loc => $chain->{loc} };
 }
 
 sub _resolve_args {
@@ -1333,7 +1358,8 @@ sub _read3d_references {
 }
 
 sub _compile_chain {
-    my ($chain, $bindings, $search, $effects) = @_;
+    my ($chain, $bindings, $search, $effects, $opts) = @_;
+    $opts = {} unless ref $opts eq 'HASH';
     my @steps;
     my $has_input             = 0;
     my $has_image             = 0;
@@ -1350,7 +1376,7 @@ sub _compile_chain {
     while ($pos <= $#$calls) {
         my $call = $calls->[ $pos++ ];
         if (($call->{kind} // '') eq 'Subchain') {
-            my $binding = $bindings->{ $call->{name} };
+            my $binding = $bindings->{ $call->{name} // '' };
             if (defined $binding) {
                 _throw("Binding \"$call->{name}\" is not callable", $call->{loc})
                     unless $binding->{kind} eq 'partial';
@@ -1370,7 +1396,16 @@ sub _compile_chain {
                 unless $binding->{kind} eq 'partial';
             $call = _merge_partial($binding->{call}, $call);
         }
-        my $args = _resolve_args($call->{args}, $bindings);
+        # Chain arguments compile while this call's arguments resolve; they
+        # belong to this call (upstream swaps bindings.pending around
+        # resolveArgs and restores it in a finally).
+        my $args;
+        my $inline_chains;
+        {
+            local $_SCOPE->{pending} = [];
+            $args = _resolve_args($call->{args}, $bindings);
+            $inline_chains = $_SCOPE->{pending};
+        }
         if ($call->{name} eq 'read') {
             if ($index != 0 || @$args != 1 || !_is_surface($args->[0]{value})) {
                 _throw('read(surface) must begin a chain', $call->{loc});
@@ -1419,10 +1454,10 @@ sub _compile_chain {
             $has_image = 1;
             next;
         }
-        my $effect_id = _resolve_effect($call->{name},
-            $call->{namespace} ? [ $call->{namespace} ] : $search, $effects);
+        my $namespaces = $call->{namespace} ? [ $call->{namespace} ] : $search;
+        my $effect_id = _resolve_effect($call->{name}, $namespaces, $effects);
         if (!defined $effect_id) {
-            _throw("Unknown effect \"$call->{name}\" in search namespaces " . join(', ', @$search),
+            _throw("Unknown effect \"$call->{name}\" in search namespaces " . join(', ', @$namespaces),
                 $call->{loc});
         }
         my $spec = $effects->{$effect_id};
@@ -1474,16 +1509,20 @@ sub _compile_chain {
             $has_image = 1;
         }
         my ($params, $surfaces) = _normalize_effect($effect_id, $spec, $args);
-        push @steps, {
+        my %step = (
             kind      => 'effect',
             effect_id => $effect_id,
             params    => $params,
             surfaces  => $surfaces,
             loc       => $call->{loc},
-        };
+        );
+        $step{inline_chains} = $inline_chains if @$inline_chains;
+        push @steps, \%step;
     }
     _throw('loopBegin must be closed by loopEnd before the chain ends', $open_loop) if $open_loop;
-    if ($starts_with_generator && (!@steps || $steps[-1]{kind} ne 'write')) {
+    if (!$opts->{inline}
+        && $starts_with_generator
+        && (!@steps || ($steps[-1]{kind} ne 'write' && $steps[-1]{kind} ne 'write3d'))) {
         _throw('Generator chain must end with write(oN)', $chain->{loc});
     }
     return { steps => \@steps, loc => $chain->{loc} };
@@ -1494,6 +1533,9 @@ sub compile_dsl {
     $options = {} unless defined $options;
     my $ast = parse_dsl($source, $options);
     _throw('Missing required search directive', $ast->{loc}) if !@{ $ast->{search} };
+
+    # GAP-046: one compile scope per program (upstream's CompileScope).
+    local $_SCOPE = { search => $ast->{search}, effects => $effects, pending => undef, inline_count => 0 };
 
     my %bindings;
     for my $binding (@{ $ast->{bindings} }) {

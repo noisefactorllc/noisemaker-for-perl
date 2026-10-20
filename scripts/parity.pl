@@ -33,6 +33,9 @@ my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
 my $CLI = File::Spec->catfile($CPU_DIR, 'bin', 'noisemaker-cpu.js');
 my $oracle_pin = verify_oracle($CPU_DIR);
 print "Reference: $oracle_pin->{revision} (runtime SHA-256 verified)\n";
+my $port_head = Cwd::getcwd();
+chomp(my $head_sha = `git -C $port_head rev-parse HEAD 2>/dev/null`);
+print "Port HEAD: ", ($head_sha ? "$head_sha\n" : "unknown\n");
 
 my $SIZE = 8;
 my $SEED = 1;
