@@ -258,7 +258,7 @@
     "synth/julia:julia": "8e0f356ca2fed1491e7ab8910aa288df6a47f8e05051b35d9a4fd576fe516571",
     "synth/mandala:mandala": "c6a621908ebb4a15f2973688aad2be743c297ad8735a9da6c007616e214cbb61",
     "synth/mandelbrot:mandelbrot": "20c03e2c913627b824575a2c18effb4686efa9d7444b2aa6dc3dc3129324a914",
-    "synth/media:mediaInput": "68bacdb76940f91100e3d4a1e2bdfe8c70cb8565ccffbdfdfbc101262c05ab3b",
+    "synth/media:mediaInput": "6b969e192ad833dcda9c67524efdf058b6f679a1c21032d0d1d7b85bde061fab",
     "synth/mnca:mnca": "f72b2b4b8010466562d9ec344c457180230137e9515d85cc7bc19b303386880a",
     "synth/mnca:mncaFb": "cb459d25b9abac36224c4760175d1e533e0efc321e9a24302b9bf8160ff09360",
     "synth/modPattern:modPattern": "80463971141c23534165b47f366bb8df54cf6d32b92d8ad9a7fa47d3280c93e7",
@@ -288,7 +288,7 @@
     "synth/subdivide:subdivide": "c4ad631bbdbc1adff613a0a284c122c87f18e043ee8c9556995effd80e404cd2",
     "synth/testPattern:testPattern": "f913300a1312c6630d56fa1cc2faf2cb17fe0643d832473fdec7b66dd373cb20",
     "synth3d/cell3d:precompute": "9a78c0011a65b7b6b94505455ae1924311780bbe8296235595a099a8a1c36c80",
-    "synth3d/cellularAutomata3d:simulate": "d5533f317f8ffe545386591fa317750bdca679402d027740b2d2488978575482",
+    "synth3d/cellularAutomata3d:simulate": "d1f88b1bb7eedf31cedd23e59996d54efef8f3eb84bc24a3bed3a1cde0bc2b64",
     "synth3d/flythrough3d:precompute": "2694825664eef632449b197e1bce585f7878c6358a4d5260c72729b015d02a62",
     "synth3d/fractal3d:precompute": "4bc39fb7920cf0829cc6a6fc4670cdac9f5ea68c5438f569050a4732c1e6de19",
     "synth3d/heightmap3d:precompute": "85d3d98f08181500765e54b01153163ac6a18a1db7766e88a32fa7de0628e0dc",
@@ -298,5 +298,5 @@
   },
   "source": "https://shaders.noisedeck.app",
   "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-  "version": "1.0.294"
+  "version": "1.0.302"
 }

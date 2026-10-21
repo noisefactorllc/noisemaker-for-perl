@@ -25,6 +25,21 @@ my @cases = (
     ['extrude', 'search synth, filter\nnoise().extrude()', 41, 23, 7, 0.75],
     ['spooky ticker', 'search synth, filter\nnoise().spookyTicker()', 41, 23, 7, 0.75],
 );
+
+# Bounded-invocation sharding: NOISEMAKER_CPU_SYNC_CASES selects the cases to
+# run in this invocation (comma-separated case names). Unset runs every case.
+# An empty value skips the file so the fast suite stays within its invocation
+# limit; the excluded cases run in their own bounded shard invocations.
+if (defined $ENV{NOISEMAKER_CPU_SYNC_CASES}) {
+    plan skip_all => 'no sync cases selected for this shard invocation'
+        if $ENV{NOISEMAKER_CPU_SYNC_CASES} eq '';
+    my %select = map { $_ => 1 } split /,/, $ENV{NOISEMAKER_CPU_SYNC_CASES};
+    my %known = map { $_->[0] => 1 } @cases;
+    my @unknown = grep { !$known{$_} } keys %select;
+    die "unknown NOISEMAKER_CPU_SYNC_CASES case: @unknown\n" if @unknown;
+    @cases = grep { $select{ $_->[0] } } @cases;
+}
+
 for my $case (@cases) {
     my ($name, $source, $width, $height, $seed, $time) = @$case;
     $source =~ s/\\n/\n/g;

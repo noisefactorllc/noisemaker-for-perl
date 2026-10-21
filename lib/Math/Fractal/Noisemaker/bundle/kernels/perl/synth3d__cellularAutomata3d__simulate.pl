@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash3__vec3, $atlasTexel__ivec3_int, $sampleState__ivec3_int, $sampleSeed__ivec3_int, $countMooreNeighbors__ivec3_int, $countVonNeumannNeighbors__ivec3_int, $shouldBeBorn__int_int, $shouldSurvive__int_int, $main__void);
+    my ($hash3__vec3, $atlasTexel__ivec3_int, $sampleState__ivec3_int, $sampleSeed__ivec3_int, $packState__float_float, $countMooreNeighbors__ivec3_int, $countVonNeumannNeighbors__ivec3_int, $shouldBeBorn__int_int, $shouldSurvive__int_int, $main__void);
     my $_retc;
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
     my $_u_seed = exists $U->{'seed'} ? $U->{'seed'} : 0;
@@ -17,6 +17,7 @@ my $run_pixel = sub {
     my $_u_speed = exists $U->{'speed'} ? $U->{'speed'} : $rt->f(0.0);
     my $_u_density = exists $U->{'density'} ? $U->{'density'} : $rt->f(0.0);
     my $_u_weight = exists $U->{'weight'} ? $U->{'weight'} : $rt->f(0.0);
+    my $_u_colorMode = exists $U->{'colorMode'} ? $U->{'colorMode'} : 0;
     my $_u_resetState = exists $U->{'resetState'} ? $U->{'resetState'} : 0;
     my $_u_stateTex = $ctx->texture_binding('stateTex');
     my $_u_seedTex = $ctx->texture_binding('seedTex');
@@ -46,6 +47,13 @@ my $run_pixel = sub {
         my ($voxel, $volSize) = @_;
         $voxel = $rt->copy($voxel, 'int');
         return $rt->texel_fetch($_u_seedTex, $atlasTexel__ivec3_int->($voxel, $volSize), $rt->i(0));
+    };
+    $packState__float_float = sub {
+        my ($alive, $age) = @_;
+        if ($rt->binary('==', $_u_colorMode, $rt->i(1))) {
+            return $rt->construct(4, $alive, $age, $rt->f(0), $rt->f(1));
+        }
+        return $rt->construct(4, $alive, $alive, $alive, $rt->f(1));
     };
     $countMooreNeighbors__ivec3_int = sub {
         my ($voxel, $volSize) = @_;
@@ -247,7 +255,7 @@ my $run_pixel = sub {
                     $age = $rt->f(0);
                 }
             }
-            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $alive, $alive, $alive, $rt->f(1)))}; $g->{fragColor} };
+            scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($packState__float_float->($alive, $age))}; $g->{fragColor} };
             return;
         }
         $neighbors = 0;
@@ -284,7 +292,7 @@ my $run_pixel = sub {
             $seedLum = $rt->binary('+', $rt->binary('+', $rt->binary('*', $rt->f(0.29899999999999999), $rt->swizzle($seedVal, 'r'), 1, 'float'), $rt->binary('*', $rt->f(0.58699999999999997), $rt->swizzle($seedVal, 'g'), 1, 'float'), 1, 'float'), $rt->binary('*', $rt->f(0.114), $rt->swizzle($seedVal, 'b'), 1, 'float'), 1, 'float');
             $finalAlive = $rt->component_wise('mix', $finalAlive, $seedLum, $rt->binary('*', $_u_weight, $rt->f(0.01), 1, 'float'));
         }
-        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $finalAlive, $finalAlive, $finalAlive, $rt->f(1)))}; $g->{fragColor} };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($packState__float_float->($finalAlive, $finalAge))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};

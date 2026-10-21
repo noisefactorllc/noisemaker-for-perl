@@ -12,6 +12,8 @@ my $run_pixel = sub {
     my $_u_imageTex = $ctx->texture_binding('imageTex');
     my $_u_imageSize = exists $U->{'imageSize'} ? $U->{'imageSize'} : $rt->construct(2, 0.0);
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
+    my $_u_tileOffset = exists $U->{'tileOffset'} ? $U->{'tileOffset'} : $rt->construct(2, 0.0);
+    my $_u_fullResolution = exists $U->{'fullResolution'} ? $U->{'fullResolution'} : $rt->construct(2, 0.0);
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
     my $_u_position = exists $U->{'position'} ? $U->{'position'} : 0;
     my $_u_rotation = exists $U->{'rotation'} ? $U->{'rotation'} : $rt->f(0.0);
@@ -83,45 +85,51 @@ my $run_pixel = sub {
         $st = $rt->copy($st, 'float');
         my ($scale, $size, $text);
         $size = $rt->fresh($_u_imageSize);
-        scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $size, 2, 'float'))}; $st };
+        if ((($rt->binary('==', $rt->swizzle($_u_tileOffset, 'x'), $rt->f(0))) && ($rt->binary('==', $rt->swizzle($_u_tileOffset, 'y'), $rt->f(0))) ? 1 : 0)) {
+            scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('/', $rt->swizzle($ctx->{frag_coord}, 'xy'), $size, 2, 'float'))}; $st };
+        } else {
+            scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('/', $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'), $size, 2, 'float'))}; $st };
+        }
         $st = $rt->assign_swizzle($st, 'y', $rt->binary('-', $rt->f(1), $rt->swizzle($st, 'y'), 1, 'float'));
         $scale = $rt->metal_divide($rt->f(100), $_u_scaleAmt);
         if ($rt->binary('==', $scale, $rt->f(0))) {
             $scale = $rt->f(1);
         }
         scalar do { @{$st} = map { $rt->f32($_) } @{($rt->binary('*', $st, $scale, 2, 'float'))}; $st };
-        if ($rt->binary('==', $_u_position, $rt->i(0))) {
-            $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
-        } else {
-            if ($rt->binary('==', $_u_position, $rt->i(1))) {
-                $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
-                $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+        if ((($rt->binary('>', $rt->swizzle($_u_fullResolution, 'x'), $rt->f(0))) && ((($rt->binary('!=', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($_u_resolution, 'x'))) || ($rt->binary('!=', $rt->swizzle($_u_fullResolution, 'y'), $rt->swizzle($_u_resolution, 'y'))) ? 1 : 0)) ? 1 : 0)) {
+            if ($rt->binary('==', $_u_position, $rt->i(0))) {
+                $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
             } else {
-                if ($rt->binary('==', $_u_position, $rt->i(2))) {
-                    $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
-                    $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                if ($rt->binary('==', $_u_position, $rt->i(1))) {
+                    $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                    $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
                 } else {
-                    if ($rt->binary('==', $_u_position, $rt->i(3))) {
-                        $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), $scale, 1, 'float'), 1, 'float'));
+                    if ($rt->binary('==', $_u_position, $rt->i(2))) {
+                        $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                        $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
                     } else {
-                        if ($rt->binary('==', $_u_position, $rt->i(4))) {
-                            $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
-                            $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), $scale, 1, 'float'), 1, 'float'));
+                        if ($rt->binary('==', $_u_position, $rt->i(3))) {
+                            $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), $scale, 1, 'float'), 1, 'float'));
                         } else {
-                            if ($rt->binary('==', $_u_position, $rt->i(5))) {
-                                $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
-                                $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), $scale, 1, 'float'), 1, 'float'));
+                            if ($rt->binary('==', $_u_position, $rt->i(4))) {
+                                $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), $scale, 1, 'float'), 1, 'float'));
                             } else {
-                                if ($rt->binary('==', $_u_position, $rt->i(6))) {
-                                    $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->f(1), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                if ($rt->binary('==', $_u_position, $rt->i(5))) {
+                                    $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                    $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), $scale, 1, 'float'), 1, 'float'));
                                 } else {
-                                    if ($rt->binary('==', $_u_position, $rt->i(7))) {
-                                        $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                    if ($rt->binary('==', $_u_position, $rt->i(6))) {
                                         $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->f(1), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
                                     } else {
-                                        if ($rt->binary('==', $_u_position, $rt->i(8))) {
-                                            $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                        if ($rt->binary('==', $_u_position, $rt->i(7))) {
+                                            $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
                                             $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->f(1), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                        } else {
+                                            if ($rt->binary('==', $_u_position, $rt->i(8))) {
+                                                $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                                $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->f(1), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                            }
                                         }
                                     }
                                 }
@@ -130,9 +138,53 @@ my $run_pixel = sub {
                     }
                 }
             }
+            $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('*', $map__float_float_float_float_float->($_u_offsetX, $rt->unary('-', $rt->f(100)), $rt->f(100), $rt->binary('*', $rt->binary('/', $rt->unary('-', $rt->swizzle($_u_fullResolution, 'x')), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float')), $rt->f(1.5), 1, 'float'), 1, 'float'));
+            $st = $rt->assign_swizzle($st, 'y', $rt->binary('-', $rt->swizzle($st, 'y'), $rt->binary('*', $map__float_float_float_float_float->($_u_offsetY, $rt->unary('-', $rt->f(100)), $rt->f(100), $rt->binary('*', $rt->binary('/', $rt->unary('-', $rt->swizzle($_u_fullResolution, 'y')), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_fullResolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float')), $rt->f(1.5), 1, 'float'), 1, 'float'));
+        } else {
+            if ($rt->binary('==', $_u_position, $rt->i(0))) {
+                $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+            } else {
+                if ($rt->binary('==', $_u_position, $rt->i(1))) {
+                    $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                    $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                } else {
+                    if ($rt->binary('==', $_u_position, $rt->i(2))) {
+                        $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                        $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                    } else {
+                        if ($rt->binary('==', $_u_position, $rt->i(3))) {
+                            $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), $scale, 1, 'float'), 1, 'float'));
+                        } else {
+                            if ($rt->binary('==', $_u_position, $rt->i(4))) {
+                                $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), $scale, 1, 'float'), 1, 'float'));
+                            } else {
+                                if ($rt->binary('==', $_u_position, $rt->i(5))) {
+                                    $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                    $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->binary('+', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), $scale, 1, 'float'), 1, 'float'));
+                                } else {
+                                    if ($rt->binary('==', $_u_position, $rt->i(6))) {
+                                        $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->f(1), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                    } else {
+                                        if ($rt->binary('==', $_u_position, $rt->i(7))) {
+                                            $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->f(0.5), 1, 'float'), $rt->binary('-', $rt->f(0.5), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                            $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->f(1), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                        } else {
+                                            if ($rt->binary('==', $_u_position, $rt->i(8))) {
+                                                $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('-', $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('-', $rt->f(1), $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                                $st = $rt->assign_swizzle($st, 'y', $rt->binary('+', $rt->swizzle($st, 'y'), $rt->binary('-', $rt->f(1), $rt->binary('-', $scale, $rt->binary('*', $rt->binary('/', $rt->f(1), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), 1, 'float'), 1, 'float'), 1, 'float'));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('*', $map__float_float_float_float_float->($_u_offsetX, $rt->unary('-', $rt->f(100)), $rt->f(100), $rt->binary('*', $rt->binary('/', $rt->unary('-', $rt->swizzle($_u_resolution, 'x')), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float')), $rt->f(1.5), 1, 'float'), 1, 'float'));
+            $st = $rt->assign_swizzle($st, 'y', $rt->binary('-', $rt->swizzle($st, 'y'), $rt->binary('*', $map__float_float_float_float_float->($_u_offsetY, $rt->unary('-', $rt->f(100)), $rt->f(100), $rt->binary('*', $rt->binary('/', $rt->unary('-', $rt->swizzle($_u_resolution, 'y')), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float')), $rt->f(1.5), 1, 'float'), 1, 'float'));
         }
-        $st = $rt->assign_swizzle($st, 'x', $rt->binary('-', $rt->swizzle($st, 'x'), $rt->binary('*', $map__float_float_float_float_float->($_u_offsetX, $rt->unary('-', $rt->f(100)), $rt->f(100), $rt->binary('*', $rt->binary('/', $rt->unary('-', $rt->swizzle($_u_resolution, 'x')), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float'), $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'x'), $rt->swizzle($size, 'x'), 1, 'float'), $scale, 1, 'float')), $rt->f(1.5), 1, 'float'), 1, 'float'));
-        $st = $rt->assign_swizzle($st, 'y', $rt->binary('-', $rt->swizzle($st, 'y'), $rt->binary('*', $map__float_float_float_float_float->($_u_offsetY, $rt->unary('-', $rt->f(100)), $rt->f(100), $rt->binary('*', $rt->binary('/', $rt->unary('-', $rt->swizzle($_u_resolution, 'y')), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float'), $rt->binary('*', $rt->binary('/', $rt->swizzle($_u_resolution, 'y'), $rt->swizzle($size, 'y'), 1, 'float'), $scale, 1, 'float')), $rt->f(1.5), 1, 'float'), 1, 'float'));
         $st = $rt->assign_swizzle($st, 'x', $rt->binary('*', $rt->swizzle($st, 'x'), $rt->binary('/', $rt->swizzle($size, 'x'), $rt->swizzle($size, 'y'), 1, 'float'), 1, 'float'));
         if ($rt->binary('!=', $_u_rotation, $rt->f(0))) {
             scalar do { @{$st} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($st, $_u_rotation))}; $st };

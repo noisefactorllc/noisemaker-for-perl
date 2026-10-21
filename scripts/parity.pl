@@ -323,7 +323,10 @@ for my $eid (@ids) {
             || $reviewed_fractal_seed_time)) {
         push @near, [$eid, $d, $changed_pixels];
     }
-    elsif ($oracle_pin->{revision} eq '2e751f4c09154bd67e5d83f50d2185425aba0c1a'
+    # The same single reviewed pixel difference was re-measured unchanged at
+    # both bound oracle pins (2b0779bf after the authority rebind).
+    elsif (($oracle_pin->{revision} eq '2e751f4c09154bd67e5d83f50d2185425aba0c1a'
+            || $oracle_pin->{revision} eq '2b0779bf3ba5dc7a2a7fa0b9c68115f153bdcbf4')
         && $reviewed_grain_seed_time) {
         push @near, [$eid, $d, $changed_pixels];
     }
