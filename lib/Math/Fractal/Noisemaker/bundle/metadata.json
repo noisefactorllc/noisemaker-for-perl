@@ -19125,6 +19125,7 @@
       "kind": "filter",
       "namespace": "points",
       "paramOrder": [
+        "fieldTex",
         "stateSize",
         "anchorDensity",
         "stride",
@@ -19136,6 +19137,10 @@
         "iterationCount"
       ],
       "params": {
+        "fieldTex": {
+          "type": "surface",
+          "default": "inputTex"
+        },
         "anchorDensity": {
           "default": 0.5,
           "max": 5,
@@ -19230,7 +19235,7 @@
           "drawBuffers": 3,
           "inputs": {
             "gridTex": "global_dla_grid",
-            "inputTex": "inputTex",
+            "inputTex": "fieldTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
             "xyzTex": "global_xyz"
@@ -19447,6 +19452,7 @@
       "kind": "filter",
       "namespace": "points",
       "paramOrder": [
+        "fieldTex",
         "stateSize",
         "behavior",
         "stride",
@@ -19457,6 +19463,10 @@
         "iterationCount"
       ],
       "params": {
+        "fieldTex": {
+          "type": "surface",
+          "default": "inputTex"
+        },
         "behavior": {
           "choices": {
             "chaotic": 4,
@@ -19521,7 +19531,7 @@
         {
           "drawBuffers": 3,
           "inputs": {
-            "inputTex": "inputTex",
+            "inputTex": "fieldTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
             "xyzTex": "global_xyz"
@@ -19673,6 +19683,7 @@
       "kind": "filter",
       "namespace": "points",
       "paramOrder": [
+        "heightTex",
         "stride",
         "quantize",
         "inverse",
@@ -19680,6 +19691,10 @@
         "iterationCount"
       ],
       "params": {
+        "heightTex": {
+          "type": "surface",
+          "default": "inputTex"
+        },
         "inputWeight": {
           "default": 100,
           "max": 100,
@@ -19716,7 +19731,7 @@
         {
           "drawBuffers": 3,
           "inputs": {
-            "inputTex": "inputTex",
+            "inputTex": "heightTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
             "xyzTex": "global_xyz"
@@ -19933,6 +19948,7 @@
       "kind": "filter",
       "namespace": "points",
       "paramOrder": [
+        "diffuseTex",
         "stateSize",
         "typeCount",
         "attractionScale",
@@ -19948,6 +19964,10 @@
         "iterationCount"
       ],
       "params": {
+        "diffuseTex": {
+          "type": "surface",
+          "default": "inputTex"
+        },
         "attractionScale": {
           "default": 1,
           "max": 5,
@@ -20056,7 +20076,7 @@
           "inputs": {
             "dataTex": "global_life_data",
             "forceMatrix": "forceMatrix",
-            "inputTex": "inputTex",
+            "inputTex": "diffuseTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
             "xyzTex": "global_xyz"
@@ -20123,6 +20143,7 @@
       "kind": "filter",
       "namespace": "points",
       "paramOrder": [
+        "fieldTex",
         "moveSpeed",
         "turnSpeed",
         "sensorAngle",
@@ -20134,6 +20155,10 @@
         "iterationCount"
       ],
       "params": {
+        "fieldTex": {
+          "type": "surface",
+          "default": "inputTex"
+        },
         "decay": {
           "default": 0.1,
           "max": 1,
@@ -20215,7 +20240,7 @@
         {
           "drawBuffers": 3,
           "inputs": {
-            "inputTex": "inputTex",
+            "inputTex": "fieldTex",
             "rgbaTex": "global_rgba",
             "trailTex": "global_physarum_pheromone",
             "velTex": "global_vel",
@@ -21288,6 +21313,7 @@
       "kind": "filter",
       "namespace": "render",
       "paramOrder": [
+        "diffuseTex",
         "stateSize",
         "layout",
         "seed",
@@ -21296,6 +21322,10 @@
         "iterationCount"
       ],
       "params": {
+        "diffuseTex": {
+          "type": "surface",
+          "default": "inputTex"
+        },
         "attrition": {
           "default": 0,
           "max": 10,
@@ -21355,7 +21385,7 @@
         {
           "drawBuffers": 3,
           "inputs": {
-            "inputTex": "inputTex",
+            "inputTex": "diffuseTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
             "xyzTex": "global_xyz"
@@ -29115,6 +29145,6 @@
     "base": "https://shaders.noisedeck.app",
     "source": "shaders.noisedeck.app CDN",
     "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-    "version": "1.0.302"
+    "version": "1.0.294"
   }
 }

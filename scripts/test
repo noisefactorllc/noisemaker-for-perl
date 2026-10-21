@@ -19,8 +19,43 @@ my $repo = $FindBin::Bin;
 chdir(File::Spec->catdir($repo, '..')) or die "cannot cd to repository root: $!\n";
 my $root = getcwd();
 
+# NM_CHANGED_FILES — one changed path per line, from the supervisor. When set,
+# run only the t/ tests that reference those paths (by full path or basename)
+# so the changed code is exercised within a bounded invocation; every matched
+# test still runs. Unset runs the whole suite as before.
+my @tests = grep { -f } glob 't/*.t';
+my $scoped = 0;
+if (defined $ENV{NM_CHANGED_FILES} && $ENV{NM_CHANGED_FILES} =~ /\S/) {
+    my @changed = grep { /\S/ } split /\n/, $ENV{NM_CHANGED_FILES};
+    my %selected;
+    for my $t (@tests) {
+        open my $fh, '<', $t or die "cannot read $t: $!\n";
+        local $/;
+        my $content = <$fh>;
+        close $fh;
+        for my $f (@changed) {
+            (my $base = $f) =~ s{.*/}{};
+            if (index($content, $f) >= 0
+                || (length($base) >= 8 && $base ne $f && index($content, $base) >= 0)) {
+                $selected{$t} = 1;
+                last;
+            }
+        }
+    }
+    @tests = sort keys %selected;
+    $scoped = 1;
+    print "NM_CHANGED_FILES set: running only tests referencing changed paths\n";
+    unless (@tests) {
+        print "No t/ test references the changed paths; nothing to run\n";
+        exit 0;
+    }
+}
+
 print "== prove suite ==\n";
-if (system('prove', '-j2', '-lr', 't') != 0) {
+my @prove = ('prove', '-j2', '-lr');
+if ($scoped) { push @prove, @tests }
+else { push @prove, 't' }
+if (system(@prove) != 0) {
     print "FAIL: test suite reported failures\n";
     $fail = 1;
 }
