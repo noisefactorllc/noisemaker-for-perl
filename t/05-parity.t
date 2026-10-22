@@ -4,7 +4,7 @@ use Test::More;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use lib "$FindBin::Bin/../scripts";
-use ParityOracle qw(verify_oracle);
+use ParityOracle qw(resolve_oracle verify_oracle);
 use File::Spec;
 use File::Temp ();
 
@@ -15,16 +15,27 @@ use Math::Fractal::Noisemaker::PNG qw(decode_png encode_png);
 use Math::Fractal::Noisemaker::Renderer qw(render_effect render_dsl);
 use Math::Fractal::Noisemaker::Surface;
 
-my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
-    || File::Spec->rel2abs(File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-for-cpu'));
+# The oracle resolves in the same order scripts/parity-summary uses:
+# NOISEMAKER_CPU_DIR when it verifies, then a sibling checkout, then the
+# exact scripts/oracle-lock.json revision installed in the provisioning
+# cache root, verified against the recorded runtime digest. Without a
+# provisioned oracle the parity cases skip.
+# An explicitly configured NOISEMAKER_CPU_DIR must verify: a wrong or
+# tampered oracle stops the run. Without any configured oracle the parity
+# cases skip until the environment provisions the pinned runtime.
+my $configured = defined $ENV{NOISEMAKER_CPU_DIR};
+my $CPU_DIR = eval { resolve_oracle() };
+if ($configured && !$CPU_DIR) {
+    BAIL_OUT('Reference verification failed: ' . ($@ || 'unknown resolution error'));
+}
+plan skip_all => 'pinned noisemaker-for-cpu oracle could not be resolved and verified: '
+    . ($@ || 'no pinned noisemaker-for-cpu available')
+    unless $CPU_DIR;
 my $CLI = File::Spec->catfile($CPU_DIR, 'bin', 'noisemaker-cpu.js');
 my $PARITY_SCRIPT = File::Spec->catfile($FindBin::Bin, '..', 'scripts', 'parity.pl');
 
 plan skip_all => 'JS oracle (node + noisemaker-cpu) not available'
-    unless $ENV{RELEASE_TESTING} || (-e $CLI && system('node --version >/dev/null 2>&1') == 0);
-
-my $verified = eval { verify_oracle($CPU_DIR); 1 };
-BAIL_OUT("Reference verification failed: $@") unless $verified;
+    unless system('node --version >/dev/null 2>&1') == 0;
 pass('reference runtime matches the recorded oracle pin');
 
 my $TMP = File::Temp::tempdir(CLEANUP => 1);

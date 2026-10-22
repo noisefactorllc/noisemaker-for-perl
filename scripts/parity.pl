@@ -18,18 +18,18 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use lib $FindBin::Bin;
-use ParityOracle qw(verify_oracle particle_program);
+use ParityOracle qw(verify_oracle resolve_oracle particle_program);
 use ReactiveFixtures qw(%EXTERNAL_INPUT_SOURCES external_inputs_for);
 use Cwd ();
 use File::Spec;
 use File::Temp ();
 
 use Math::Fractal::Noisemaker::PNG qw(encode_png decode_png);
+use File::Copy qw(copy);
 use Math::Fractal::Noisemaker::Renderer qw(render_effect render_dsl meta);
 use Math::Fractal::Noisemaker::Surface;
 
-my $CPU_DIR = $ENV{NOISEMAKER_CPU_DIR}
-    || File::Spec->rel2abs(File::Spec->catdir($FindBin::Bin, '..', '..', 'noisemaker-for-cpu'));
+my $CPU_DIR = resolve_oracle();
 my $CLI = File::Spec->catfile($CPU_DIR, 'bin', 'noisemaker-cpu.js');
 my $oracle_pin = verify_oracle($CPU_DIR);
 print "Reference: $oracle_pin->{revision} (runtime SHA-256 verified)\n";
@@ -324,13 +324,27 @@ for my $eid (@ids) {
         push @near, [$eid, $d, $changed_pixels];
     }
     # The same single reviewed pixel difference was re-measured unchanged at
-    # both bound oracle pins (2b0779bf after the authority rebind).
+    # each bound oracle pin (2b0779bf after the authority rebind, then
+    # c24b348cf654 at the delivered pin; size-64/seed-97/time-0.75 protocol:
+    # 1 changed pixel, NEAR accepted, exit 0; captures retained).
     elsif (($oracle_pin->{revision} eq '2e751f4c09154bd67e5d83f50d2185425aba0c1a'
-            || $oracle_pin->{revision} eq '2b0779bf3ba5dc7a2a7fa0b9c68115f153bdcbf4')
+            || $oracle_pin->{revision} eq '2b0779bf3ba5dc7a2a7fa0b9c68115f153bdcbf4'
+            || $oracle_pin->{revision} eq 'c24b348cf654ef8653ad071c208e9d532ce9df44')
         && $reviewed_grain_seed_time) {
         push @near, [$eid, $d, $changed_pixels];
     }
     else { push @diffs, [$eid, $d, $changed_pixels] }
+
+    # Retain source-bound captures for reviewed NEAR cases so the required
+    # side-by-side visual verdict stays reproducible at native size.
+    if (@near && $near[-1][0] eq $eid && (my $cap = $ENV{NM_PARITY_CAPTURE_DIR})) {
+        (my $case = $eid) =~ s{/}{_}g;
+        copy(File::Spec->catfile($TMP, 'ph_js.png'), File::Spec->catfile($cap, "$case.js.png"))
+            or die "cannot retain reference capture: $!\n";
+        open my $cap_fh, '>:raw', File::Spec->catfile($cap, "$case.perl.png") or die $!;
+        print {$cap_fh} encode_png($pl) or die $!;
+        close $cap_fh or die $!;
+    }
 }
 
 my $err_count = 0;

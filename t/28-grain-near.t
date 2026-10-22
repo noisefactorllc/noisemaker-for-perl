@@ -2,12 +2,21 @@ use strict;
 use warnings;
 use Test::More;
 use FindBin;
+use lib "$FindBin::Bin/../scripts";
+use ParityOracle qw(resolve_oracle);
 use File::Spec;
 use File::Temp qw(tempdir);
 
-my $oracle = $ENV{NOISEMAKER_CPU_DIR};
+my $oracle = eval { resolve_oracle() };
+my $oracle_ok = defined $oracle && -f File::Spec->catfile($oracle, 'bin', 'noisemaker-cpu.js');
+if ($ENV{RELEASE_TESTING} && !$oracle_ok) {
+    BAIL_OUT('pinned JS oracle could not be resolved and verified: '
+        . ($@ || 'no pinned noisemaker-for-cpu available'));
+}
 plan skip_all => 'pinned JS oracle required for grain near-parity regression'
-    unless $ENV{RELEASE_TESTING} || (defined $oracle && -f "$oracle/bin/noisemaker-cpu.js");
+    unless $oracle_ok;
+# parity.pl resolves NOISEMAKER_CPU_DIR first; hand the verified checkout down.
+$ENV{NOISEMAKER_CPU_DIR} = $oracle;
 my $root = File::Spec->rel2abs("$FindBin::Bin/..");
 my $script = "$root/scripts/parity.pl";
 my $tmp = tempdir(CLEANUP => 1);
@@ -29,7 +38,10 @@ sub run_capture {
 
 my ($accepted, $receipt) = run_capture('accepted', $^X, $script, @args);
 is($accepted, 0, 'reviewed grain receipt remains accepted at the current oracle pin');
-like($receipt, qr/^NEAR: 1$/m, 'the receipt is classified as near, not exact');
+my ($pin) = $receipt =~ /^Reference: ([0-9a-f]{40}) /m;
+ok(defined $pin, 'the receipt names its oracle pin');
+like($receipt, qr/^NEAR: 1$/m,
+    'the reviewed single-pixel difference is classified as near, not exact');
 
 # Alter one additional pixel of a real render; the narrowly measured allowance
 # must reject it instead of accepting every small grain difference.

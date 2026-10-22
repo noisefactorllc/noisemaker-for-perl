@@ -6,10 +6,11 @@ use Exporter 'import';
 use File::Basename qw(dirname);
 use File::Find qw(find);
 use File::Spec;
+
 use Digest::SHA;
 use JSON::PP qw(decode_json);
 
-our @EXPORT_OK = qw(verify_oracle particle_program);
+our @EXPORT_OK = qw(verify_oracle resolve_oracle particle_program);
 
 sub read_file {
     my ($path) = @_;
@@ -45,6 +46,56 @@ sub verify_oracle {
     die "Reference runtime differs from oracle-lock.json; check out $pin->{revision} in $root\n"
         unless $sha->hexdigest eq $pin->{runtime_sha256};
     return $pin;
+}
+
+# Where the pinned noisemaker-for-cpu oracle lives. NOISEMAKER_CPU_DIR wins
+# and must verify: an explicitly configured oracle that does not match the
+# recorded digest is a hard error, matching the published harness contract.
+# A sibling checkout comes next; otherwise the cache root must already hold
+# the exact pin revision, verified against the recorded runtime digest.
+# Tests never touch the network: the pinned runtime is installed by the
+# environment's provisioning step, and a cache that does not hold it is
+# reported. Dies when no source can be verified.
+sub resolve_oracle {
+    my ($pin_path) = @_;
+    if (defined(my $dir = $ENV{NOISEMAKER_CPU_DIR})) {
+        verify_oracle($dir, $pin_path);
+        return $dir;
+    }
+    my $sibling = File::Spec->rel2abs(
+        File::Spec->catdir(dirname(__FILE__), '..', '..', 'noisemaker-for-cpu'));
+    if (-e File::Spec->catfile($sibling, 'package.json')) {
+        return $sibling if eval { verify_oracle($sibling, $pin_path); 1 };
+        warn "noisemaker-for-cpu sibling $sibling does not match oracle-lock.json: $@";
+    }
+    return provision_oracle($pin_path);
+}
+
+# Locate the pinned runtime in the cache root and verify it against the
+# recorded runtime digest. The cache lives outside this repository; a pin bump
+# expects a fresh revision installed by the environment's provisioning step.
+sub provision_oracle {
+    my ($pin_path) = @_;
+    $pin_path ||= File::Spec->catfile(dirname(__FILE__), 'oracle-lock.json');
+    my $pin = decode_json(read_file($pin_path));
+    my $rev = $pin->{revision}
+        or die "oracle-lock.json records no revision to provision\n";
+
+    my ($cache_root) = grep {
+        defined && -d && -w
+    } ($ENV{NOISEMAKER_ORACLE_CACHE},
+       File::Spec->rel2abs(File::Spec->catdir($ENV{HOME} || File::Spec->curdir, '.cache')));
+    $cache_root or die "no writable cache root is configured; set NOISEMAKER_ORACLE_CACHE\n";
+    my $base = File::Spec->catdir($cache_root, 'noisemaker-for-cpu-pin');
+    my $target = File::Spec->catdir($base, $rev);
+    # Tests never fetch from the network. The pinned runtime is installed by
+    # the environment's provisioning step into the cache root before the
+    # suite runs; a bare container without it has no oracle and the callers
+    # gate on that instead of downloading at test time.
+    return $target if eval { verify_oracle($target, $pin_path); 1 };
+    die "pinned noisemaker-for-cpu $rev is not provisioned in the cache root; "
+        . "install it before running the suite (runtime_sha256 "
+        . "$pin->{runtime_sha256})\n";
 }
 
 # Both engines receive this exact scene. The reference `effect` CLI inserts an

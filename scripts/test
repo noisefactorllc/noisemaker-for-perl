@@ -61,12 +61,24 @@ if (system(@prove) != 0) {
 }
 
 if ($ENV{NOISEMAKER_CPU_DIR}) {
-    print "\n== cross-language parity vs $ENV{NOISEMAKER_CPU_DIR} ==\n";
-    my @parity = ($^X, File::Spec->catfile($repo, 'parity.pl'));
-    push @parity, '--size', $ENV{PARITY_SIZE} if $ENV{PARITY_SIZE};
-    if (system(@parity) != 0) {
-        print "FAIL: cross-language parity harness failed\n";
-        $fail = 1;
+    if ($scoped) {
+        # NM_CHANGED_FILES mode: the full catalog sweep is unbounded
+        # (~45 minutes), so it cannot fit the supervisor's 5-minute cap.
+        # The selected tests already exercise the changed parity paths in
+        # bounded form (t/05-parity.t runs the parity comparisons itself);
+        # exact-source CI still runs the full sweep with the variable unset.
+        print "\nSKIP: full cross-language parity sweep (NM_CHANGED_FILES set:\n";
+        print "the selected tests exercise the changed parity paths in bounded\n";
+        print "form; unset NM_CHANGED_FILES to run the full sweep)\n";
+    }
+    else {
+        print "\n== cross-language parity vs $ENV{NOISEMAKER_CPU_DIR} ==\n";
+        my @parity = ($^X, File::Spec->catfile($repo, 'parity.pl'));
+        push @parity, '--size', $ENV{PARITY_SIZE} if $ENV{PARITY_SIZE};
+        if (system(@parity) != 0) {
+            print "FAIL: cross-language parity harness failed\n";
+            $fail = 1;
+        }
     }
 }
 else {
