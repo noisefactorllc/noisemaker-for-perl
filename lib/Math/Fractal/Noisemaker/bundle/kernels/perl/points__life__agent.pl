@@ -22,12 +22,14 @@ my $run_pixel = sub {
     my $_u_matrixSeed = exists $U->{'matrixSeed'} ? $U->{'matrixSeed'} : $rt->f(0.0);
     my $_u_symmetricForces = exists $U->{'symmetricForces'} ? $U->{'symmetricForces'} : 0;
     my $_u_useTypeColor = exists $U->{'useTypeColor'} ? $U->{'useTypeColor'} : 0;
+    my $_u_diffuseActive = exists $U->{'diffuseActive'} ? $U->{'diffuseActive'} : $rt->f(0.0);
     my $_u_xyzTex = $ctx->texture_binding('xyzTex');
     my $_u_velTex = $ctx->texture_binding('velTex');
     my $_u_rgbaTex = $ctx->texture_binding('rgbaTex');
     my $_u_dataTex = $ctx->texture_binding('dataTex');
     my $_u_forceMatrix = $ctx->texture_binding('forceMatrix');
     my $_u_inputTex = $ctx->texture_binding('inputTex');
+    my $_u_diffuseTex = $ctx->texture_binding('diffuseTex');
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
@@ -276,10 +278,14 @@ my $run_pixel = sub {
         $age = $rt->binary('+', $age, $rt->f(0.016), 1, 'float');
         scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $pos, $rt->f(0), $rt->f(1)))}; $g->{outXYZ} };
         scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $velocity, $age, $seed))}; $g->{outVel} };
-        if ($_u_useTypeColor) {
-            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->construct(4, $typeColor__int_int->($rt->construct(1, $typeId, 'int'), $_u_typeCount), $rt->f(1)))}; $g->{outRGBA} };
+        if ($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) {
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->texture($_u_diffuseTex, $pos))}; $g->{outRGBA} };
         } else {
-            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $pos))}; $g->{outRGBA} };
+            if ($_u_useTypeColor) {
+                scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->construct(4, $typeColor__int_int->($rt->construct(1, $typeId, 'int'), $_u_typeCount), $rt->f(1)))}; $g->{outRGBA} };
+            } else {
+                scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $pos))}; $g->{outRGBA} };
+            }
         }
         scalar do { @{$g->{outData}} = map { $rt->f32($_) } @{($rt->construct(4, $typeId, $mass, $rt->f(0), $rt->f(1)))}; $g->{outData} };
     };

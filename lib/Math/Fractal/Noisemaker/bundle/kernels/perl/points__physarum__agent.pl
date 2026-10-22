@@ -7,12 +7,13 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint_lcg__uint, $hash__uint, $hash_f__float, $wrapPosition__vec2, $luminance__vec3, $sampleTrail__vec2, $sampleExternalField__vec2_float, $main__void);
+    my ($selectedDiffuse__vec2, $hash_uint_lcg__uint, $hash__uint, $hash_f__float, $wrapPosition__vec2, $luminance__vec3, $sampleTrail__vec2, $sampleExternalField__vec2_float, $main__void);
     my $_retc;
     my $_u_xyzTex = $ctx->texture_binding('xyzTex');
     my $_u_velTex = $ctx->texture_binding('velTex');
     my $_u_rgbaTex = $ctx->texture_binding('rgbaTex');
     my $_u_trailTex = $ctx->texture_binding('trailTex');
+    my $_u_fieldTex = $ctx->texture_binding('fieldTex');
     my $_u_inputTex = $ctx->texture_binding('inputTex');
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
@@ -21,10 +22,21 @@ my $run_pixel = sub {
     my $_u_sensorAngle = exists $U->{'sensorAngle'} ? $U->{'sensorAngle'} : $rt->f(0.0);
     my $_u_sensorDistance = exists $U->{'sensorDistance'} ? $U->{'sensorDistance'} : $rt->f(0.0);
     my $_u_inputWeight = exists $U->{'inputWeight'} ? $U->{'inputWeight'} : $rt->f(0.0);
+    my $_u_fieldActive = exists $U->{'fieldActive'} ? $U->{'fieldActive'} : $rt->f(0.0);
+    my $_u_diffuseTex = $ctx->texture_binding('diffuseTex');
+    my $_u_diffuseActive = exists $U->{'diffuseActive'} ? $U->{'diffuseActive'} : $rt->f(0.0);
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
     $g->{TAU} = $rt->f(6.2831853071800001);
+    $selectedDiffuse__vec2 = sub {
+        my ($uv) = @_;
+        $uv = $rt->copy($uv, 'float');
+        my ($pixel, $size);
+        $size = $rt->texture_size($_u_diffuseTex);
+        $pixel = $rt->component_wise('clamp', $rt->construct(2, $rt->construct(2, $rt->binary('*', $rt->component_wise('clamp', $uv, $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->f(0.99999899999999997))), $rt->construct(2, $size), 2, 'float')), 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int'));
+        return $rt->texel_fetch($_u_diffuseTex, $pixel, $rt->i(0));
+    };
     $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
@@ -58,15 +70,16 @@ my $run_pixel = sub {
     $sampleExternalField__vec2_float = sub {
         my ($uv, $weight) = @_;
         $uv = $rt->copy($uv, 'float');
-        my ($blend);
+        my ($blend, $field);
         if ($rt->binary('<=', $weight, $rt->f(0))) {
             return $rt->f(0);
         }
         $blend = $rt->component_wise('clamp', $rt->binary('*', $weight, $rt->f(0.01), 1, 'float'), $rt->f(0), $rt->f(1));
-        return $rt->binary('*', $rt->binary('*', $luminance__vec3->($rt->swizzle($rt->texture($_u_inputTex, $uv), 'rgb')), $blend, 1, 'float'), $rt->f(0.050000000000000003), 1, 'float');
+        $field = $rt->construct(3, (($rt->binary('>', $_u_fieldActive, $rt->f(0.5))) ? ($rt->swizzle($rt->texture($_u_fieldTex, $uv), 'rgb')) : ($rt->swizzle($rt->texture($_u_inputTex, $uv), 'rgb'))));
+        return $rt->binary('*', $rt->binary('*', $luminance__vec3->($field), $blend, 1, 'float'), $rt->f(0.050000000000000003), 1, 'float');
     };
     $main__void = sub {
-        my ($age, $alive, $blend, $coord, $forwardDir, $heading, $leftDir, $localInput, $moveDir, $newAge, $newHeading, $newPos, $normalizedSpeed, $pos, $rgba, $rightDir, $seed, $sensorPosF, $sensorPosL, $sensorPosR, $speedScale, $stateSize, $valF, $valL, $valR, $vel, $xyz);
+        my ($age, $alive, $blend, $coord, $field, $forwardDir, $heading, $leftDir, $localInput, $moveDir, $newAge, $newHeading, $newPos, $normalizedSpeed, $pos, $rgba, $rightDir, $seed, $sensorPosF, $sensorPosL, $sensorPosR, $speedScale, $stateSize, $valF, $valL, $valR, $vel, $xyz);
         $stateSize = $rt->texture_size($_u_xyzTex);
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $xyz = $rt->texel_fetch($_u_xyzTex, $coord, $rt->i(0));
@@ -110,9 +123,11 @@ my $run_pixel = sub {
         $moveDir = $rt->construct(2, $rt->component_wise('cos', $newHeading), $rt->component_wise('sin', $newHeading));
         $speedScale = $rt->f(1);
         $blend = $rt->component_wise('clamp', $rt->binary('*', $_u_inputWeight, $rt->f(0.01), 1, 'float'), $rt->f(0), $rt->f(1));
+        $field = $rt->construct(3, 0.0);
         $localInput = $rt->f(0.0);
         if ($rt->binary('>', $blend, $rt->f(0))) {
-            $localInput = $luminance__vec3->($rt->swizzle($rt->texture($_u_inputTex, $pos), 'rgb'));
+            $field = $rt->construct(3, (($rt->binary('>', $_u_fieldActive, $rt->f(0.5))) ? ($rt->swizzle($rt->texture($_u_fieldTex, $pos), 'rgb')) : ($rt->swizzle($rt->texture($_u_inputTex, $pos), 'rgb'))));
+            $localInput = $luminance__vec3->($field);
             $speedScale = $rt->component_wise('mix', $rt->f(1), $rt->component_wise('mix', $rt->f(1.8), $rt->f(0.34999999999999998), $localInput), $blend);
         }
         $normalizedSpeed = $rt->binary('*', $rt->binary('*', $_u_moveSpeed, $rt->f(0.001), 1, 'float'), $speedScale, 1, 'float');
@@ -120,7 +135,7 @@ my $run_pixel = sub {
         $newAge = $rt->binary('+', $age, $rt->f(0.016), 1, 'float');
         scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPos, $newHeading, $rt->f(1)))}; $g->{outXYZ} };
         scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $newAge, $seed))}; $g->{outVel} };
-        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
+        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($selectedDiffuse__vec2->($rt->swizzle($g->{outXYZ}, 'xy'))) : ($rgba)))}; $g->{outRGBA} };
     };
     $main__void->();
     my $_c0 = $g->{outXYZ};

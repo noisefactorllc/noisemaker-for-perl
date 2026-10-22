@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint_lcg__uint, $hash__uint, $complexToScreen__vec2, $inMandelbrotInterior__float_float, $main__void);
+    my ($selectedDiffuse__vec2, $hash_uint_lcg__uint, $hash__uint, $complexToScreen__vec2, $inMandelbrotInterior__float_float, $main__void);
     my $_retc;
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
@@ -20,9 +20,19 @@ my $run_pixel = sub {
     my $_u_xyzTex = $ctx->texture_binding('xyzTex');
     my $_u_velTex = $ctx->texture_binding('velTex');
     my $_u_rgbaTex = $ctx->texture_binding('rgbaTex');
+    my $_u_diffuseTex = $ctx->texture_binding('diffuseTex');
+    my $_u_diffuseActive = exists $U->{'diffuseActive'} ? $U->{'diffuseActive'} : $rt->f(0.0);
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
+    $selectedDiffuse__vec2 = sub {
+        my ($uv) = @_;
+        $uv = $rt->copy($uv, 'float');
+        my ($pixel, $size);
+        $size = $rt->texture_size($_u_diffuseTex);
+        $pixel = $rt->component_wise('clamp', $rt->construct(2, $rt->construct(2, $rt->binary('*', $rt->component_wise('clamp', $uv, $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->f(0.99999899999999997))), $rt->construct(2, $size), 2, 'float')), 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int'));
+        return $rt->texel_fetch($_u_diffuseTex, $pixel, $rt->i(0));
+    };
     $hash_uint_lcg__uint = sub {
         my ($s) = @_;
         my ($state, $word);
@@ -131,7 +141,7 @@ my $run_pixel = sub {
             $screen = $complexToScreen__vec2->($rt->construct(2, $cRe, $cIm));
             scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $screen, $rt->f(0.5), $rt->f(1)))}; $g->{outXYZ} };
             scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $cRe, $cIm, $rt->f(1), $escapeStep))}; $g->{outVel} };
-            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->construct(4, $brightness, $brightness, $brightness, $rt->f(1)))}; $g->{outRGBA} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($rt->construct(4, $rt->construct(3, $rt->binary('*', $rt->swizzle($selectedDiffuse__vec2->($screen), 'rgb'), $brightness, 3, 'float')), $rt->f(1))) : ($rt->construct(4, $brightness, $brightness, $brightness, $rt->f(1)))))}; $g->{outRGBA} };
             return;
         }
         $cRe = $rt->swizzle($vel, 'x');
@@ -181,7 +191,7 @@ my $run_pixel = sub {
         $screen = $complexToScreen__vec2->($z);
         scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $screen, $rt->f(0.5), $rt->f(1)))}; $g->{outXYZ} };
         scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $cRe, $cIm, $step, $escapeStep))}; $g->{outVel} };
-        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)}; $g->{outRGBA} };
+        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($rt->construct(4, $rt->construct(3, $rt->binary('*', $rt->swizzle($selectedDiffuse__vec2->($screen), 'rgb'), $rt->f(0.029999999999999999), 3, 'float')), $rt->f(1))) : ($col)))}; $g->{outRGBA} };
     };
     $main__void->();
     my $_c0 = $g->{outXYZ};

@@ -7,13 +7,14 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint_lcg__uint, $hash__uint, $rand__float, $randomDirection__float, $wrap01__vec2, $sampleGrid__vec2, $neighborhood__vec2_float, $main__void);
+    my ($selectedDiffuse__vec2, $hash_uint_lcg__uint, $hash__uint, $rand__float, $randomDirection__float, $wrap01__vec2, $sampleGrid__vec2, $neighborhood__vec2_float, $main__void);
     my $_retc;
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
     my $_u_frame = exists $U->{'frame'} ? $U->{'frame'} : 0;
     my $_u_stride = exists $U->{'stride'} ? $U->{'stride'} : $rt->f(0.0);
     my $_u_inputWeight = exists $U->{'inputWeight'} ? $U->{'inputWeight'} : $rt->f(0.0);
+    my $_u_fieldActive = exists $U->{'fieldActive'} ? $U->{'fieldActive'} : $rt->f(0.0);
     my $_u_attrition = exists $U->{'attrition'} ? $U->{'attrition'} : $rt->f(0.0);
     my $_u_stateSize = exists $U->{'stateSize'} ? $U->{'stateSize'} : 0;
     my $_u_resetState = exists $U->{'resetState'} ? $U->{'resetState'} : 0;
@@ -21,10 +22,21 @@ my $run_pixel = sub {
     my $_u_velTex = $ctx->texture_binding('velTex');
     my $_u_rgbaTex = $ctx->texture_binding('rgbaTex');
     my $_u_gridTex = $ctx->texture_binding('gridTex');
+    my $_u_fieldTex = $ctx->texture_binding('fieldTex');
     my $_u_inputTex = $ctx->texture_binding('inputTex');
+    my $_u_diffuseTex = $ctx->texture_binding('diffuseTex');
+    my $_u_diffuseActive = exists $U->{'diffuseActive'} ? $U->{'diffuseActive'} : $rt->f(0.0);
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
+    $selectedDiffuse__vec2 = sub {
+        my ($uv) = @_;
+        $uv = $rt->copy($uv, 'float');
+        my ($pixel, $size);
+        $size = $rt->texture_size($_u_diffuseTex);
+        $pixel = $rt->component_wise('clamp', $rt->construct(2, $rt->construct(2, $rt->binary('*', $rt->component_wise('clamp', $uv, $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->f(0.99999899999999997))), $rt->construct(2, $size), 2, 'float')), 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int'));
+        return $rt->texel_fetch($_u_diffuseTex, $pixel, $rt->i(0));
+    };
     $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
@@ -116,9 +128,9 @@ my $run_pixel = sub {
         $inputDir = $rt->construct(2, 0.0);
         $inputVal = $rt->construct(4, 0.0);
         if ($rt->binary('>', $inputW, $rt->f(0))) {
-            $inputDims = $rt->texture_size($_u_inputTex);
+            $inputDims = (($rt->binary('>', $_u_fieldActive, $rt->f(0.5))) ? ($rt->texture_size($_u_fieldTex)) : ($rt->texture_size($_u_inputTex)));
             $inputCoord = $rt->construct(2, $rt->construct(2, $rt->binary('*', $wrap01__vec2->($pos), $rt->construct(2, $inputDims), 2, 'float')), 'int');
-            $inputVal = $rt->texel_fetch($_u_inputTex, $inputCoord, $rt->i(0));
+            $inputVal = $rt->construct(4, (($rt->binary('>', $_u_fieldActive, $rt->f(0.5))) ? ($rt->texel_fetch($_u_fieldTex, $inputCoord, $rt->i(0))) : ($rt->texel_fetch($_u_inputTex, $inputCoord, $rt->i(0)))));
             $inputDir = $rt->construct(2, $rt->binary('-', $rt->binary('*', $rt->swizzle($inputVal, 'xy'), $rt->f(2), 2, 'float'), $rt->f(1), 2, 'float'));
             if ($rt->binary('>', $rt->length($inputDir), $rt->f(0.01))) {
                 scalar do { @{$inputDir} = map { $rt->f32($_) } @{($rt->normalize($inputDir))}; $inputDir };
@@ -143,16 +155,16 @@ my $run_pixel = sub {
         if ($stuck) {
             scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $candidate, $rt->f(0), $rt->f(0)))}; $g->{outXYZ} };
             scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $seed, $rt->f(1), $rt->f(0), $agentRand))}; $g->{outVel} };
-            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($selectedDiffuse__vec2->($candidate)) : ($rgba)))}; $g->{outRGBA} };
         } else {
             if ($needsRespawn) {
                 scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $candidate, $rt->f(0), $rt->f(0)))}; $g->{outXYZ} };
                 scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $seed, $rt->f(0), $rt->f(0), $agentRand))}; $g->{outVel} };
-                scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
+                scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($selectedDiffuse__vec2->($candidate)) : ($rgba)))}; $g->{outRGBA} };
             } else {
                 scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $candidate, $rt->f(0), $rt->f(1)))}; $g->{outXYZ} };
                 scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $seed, $rt->f(0), $rt->f(0), $agentRand))}; $g->{outVel} };
-                scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
+                scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($selectedDiffuse__vec2->($candidate)) : ($rgba)))}; $g->{outRGBA} };
             }
         }
     };

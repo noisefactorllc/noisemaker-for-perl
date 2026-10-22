@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint_lcg__uint, $hash__uint, $noise2D__vec2, $fbm__vec2, $main__void);
+    my ($selectedDiffuse__vec2, $hash_uint_lcg__uint, $hash__uint, $noise2D__vec2, $fbm__vec2, $main__void);
     my $_retc;
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
@@ -21,9 +21,19 @@ my $run_pixel = sub {
     my $_u_xyzTex = $ctx->texture_binding('xyzTex');
     my $_u_velTex = $ctx->texture_binding('velTex');
     my $_u_rgbaTex = $ctx->texture_binding('rgbaTex');
+    my $_u_diffuseTex = $ctx->texture_binding('diffuseTex');
+    my $_u_diffuseActive = exists $U->{'diffuseActive'} ? $U->{'diffuseActive'} : $rt->f(0.0);
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
+    $selectedDiffuse__vec2 = sub {
+        my ($uv) = @_;
+        $uv = $rt->copy($uv, 'float');
+        my ($pixel, $size);
+        $size = $rt->texture_size($_u_diffuseTex);
+        $pixel = $rt->component_wise('clamp', $rt->construct(2, $rt->construct(2, $rt->binary('*', $rt->component_wise('clamp', $uv, $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->f(0.99999899999999997))), $rt->construct(2, $size), 2, 'float')), 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int'));
+        return $rt->texel_fetch($_u_diffuseTex, $pixel, $rt->i(0));
+    };
     $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
@@ -118,7 +128,7 @@ my $run_pixel = sub {
         } else {
             scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $px, $py, $pz, $rt->f(1)))}; $g->{outXYZ} };
             scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $vx, $vy, $vz, $seed_f))}; $g->{outVel} };
-            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
+            scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($selectedDiffuse__vec2->($rt->swizzle($g->{outXYZ}, 'xy'))) : ($rgba)))}; $g->{outRGBA} };
         }
     };
     $main__void->();

@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash_uint_lcg__uint, $hash__uint, $srgb_to_linear__float, $cube_root__float, $oklab_l__vec3, $normalized_sine__float, $computeRotationBias__int_float_float_float_int_int, $main__void);
+    my ($selectedDiffuse__vec2, $hash_uint_lcg__uint, $hash__uint, $srgb_to_linear__float, $cube_root__float, $oklab_l__vec3, $normalized_sine__float, $computeRotationBias__int_float_float_float_int_int, $main__void);
     my $_retc;
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
@@ -16,16 +16,28 @@ my $run_pixel = sub {
     my $_u_kink = exists $U->{'kink'} ? $U->{'kink'} : $rt->f(0.0);
     my $_u_quantize = exists $U->{'quantize'} ? $U->{'quantize'} : $rt->f(0.0);
     my $_u_inputWeight = exists $U->{'inputWeight'} ? $U->{'inputWeight'} : $rt->f(0.0);
+    my $_u_fieldActive = exists $U->{'fieldActive'} ? $U->{'fieldActive'} : $rt->f(0.0);
     my $_u_behavior = exists $U->{'behavior'} ? $U->{'behavior'} : $rt->f(0.0);
+    my $_u_fieldTex = $ctx->texture_binding('fieldTex');
     my $_u_inputTex = $ctx->texture_binding('inputTex');
     my $_u_xyzTex = $ctx->texture_binding('xyzTex');
     my $_u_velTex = $ctx->texture_binding('velTex');
     my $_u_rgbaTex = $ctx->texture_binding('rgbaTex');
+    my $_u_diffuseTex = $ctx->texture_binding('diffuseTex');
+    my $_u_diffuseActive = exists $U->{'diffuseActive'} ? $U->{'diffuseActive'} : $rt->f(0.0);
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
     $g->{TAU} = $rt->f(6.2831853071795862);
     $g->{RIGHT_ANGLE} = $rt->f(1.5707963267948966);
+    $selectedDiffuse__vec2 = sub {
+        my ($uv) = @_;
+        $uv = $rt->copy($uv, 'float');
+        my ($pixel, $size);
+        $size = $rt->texture_size($_u_diffuseTex);
+        $pixel = $rt->component_wise('clamp', $rt->construct(2, $rt->construct(2, $rt->binary('*', $rt->component_wise('clamp', $uv, $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->f(0.99999899999999997))), $rt->construct(2, $size), 2, 'float')), 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int'));
+        return $rt->texel_fetch($_u_diffuseTex, $pixel, $rt->i(0));
+    };
     $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
         my ($state, $word);
@@ -137,10 +149,10 @@ my $run_pixel = sub {
             scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
             return;
         }
-        $texSize = $rt->texture_size($_u_inputTex);
+        $texSize = (($rt->binary('>', $_u_fieldActive, $rt->f(0.5))) ? ($rt->texture_size($_u_fieldTex)) : ($rt->texture_size($_u_inputTex)));
         $texCoord = $rt->construct(2, $rt->binary('*', $px, $rt->construct(1, $rt->swizzle($texSize, 'x')), 1, 'float'), $rt->binary('*', $py, $rt->construct(1, $rt->swizzle($texSize, 'y')), 1, 'float'), 'int');
         scalar do { @{$texCoord} = @{($rt->component_wise('clamp', $texCoord, $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $texSize, $rt->i(1), 2, 'int')))}; $texCoord };
-        $texel = $rt->texel_fetch($_u_inputTex, $texCoord, $rt->i(0));
+        $texel = $rt->construct(4, (($rt->binary('>', $_u_fieldActive, $rt->f(0.5))) ? ($rt->texel_fetch($_u_fieldTex, $texCoord, $rt->i(0))) : ($rt->texel_fetch($_u_inputTex, $texCoord, $rt->i(0)))));
         $inputLuma = $oklab_l__vec3->($rt->swizzle($texel, 'rgb'));
         $weightBlend = $rt->component_wise('clamp', $rt->binary('*', $_u_inputWeight, $rt->f(0.01), 1, 'float'), $rt->f(0), $rt->f(1));
         $indexValue = $rt->component_wise('mix', $rt->f(0.5), $inputLuma, $weightBlend);
@@ -162,7 +174,7 @@ my $run_pixel = sub {
         $newY = $rt->component_wise('fract', $newY);
         scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newX, $newY, $pz, $rt->f(1)))}; $g->{outXYZ} };
         scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rotRand, $strideRand))}; $g->{outVel} };
-        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
+        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($selectedDiffuse__vec2->($rt->swizzle($g->{outXYZ}, 'xy'))) : ($rgba)))}; $g->{outRGBA} };
     };
     $main__void->();
     my $_c0 = $g->{outXYZ};

@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($growth__float_float_float, $growthDerivative__float_float_float, $main__void);
+    my ($selectedDiffuse__vec2, $growth__float_float_float, $growthDerivative__float_float_float, $main__void);
     my $_retc;
     my $_u_xyzTex = $ctx->texture_binding('xyzTex');
     my $_u_velTex = $ctx->texture_binding('velTex');
@@ -18,10 +18,20 @@ my $run_pixel = sub {
     my $_u_sigmaG = exists $U->{'sigmaG'} ? $U->{'sigmaG'} : $rt->f(0.0);
     my $_u_repulsion = exists $U->{'repulsion'} ? $U->{'repulsion'} : $rt->f(0.0);
     my $_u_dt = exists $U->{'dt'} ? $U->{'dt'} : $rt->f(0.0);
+    my $_u_diffuseTex = $ctx->texture_binding('diffuseTex');
+    my $_u_diffuseActive = exists $U->{'diffuseActive'} ? $U->{'diffuseActive'} : $rt->f(0.0);
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
     $g->{EPSILON} = $rt->f(0.0001);
+    $selectedDiffuse__vec2 = sub {
+        my ($uv) = @_;
+        $uv = $rt->copy($uv, 'float');
+        my ($pixel, $size);
+        $size = $rt->texture_size($_u_diffuseTex);
+        $pixel = $rt->component_wise('clamp', $rt->construct(2, $rt->construct(2, $rt->binary('*', $rt->component_wise('clamp', $uv, $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->f(0.99999899999999997))), $rt->construct(2, $size), 2, 'float')), 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int'));
+        return $rt->texel_fetch($_u_diffuseTex, $pixel, $rt->i(0));
+    };
     $growth__float_float_float = sub {
         my ($u, $mu, $sigma) = @_;
         my ($x);
@@ -73,7 +83,7 @@ my $run_pixel = sub {
         $age = $rt->binary('+', $rt->swizzle($vel, 'z'), $rt->f(0.016), 1, 'float');
         scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPos, $rt->swizzle($xyz, 'z'), $rt->f(1)))}; $g->{outXYZ} };
         scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $velocity, $age, $rt->swizzle($vel, 'w')))}; $g->{outVel} };
-        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rgba)}; $g->{outRGBA} };
+        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($selectedDiffuse__vec2->($rt->swizzle($g->{outXYZ}, 'xy'))) : ($rgba)))}; $g->{outRGBA} };
     };
     $main__void->();
     my $_c0 = $g->{outXYZ};
