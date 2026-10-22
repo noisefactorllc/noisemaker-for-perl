@@ -492,6 +492,7 @@ sub fetch_effect {
             passes          => $override->{passes},
             textures        => ($override->{textures} || {}),
             externalTexture => $override->{externalTexture},
+            paramAliases    => $override->{paramAliases},
             programs        => _extract_programs(\$bundle),
         };
     }
@@ -511,6 +512,7 @@ sub fetch_effect {
             passes          => _parse_field(\$region, $effect_id, 'passes', []),
             textures        => _parse_field(\$region, $effect_id, 'textures', {}),
             externalTexture => _parse_field(\$region, $effect_id, 'externalTexture', undef),
+            paramAliases    => _parse_field(\$region, $effect_id, 'paramAliases', undef),
             programs        => _extract_programs(\$bundle),
         };
     }

@@ -18905,11 +18905,6 @@
         "iterationCount"
       ],
       "params": {
-        "diffuseTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "diffuseActive"
-        },
         "attractor": {
           "choices": {
             "aizawa": 2,
@@ -18923,6 +18918,11 @@
           "default": 0,
           "type": "int",
           "uniform": "attractor"
+        },
+        "diffuseTex": {
+          "colorModeUniform": "diffuseActive",
+          "default": "none",
+          "type": "surface"
         },
         "iterationCount": {
           "cpuOnly": true,
@@ -18951,8 +18951,9 @@
       },
       "passes": [
         {
-          "drawBuffers": 3,
+          "drawBuffers": 4,
           "inputs": {
+            "baseColorTex": "global_attractor_base_color",
             "diffuseTex": "diffuseTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
@@ -18961,6 +18962,7 @@
           "key": "points/attractor:agent",
           "name": "agent",
           "outputs": {
+            "outBaseColor": "global_attractor_base_color",
             "outRGBA": "global_rgba",
             "outVel": "global_vel",
             "outXYZ": "global_xyz"
@@ -18985,7 +18987,19 @@
           "uniforms": {}
         }
       ],
-      "textures": {}
+      "textures": {
+        "global_attractor_base_color": {
+          "format": "rgba8",
+          "height": {
+            "inherit": true,
+            "param": "stateSize"
+          },
+          "width": {
+            "inherit": true,
+            "param": "stateSize"
+          }
+        }
+      }
     },
     "points/buddhabrot": {
       "domain": "image",
@@ -19005,11 +19019,6 @@
         "iterationCount"
       ],
       "params": {
-        "diffuseTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "diffuseActive"
-        },
         "centerX": {
           "default": -0.5,
           "max": 3,
@@ -19023,6 +19032,11 @@
           "min": -3,
           "type": "float",
           "uniform": "centerY"
+        },
+        "diffuseTex": {
+          "colorModeUniform": "diffuseActive",
+          "default": "none",
+          "type": "surface"
         },
         "iterationCount": {
           "cpuOnly": true,
@@ -19069,8 +19083,9 @@
       },
       "passes": [
         {
-          "drawBuffers": 3,
+          "drawBuffers": 4,
           "inputs": {
+            "baseColorTex": "global_buddhabrot_base_color",
             "diffuseTex": "diffuseTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
@@ -19079,6 +19094,7 @@
           "key": "points/buddhabrot:agent",
           "name": "agent",
           "outputs": {
+            "outBaseColor": "global_buddhabrot_base_color",
             "outRGBA": "global_rgba",
             "outVel": "global_vel",
             "outXYZ": "global_xyz"
@@ -19121,6 +19137,17 @@
         }
       ],
       "textures": {
+        "global_buddhabrot_base_color": {
+          "format": "rgba8",
+          "height": {
+            "inherit": true,
+            "param": "stateSize"
+          },
+          "width": {
+            "inherit": true,
+            "param": "stateSize"
+          }
+        },
         "global_zState": {
           "format": "rgba32float",
           "height": {
@@ -19140,9 +19167,12 @@
       "iterated": true,
       "kind": "filter",
       "namespace": "points",
+      "paramAliases": {
+        "fieldTex": "heightTex"
+      },
       "paramOrder": [
+        "heightTex",
         "diffuseTex",
-        "fieldTex",
         "stateSize",
         "anchorDensity",
         "stride",
@@ -19154,16 +19184,6 @@
         "iterationCount"
       ],
       "params": {
-        "diffuseTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "diffuseActive"
-        },
-        "fieldTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "fieldActive"
-        },
         "anchorDensity": {
           "default": 0.5,
           "max": 5,
@@ -19191,6 +19211,16 @@
           "min": 0.5,
           "type": "float",
           "uniform": "deposit"
+        },
+        "diffuseTex": {
+          "colorModeUniform": "diffuseActive",
+          "default": "none",
+          "type": "surface"
+        },
+        "heightTex": {
+          "colorModeUniform": "fieldActive",
+          "default": "none",
+          "type": "surface"
         },
         "inputWeight": {
           "default": 15,
@@ -19255,11 +19285,12 @@
           "uniforms": {}
         },
         {
-          "drawBuffers": 3,
+          "drawBuffers": 4,
           "inputs": {
+            "baseColorTex": "global_dla_base_color",
             "diffuseTex": "diffuseTex",
-            "fieldTex": "fieldTex",
             "gridTex": "global_dla_grid",
+            "heightTex": "heightTex",
             "inputTex": "inputTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
@@ -19268,6 +19299,7 @@
           "key": "points/dla:agent",
           "name": "agent",
           "outputs": {
+            "outBaseColor": "global_dla_base_color",
             "outRGBA": "global_rgba",
             "outVel": "global_vel",
             "outXYZ": "global_xyz"
@@ -19321,6 +19353,17 @@
         }
       ],
       "textures": {
+        "global_dla_base_color": {
+          "format": "rgba8",
+          "height": {
+            "inherit": true,
+            "param": "stateSize"
+          },
+          "width": {
+            "inherit": true,
+            "param": "stateSize"
+          }
+        },
         "global_dla_grid": {
           "format": "rgba16f",
           "height": "100%",
@@ -19349,11 +19392,6 @@
         "iterationCount"
       ],
       "params": {
-        "diffuseTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "diffuseActive"
-        },
         "alignment": {
           "default": 1,
           "max": 5,
@@ -19376,6 +19414,11 @@
           "min": 0,
           "type": "float",
           "uniform": "cohesion"
+        },
+        "diffuseTex": {
+          "colorModeUniform": "diffuseActive",
+          "default": "none",
+          "type": "surface"
         },
         "iterationCount": {
           "cpuOnly": true,
@@ -19436,9 +19479,11 @@
       },
       "passes": [
         {
-          "drawBuffers": 3,
+          "drawBuffers": 4,
           "inputs": {
+            "baseColorTex": "global_flock_base_color",
             "diffuseTex": "diffuseTex",
+            "inputTex": "inputTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
             "xyzTex": "global_xyz"
@@ -19446,6 +19491,7 @@
           "key": "points/flock:agent",
           "name": "agent",
           "outputs": {
+            "outBaseColor": "global_flock_base_color",
             "outRGBA": "global_rgba",
             "outVel": "global_vel",
             "outXYZ": "global_xyz"
@@ -19478,7 +19524,19 @@
           "uniforms": {}
         }
       ],
-      "textures": {}
+      "textures": {
+        "global_flock_base_color": {
+          "format": "rgba8",
+          "height": {
+            "inherit": true,
+            "param": "stateSize"
+          },
+          "width": {
+            "inherit": true,
+            "param": "stateSize"
+          }
+        }
+      }
     },
     "points/flow": {
       "domain": "image",
@@ -19486,9 +19544,12 @@
       "iterated": true,
       "kind": "filter",
       "namespace": "points",
+      "paramAliases": {
+        "fieldTex": "heightTex"
+      },
       "paramOrder": [
+        "heightTex",
         "diffuseTex",
-        "fieldTex",
         "stateSize",
         "behavior",
         "stride",
@@ -19499,16 +19560,6 @@
         "iterationCount"
       ],
       "params": {
-        "diffuseTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "diffuseActive"
-        },
-        "fieldTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "fieldActive"
-        },
         "behavior": {
           "choices": {
             "chaotic": 4,
@@ -19522,6 +19573,16 @@
           "default": 1,
           "type": "int",
           "uniform": "behavior"
+        },
+        "diffuseTex": {
+          "colorModeUniform": "diffuseActive",
+          "default": "none",
+          "type": "surface"
+        },
+        "heightTex": {
+          "colorModeUniform": "fieldActive",
+          "default": "none",
+          "type": "surface"
         },
         "inputWeight": {
           "default": 100,
@@ -19571,10 +19632,11 @@
       },
       "passes": [
         {
-          "drawBuffers": 3,
+          "drawBuffers": 4,
           "inputs": {
+            "baseColorTex": "global_flow_base_color",
             "diffuseTex": "diffuseTex",
-            "fieldTex": "fieldTex",
+            "heightTex": "heightTex",
             "inputTex": "inputTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
@@ -19583,6 +19645,7 @@
           "key": "points/flow:agent",
           "name": "agent",
           "outputs": {
+            "outBaseColor": "global_flow_base_color",
             "outRGBA": "global_rgba",
             "outVel": "global_vel",
             "outXYZ": "global_xyz"
@@ -19612,7 +19675,19 @@
           "uniforms": {}
         }
       ],
-      "textures": {}
+      "textures": {
+        "global_flow_base_color": {
+          "format": "rgba8",
+          "height": {
+            "inherit": true,
+            "param": "stateSize"
+          },
+          "width": {
+            "inherit": true,
+            "param": "stateSize"
+          }
+        }
+      }
     },
     "points/heightGrid": {
       "domain": "image",
@@ -19729,8 +19804,8 @@
       "kind": "filter",
       "namespace": "points",
       "paramOrder": [
-        "diffuseTex",
         "heightTex",
+        "diffuseTex",
         "stride",
         "quantize",
         "inverse",
@@ -19739,14 +19814,14 @@
       ],
       "params": {
         "diffuseTex": {
-          "type": "surface",
+          "colorModeUniform": "diffuseActive",
           "default": "none",
-          "colorModeUniform": "diffuseActive"
+          "type": "surface"
         },
         "heightTex": {
-          "type": "surface",
+          "colorModeUniform": "fieldActive",
           "default": "none",
-          "colorModeUniform": "fieldActive"
+          "type": "surface"
         },
         "inputWeight": {
           "default": 100,
@@ -19782,8 +19857,9 @@
       },
       "passes": [
         {
-          "drawBuffers": 3,
+          "drawBuffers": 4,
           "inputs": {
+            "baseColorTex": "global_hydraulic_base_color",
             "diffuseTex": "diffuseTex",
             "heightTex": "heightTex",
             "inputTex": "inputTex",
@@ -19794,6 +19870,7 @@
           "key": "points/hydraulic:agent",
           "name": "agent",
           "outputs": {
+            "outBaseColor": "global_hydraulic_base_color",
             "outRGBA": "global_rgba",
             "outVel": "global_vel",
             "outXYZ": "global_xyz"
@@ -19821,7 +19898,19 @@
           "uniforms": {}
         }
       ],
-      "textures": {}
+      "textures": {
+        "global_hydraulic_base_color": {
+          "format": "rgba8",
+          "height": {
+            "inherit": true,
+            "param": "stateSize"
+          },
+          "width": {
+            "inherit": true,
+            "param": "stateSize"
+          }
+        }
+      }
     },
     "points/lenia": {
       "domain": "image",
@@ -19842,17 +19931,17 @@
         "iterationCount"
       ],
       "params": {
-        "diffuseTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "diffuseActive"
-        },
         "depositAmount": {
           "default": 3.6,
           "max": 5,
           "min": 0.1,
           "type": "float",
           "uniform": "depositAmount"
+        },
+        "diffuseTex": {
+          "colorModeUniform": "diffuseActive",
+          "default": "none",
+          "type": "surface"
         },
         "dt": {
           "default": 0.25,
@@ -19956,10 +20045,12 @@
           }
         },
         {
-          "drawBuffers": 3,
+          "drawBuffers": 4,
           "inputs": {
+            "baseColorTex": "global_lenia_base_color",
             "diffuseTex": "diffuseTex",
             "fieldTex": "global_lenia_field",
+            "inputTex": "inputTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
             "xyzTex": "global_xyz"
@@ -19967,6 +20058,7 @@
           "key": "points/lenia:agentField",
           "name": "agent",
           "outputs": {
+            "outBaseColor": "global_lenia_base_color",
             "outRGBA": "global_rgba",
             "outVel": "global_vel",
             "outXYZ": "global_xyz"
@@ -19994,6 +20086,17 @@
         }
       ],
       "textures": {
+        "global_lenia_base_color": {
+          "format": "rgba8",
+          "height": {
+            "inherit": true,
+            "param": "stateSize"
+          },
+          "width": {
+            "inherit": true,
+            "param": "stateSize"
+          }
+        },
         "global_lenia_density": {
           "format": "rgba16f",
           "height": "50%",
@@ -20029,11 +20132,6 @@
         "iterationCount"
       ],
       "params": {
-        "diffuseTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "diffuseActive"
-        },
         "attractionScale": {
           "default": 1,
           "max": 5,
@@ -20049,6 +20147,11 @@
           "default": 0,
           "type": "int",
           "uniform": "boundaryMode"
+        },
+        "diffuseTex": {
+          "colorModeUniform": "diffuseActive",
+          "default": "none",
+          "type": "surface"
         },
         "friction": {
           "default": 0.1,
@@ -20210,9 +20313,12 @@
       "iterated": true,
       "kind": "filter",
       "namespace": "points",
+      "paramAliases": {
+        "fieldTex": "heightTex"
+      },
       "paramOrder": [
+        "heightTex",
         "diffuseTex",
-        "fieldTex",
         "moveSpeed",
         "turnSpeed",
         "sensorAngle",
@@ -20224,16 +20330,6 @@
         "iterationCount"
       ],
       "params": {
-        "diffuseTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "diffuseActive"
-        },
-        "fieldTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "fieldActive"
-        },
         "decay": {
           "default": 0.1,
           "max": 1,
@@ -20247,6 +20343,16 @@
           "min": 0,
           "type": "float",
           "uniform": "deposit"
+        },
+        "diffuseTex": {
+          "colorModeUniform": "diffuseActive",
+          "default": "none",
+          "type": "surface"
+        },
+        "heightTex": {
+          "colorModeUniform": "fieldActive",
+          "default": "none",
+          "type": "surface"
         },
         "inputWeight": {
           "default": 0,
@@ -20313,10 +20419,11 @@
           }
         },
         {
-          "drawBuffers": 3,
+          "drawBuffers": 4,
           "inputs": {
+            "baseColorTex": "global_physarum_base_color",
             "diffuseTex": "diffuseTex",
-            "fieldTex": "fieldTex",
+            "heightTex": "heightTex",
             "inputTex": "inputTex",
             "rgbaTex": "global_rgba",
             "trailTex": "global_physarum_pheromone",
@@ -20326,6 +20433,7 @@
           "key": "points/physarum:agent",
           "name": "agent",
           "outputs": {
+            "outBaseColor": "global_physarum_base_color",
             "outRGBA": "global_rgba",
             "outVel": "global_vel",
             "outXYZ": "global_xyz"
@@ -20385,6 +20493,17 @@
         }
       ],
       "textures": {
+        "global_physarum_base_color": {
+          "format": "rgba8",
+          "height": {
+            "inherit": true,
+            "param": "stateSize"
+          },
+          "width": {
+            "inherit": true,
+            "param": "stateSize"
+          }
+        },
         "global_physarum_pheromone": {
           "format": "rgba16f",
           "height": "100%",
@@ -20410,17 +20529,17 @@
         "iterationCount"
       ],
       "params": {
-        "diffuseTex": {
-          "type": "surface",
-          "default": "none",
-          "colorModeUniform": "diffuseActive"
-        },
         "deviation": {
           "default": 0.75,
           "max": 1,
           "min": 0,
           "type": "float",
           "uniform": "deviation"
+        },
+        "diffuseTex": {
+          "colorModeUniform": "diffuseActive",
+          "default": "none",
+          "type": "surface"
         },
         "drag": {
           "default": 0.15,
@@ -20472,9 +20591,11 @@
       },
       "passes": [
         {
-          "drawBuffers": 3,
+          "drawBuffers": 4,
           "inputs": {
+            "baseColorTex": "global_physical_base_color",
             "diffuseTex": "diffuseTex",
+            "inputTex": "inputTex",
             "rgbaTex": "global_rgba",
             "velTex": "global_vel",
             "xyzTex": "global_xyz"
@@ -20482,6 +20603,7 @@
           "key": "points/physical:agent",
           "name": "agent",
           "outputs": {
+            "outBaseColor": "global_physical_base_color",
             "outRGBA": "global_rgba",
             "outVel": "global_vel",
             "outXYZ": "global_xyz"
@@ -20510,7 +20632,19 @@
           "uniforms": {}
         }
       ],
-      "textures": {}
+      "textures": {
+        "global_physical_base_color": {
+          "format": "rgba8",
+          "height": {
+            "inherit": true,
+            "param": "stateSize"
+          },
+          "width": {
+            "inherit": true,
+            "param": "stateSize"
+          }
+        }
+      }
     },
     "render/loopBegin": {
       "domain": "loop-begin",
@@ -29227,6 +29361,6 @@
     "base": "https://shaders.noisedeck.app",
     "source": "shaders.noisedeck.app CDN",
     "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-    "version": "1.0.302"
+    "version": "1.0.309"
   }
 }

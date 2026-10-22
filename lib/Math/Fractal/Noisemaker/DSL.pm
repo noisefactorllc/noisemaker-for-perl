@@ -1001,32 +1001,56 @@ sub _surface_marker {
 # in the renderer before coercion; unknown parameter names are rejected here.
 # Catalog slider ranges remain UI hints. paramOrder stands in for
 # Python's list(param_specs.keys()) (see module header).
+# Hard removal date for every deprecated parameter alias, mirroring upstream's
+# ALIAS_EOL_DATE (shaders/src/lang/paramAliases.js).
+my $ALIAS_EOL_DATE = '2027-06-01';
+
 sub _normalize_effect {
     my ($effect_id, $spec, $args) = @_;
     my $param_specs = $spec->{params};
     my $param_names = $spec->{paramOrder};
+    my $aliases = $spec->{paramAliases};
     my $named = (@$args && defined $args->[0]{name}) ? 1 : 0;
-    my (%params, %surfaces, %provided);
+    my (%params, %surfaces, %provided, %canonical_supplied, %alias_warned);
+    if ($named) {
+        for my $arg (@$args) {
+            next if !defined $arg->{name} || _is_unsupported_input($arg->{value});
+            $canonical_supplied{ $arg->{name} } = 1;
+        }
+    }
     for my $index (0 .. $#$args) {
         my $arg = $args->[$index];
         my $supplied =
               $named                 ? $arg->{name}
             : $index < @$param_names ? $param_names->[$index]
             :                          undef;
-        if (!defined $supplied || $supplied eq '' || !exists $param_specs->{$supplied}) {
+        # Deprecated aliases resolve exactly as upstream's resolveParamAliases:
+        # an alias present without its canonical name migrates the value; with
+        # both present the canonical name wins; the alias is always consumed.
+        # Only named arguments participate, matching upstream's kwarg-only
+        # resolution.
+        my $name = ($named && $aliases && defined $aliases->{$supplied})
+            ? $aliases->{$supplied} : $supplied;
+        if (!defined $name || $name eq '' || !exists $param_specs->{$name}) {
             my $bad = (defined $supplied && $supplied ne '') ? $supplied : 'argument ' . ($index + 1);
             _throw("Unknown parameter \"$bad\" for $effect_id; accepted: " . join(', ', @$param_names),
                 $arg->{loc});
         }
         next if _is_unsupported_input($arg->{value});
-        $provided{$supplied} = 1;
-        my $pspec = $param_specs->{$supplied};
+        if ($named && $supplied ne $name) {
+            warn "param '$supplied' is deprecated, use '$name' instead. Aliases will be removed on $ALIAS_EOL_DATE.\n"
+                unless $alias_warned{$supplied};
+            $alias_warned{$supplied} = 1;
+            next if $canonical_supplied{$name};
+        }
+        $provided{$name} = 1;
+        my $pspec = $param_specs->{$name};
         if (ref $pspec eq 'HASH' && defined $pspec->{type} && $pspec->{type} eq 'surface') {
-            my $marker = _surface_marker($arg->{value}, $supplied, $arg->{loc});
-            $surfaces{$supplied} = $marker if defined $marker;
+            my $marker = _surface_marker($arg->{value}, $name, $arg->{loc});
+            $surfaces{$name} = $marker if defined $marker;
         }
         else {
-            $params{$supplied} = $arg->{value};
+            $params{$name} = $arg->{value};
         }
     }
     for my $name (@$param_names) {

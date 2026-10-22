@@ -25,7 +25,7 @@ sub wrap01 {
 sub is_particle_state_name {
     my ($name) = @_;
     return defined $name && !ref $name
-        && $name =~ /\A(?:global_(?:xyz|vel|rgba|life_data)|global_.*_trail)\z/ ? 1 : 0;
+        && $name =~ /\A(?:global_(?:xyz|vel|rgba|life_data)|global_.*_trail|global_[a-z]+_base_color)\z/ ? 1 : 0;
 }
 
 sub _definition {

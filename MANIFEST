@@ -395,6 +395,7 @@ t/data/cpu-adapter-sync/snow-zero.f32
 t/data/cpu-sync/metal-division-m4.json
 t/data/cpu-sync/nearest-texel-m4.json
 t/34-median-cpu-sync.t
+t/35-param-aliases.t
 t/data/cpu-adapter-sync/median-radius-2.rgba
 t/data/cpu-adapter-sync/median-radius-3.rgba
 t/data/cpu-adapter-sync/median-radius-1.rgba

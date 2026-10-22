@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($selectedDiffuse__vec2, $hash_uint_lcg__uint, $hash__uint, $lorenz__vec3, $rossler__vec3, $aizawa__vec3, $thomas__vec3, $halvorsen__vec3, $chen__vec3, $dadras__vec3, $stepAttractor__vec3_int_float, $main__void);
+    my ($selectedDiffuse__vec2, $baseColor__ivec2_vec4, $keptBaseColor__vec4, $hash_uint_lcg__uint, $hash__uint, $lorenz__vec3, $rossler__vec3, $aizawa__vec3, $thomas__vec3, $halvorsen__vec3, $chen__vec3, $dadras__vec3, $stepAttractor__vec3_int_float, $main__void);
     my $_retc;
     my $_u_time = exists $U->{'time'} ? $U->{'time'} : $rt->f(0.0);
     my $_u_resolution = exists $U->{'resolution'} ? $U->{'resolution'} : $rt->construct(2, 0.0);
@@ -19,9 +19,11 @@ my $run_pixel = sub {
     my $_u_rgbaTex = $ctx->texture_binding('rgbaTex');
     my $_u_diffuseTex = $ctx->texture_binding('diffuseTex');
     my $_u_diffuseActive = exists $U->{'diffuseActive'} ? $U->{'diffuseActive'} : $rt->f(0.0);
+    my $_u_baseColorTex = $ctx->texture_binding('baseColorTex');
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
+    $g->{outBaseColor} = $rt->construct(4, 0.0);
     $selectedDiffuse__vec2 = sub {
         my ($uv) = @_;
         $uv = $rt->copy($uv, 'float');
@@ -29,6 +31,19 @@ my $run_pixel = sub {
         $size = $rt->texture_size($_u_diffuseTex);
         $pixel = $rt->component_wise('clamp', $rt->construct(2, $rt->construct(2, $rt->binary('*', $rt->component_wise('clamp', $uv, $rt->construct(2, $rt->f(0)), $rt->construct(2, $rt->f(0.99999899999999997))), $rt->construct(2, $size), 2, 'float')), 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int'));
         return $rt->texel_fetch($_u_diffuseTex, $pixel, $rt->i(0));
+    };
+    $baseColor__ivec2_vec4 = sub {
+        my ($coord, $col) = @_;
+        $coord = $rt->copy($coord, 'int');
+        $col = $rt->copy($col, 'float');
+        my ($kept);
+        $kept = $rt->texel_fetch($_u_baseColorTex, $coord, $rt->i(0));
+        return $rt->construct(4, (($rt->binary('==', $rt->swizzle($kept, 'a'), $rt->f(0))) ? ($col) : ($kept)));
+    };
+    $keptBaseColor__vec4 = sub {
+        my ($base) = @_;
+        $base = $rt->copy($base, 'float');
+        return $rt->construct(4, (($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($rt->construct(4, $rt->swizzle($base, 'rgb'), $rt->component_wise('max', $rt->swizzle($base, 'a'), $rt->binary('/', $rt->f(1), $rt->f(255), 1, 'float')))) : ($rt->construct(4, $rt->f(0)))));
     };
     $hash_uint_lcg__uint = sub {
         my ($seed) = @_;
@@ -138,7 +153,7 @@ my $run_pixel = sub {
         return $rt->construct(3, $rt->binary('+', $p, $rt->binary('*', $dp, $dt, 3, 'float'), 3, 'float'));
     };
     $main__void = sub {
-        my ($agentSeed, $col, $coord, $dt, $initSeed, $needs3DInit, $newPos, $pos, $respawnSeed, $stateSize, $texSize, $vel);
+        my ($agentSeed, $base, $col, $coord, $dt, $initSeed, $needs3DInit, $newPos, $pos, $respawnSeed, $stateSize, $texSize, $vel);
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $texSize = $rt->texture_size($_u_xyzTex);
         $stateSize = $rt->swizzle($texSize, 'x');
@@ -156,12 +171,14 @@ my $run_pixel = sub {
             scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->swizzle($pos, 'xyz'), $rt->f(1)))}; $g->{outXYZ} };
             scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
             scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($selectedDiffuse__vec2->($rt->component_wise('fract', $rt->swizzle($g->{outXYZ}, 'xy')))) : ($col)))}; $g->{outRGBA} };
+            scalar do { @{$g->{outBaseColor}} = map { $rt->f32($_) } @{($keptBaseColor__vec4->($col))}; $g->{outBaseColor} };
             return;
         }
         if ($rt->binary('<', $rt->swizzle($pos, 'w'), $rt->f(0.5))) {
             scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($pos)}; $g->{outXYZ} };
             scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
             scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($col)}; $g->{outRGBA} };
+            scalar do { @{$g->{outBaseColor}} = map { $rt->f32($_) } @{($keptBaseColor__vec4->($baseColor__ivec2_vec4->($coord, $col)))}; $g->{outBaseColor} };
             return;
         }
         $dt = $rt->binary('*', $_u_speed, $rt->f(0.01), 1, 'float');
@@ -173,9 +190,11 @@ my $run_pixel = sub {
             $newPos = $rt->assign_swizzle($newPos, 'y', $rt->binary('*', $rt->binary('-', $hash__uint->($rt->binary('+', $respawnSeed, $rt->i(1), 1, 'uint')), $rt->f(0.5), 1, 'float'), $rt->f(20), 1, 'float'));
             $newPos = $rt->assign_swizzle($newPos, 'z', $rt->binary('+', $rt->binary('*', $hash__uint->($rt->binary('+', $respawnSeed, $rt->i(2), 1, 'uint')), $rt->f(30), 1, 'float'), $rt->f(10), 1, 'float'));
         }
+        $base = $baseColor__ivec2_vec4->($coord, $col);
         scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $newPos, $rt->f(1)))}; $g->{outXYZ} };
         scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($vel)}; $g->{outVel} };
-        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($selectedDiffuse__vec2->($rt->component_wise('fract', $rt->swizzle($g->{outXYZ}, 'xy')))) : ($col)))}; $g->{outRGBA} };
+        scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{((($rt->binary('>', $_u_diffuseActive, $rt->f(0.5))) ? ($selectedDiffuse__vec2->($rt->component_wise('fract', $rt->swizzle($g->{outXYZ}, 'xy')))) : ($base)))}; $g->{outRGBA} };
+        scalar do { @{$g->{outBaseColor}} = map { $rt->f32($_) } @{($keptBaseColor__vec4->($base))}; $g->{outBaseColor} };
     };
     $main__void->();
     my $_c0 = $g->{outXYZ};
@@ -184,5 +203,7 @@ my $run_pixel = sub {
     $out->[4] = $rt->f32($_c1->[0]); $out->[5] = $rt->f32($_c1->[1]); $out->[6] = $rt->f32($_c1->[2]); $out->[7] = $rt->f32($_c1->[3]);
     my $_c2 = $g->{outRGBA};
     $out->[8] = $rt->f32($_c2->[0]); $out->[9] = $rt->f32($_c2->[1]); $out->[10] = $rt->f32($_c2->[2]); $out->[11] = $rt->f32($_c2->[3]);
+    my $_c3 = $g->{outBaseColor};
+    $out->[12] = $rt->f32($_c3->[0]); $out->[13] = $rt->f32($_c3->[1]); $out->[14] = $rt->f32($_c3->[2]); $out->[15] = $rt->f32($_c3->[3]);
 };
-{ kernel => $run_pixel, uses_derivatives => 0, output_names => ['outXYZ', 'outVel', 'outRGBA'] };
+{ kernel => $run_pixel, uses_derivatives => 0, output_names => ['outXYZ', 'outVel', 'outRGBA', 'outBaseColor'] };

@@ -546,20 +546,62 @@ sub _format_for {
     return (($eff->{textures} || {})->{$name} || {})->{format} || 'rgba16f';
 }
 
+# The value every particle behavior's inherit-sized texture memory falls back to
+# when no group owner supplies a stateSize (cpu's PARTICLE_STATE_FALLBACK_SIZE).
+my $PARTICLE_STATE_FALLBACK_SIZE = 256;
+
+# A texture dimension spec reading the group's shared `stateSize` through the
+# `inherit: true` flag (cpu's declaresInheritedStateSizeTextures): it resolves
+# against the scope's stateSize and never the behavior's own default over it.
+sub _declares_inherited_state_size_textures {
+    my ($eff) = @_;
+    for my $texture (values %{ $eff->{textures} || {} }) {
+        next unless ref $texture eq 'HASH';
+        for my $spec (@{ $texture}{ qw(width height) }) {
+            return 1 if ref $spec eq 'HASH' && $spec->{inherit}
+                && ($spec->{inherit} eq '1' || $spec->{inherit} == 1)
+                && defined $spec->{param} && $spec->{param} eq 'stateSize';
+        }
+    }
+    return 0;
+}
+
 sub _prepare_state {
     my ($step, $width, $height, $seed, $owner_state_size, $input_bundle, $time) = @_;
     my $eff = meta()->{effects}{ $step->{effect_id} }
         or die "unknown effect '$step->{effect_id}' (not in bundle)\n";
     _validate_parameters($step->{effect_id}, $eff, $step->{params});
     my %raw = %{ $step->{params} };
-    $raw{stateSize} = $owner_state_size
-        if defined $owner_state_size && exists(($eff->{params} || {})->{stateSize});
+    # cpu's initializeGroupStepState: a joining step inherits the group owner's
+    # stateSize whenever it declares a stateSize param — or when its own
+    # textures read the scope's stateSize through an `inherit: true` dimension
+    # (a joining behavior's base-color memory). With no owner, a behavior that
+    # declares only inherit-sized textures still sizes them from the shared
+    # particle fallback, while a standalone effect with its own stateSize keeps
+    # its default.
+    my $declares_state_size = exists(($eff->{params} || {})->{stateSize}) ? 1 : 0;
+    my $inherit_textures    = _declares_inherited_state_size_textures($eff);
+    my $inherited_state_size;
+    if (defined $owner_state_size && ($declares_state_size || $inherit_textures)) {
+        $inherited_state_size = $owner_state_size;
+    }
+    elsif (!$declares_state_size && $inherit_textures) {
+        $inherited_state_size = $PARTICLE_STATE_FALLBACK_SIZE;
+    }
+    $raw{stateSize} = $inherited_state_size if defined $inherited_state_size;
     my $raw_params = _normalized_params($eff, \%raw, $seed);
     # cpu's initializeGroupStepState resolves automation params once at the
     # render's normalized time: this init-time view feeds iterationCount,
     # stateSize, and destination sizing. The per-run view re-resolves in
     # _run_state_once against each run's own (possibly rewound) time.
     my $params = _resolve_effect_automation($eff, $raw_params, $time) // $raw_params;
+    # An injected stateSize (owner value or the shared particle fallback) must
+    # stay visible to destination sizing even when the effect declares no
+    # stateSize param of its own, mirroring cpu's resolved params view.
+    $raw_params->{stateSize} = $inherited_state_size
+        if defined $inherited_state_size && !$declares_state_size;
+    $params = { %$params, stateSize => $inherited_state_size }
+        if defined $inherited_state_size && !$declares_state_size;
     _inherit_volume_size($step->{effect_id}, $eff, $params, $input_bundle);
     my $domain = $eff->{domain} || 'image';
     my $state = {

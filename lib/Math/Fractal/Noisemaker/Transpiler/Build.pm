@@ -327,6 +327,8 @@ sub build {
         };
         $bundle->{effects}{$eid}{externalTexture} = $eff->{externalTexture}
             if $eff->{externalTexture};
+        $bundle->{effects}{$eid}{paramAliases} = $eff->{paramAliases}
+            if $eff->{paramAliases};
         for my $field (qw(domain outputTex outputTex3d outputGeo loopRole)) {
             $bundle->{effects}{$eid}{$field} = $eff->{$field}
                 if defined $eff->{$field};
