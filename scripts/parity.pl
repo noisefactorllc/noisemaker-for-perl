@@ -326,12 +326,14 @@ for my $eid (@ids) {
     # The same single reviewed pixel difference was re-measured unchanged at
     # each bound oracle pin (2b0779bf after the authority rebind, then
     # c24b348cf654 at the delivered pin, then c3356dc1e5ae at the
-    # base-color-memory pin; size-64/seed-97/time-0.75 protocol:
+    # base-color-memory pin, then 9b7294820eec at the base-color-default pin;
+    # size-64/seed-97/time-0.75 protocol:
     # 1 changed pixel, NEAR accepted, exit 0; captures retained).
     elsif (($oracle_pin->{revision} eq '2e751f4c09154bd67e5d83f50d2185425aba0c1a'
             || $oracle_pin->{revision} eq '2b0779bf3ba5dc7a2a7fa0b9c68115f153bdcbf4'
             || $oracle_pin->{revision} eq 'c24b348cf654ef8653ad071c208e9d532ce9df44'
-            || $oracle_pin->{revision} eq 'c3356dc1e5ae75963acb14f63fae4d0463f4af9e')
+            || $oracle_pin->{revision} eq 'c3356dc1e5ae75963acb14f63fae4d0463f4af9e'
+            || $oracle_pin->{revision} eq '9b7294820eec2a0b95c66790b1dae374fa079c13')
         && $reviewed_grain_seed_time) {
         push @near, [$eid, $d, $changed_pixels];
     }
