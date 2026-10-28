@@ -17,11 +17,13 @@ package Math::Fractal::Noisemaker::OverlayGen;
 use strict;
 use warnings;
 use POSIX ();
+use Config ();
 
 use Math::Fractal::Noisemaker::Surface;
 
-my $TAU = 2.0 * 3.141592653589793;
-my $M   = 0xFFFFFFFF;
+my $TAU  = 2.0 * 3.141592653589793;
+my $M    = 0xFFFFFFFF;
+my $IV64 = ($Config::Config{ivsize} >= 8) ? 1 : 0;
 
 my %OVERLAY_EFFECTS = map { $_ => 1 } qw(filter/fibers filter/scratches filter/strayHair);
 
@@ -50,24 +52,36 @@ package Math::Fractal::Noisemaker::OverlayGen::SeededRng;
 # double result — before the exact mod-2^32.
 
 # Round a non-negative exact integer (< 2^62) to float64 precision: keep the
-# top 53 significant bits, round half to even.
+# top 53 significant bits, round half to even. The 64-bit-IV path uses the
+# integer bit operators directly; a 32-bit-IV perl cannot apply bitwise ops to
+# an NV at or above 2^32, so that path shifts with exact power-of-two floor
+# divisions and reads the discarded low bits with an exact fmod instead.
 sub _round53 {
     my ($n) = @_;
     return $n if $n < 9007199254740992;    # < 2^53: already exact
-    my $h = 0;
-    { my $t = $n; while ($t >>= 1) { $h++ } }
-    my $shift = $h - 52;
-    my $keep  = $n >> $shift;
-    my $rem   = $n & ((1 << $shift) - 1);
-    my $half  = 1 << ($shift - 1);
-    $keep++ if $rem > $half || ($rem == $half && ($keep & 1));
-    return $keep << $shift;
+    if ($IV64) {
+        my $h = 0;
+        { my $t = $n; while ($t >>= 1) { $h++ } }
+        my $shift = $h - 52;
+        my $keep  = $n >> $shift;
+        my $rem   = $n & ((1 << $shift) - 1);
+        my $half  = 1 << ($shift - 1);
+        $keep++ if $rem > $half || ($rem == $half && ($keep & 1));
+        return $keep << $shift;
+    }
+    my $shift = 0;
+    { my $t = $n; $t = POSIX::floor($t / 2.0), $shift++ while $t >= 9007199254740992 }
+    my $keep = POSIX::floor($n / 2.0**$shift);
+    my $rem  = POSIX::fmod($n, 2.0**$shift);
+    my $half = 2.0**($shift - 1);
+    $keep++ if $rem > $half || ($rem == $half && ($keep % 2));
+    return $keep * 2.0**$shift;
 }
 
 sub _advance {    # float64( state*747796405 + 2891336453 ) mod 2^32, exactly
     my ($state) = @_;
     my $sum = _round53(_round53($state * 747796405) + 2891336453);
-    return $sum % 4294967296;
+    return _mod32($sum);
 }
 
 sub new {
@@ -77,11 +91,24 @@ sub new {
     return bless { state => _advance($state) }, $class;
 }
 
+# Unsigned 32-bit helpers. On a 32-bit-IV perl the bit operators cannot be
+# applied to an NV at or above 2^31/2^32, so shift by an exact power-of-two
+# floor division and xor by splitting into two 16-bit halves; every operation
+# stays exact for u32 operands.
+sub _shr32 { POSIX::floor($_[0] / 2.0**$_[1]) }
+sub _xor32 {
+    my ($a, $b) = @_;
+    my $lo = ($a % 65536) ^ ($b % 65536);
+    my $hi = POSIX::floor($a / 65536.0) ^ POSIX::floor($b / 65536.0);
+    return $lo + $hi * 65536.0;
+}
+sub _mod32 { POSIX::fmod($_[0], 4294967296.0) }
+
 sub next_word {
     my ($self) = @_;
     my $s = $self->{state} = _advance($self->{state});
-    my $word = _round53((($s >> (($s >> 28) + 4)) ^ $s) * 277803737) % 4294967296;
-    return (($word >> 22) ^ $word) & $M;
+    my $word = _mod32(_round53(_xor32(_shr32($s, _shr32($s, 28) + 4), $s) * 277803737));
+    return _xor32(_shr32($word, 22), $word) % 4294967296;
 }
 
 sub float { $_[0]->next_word / 4294967295.0 }

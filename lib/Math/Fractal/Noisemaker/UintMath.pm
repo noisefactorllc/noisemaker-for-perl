@@ -11,12 +11,19 @@ package Math::Fractal::Noisemaker::UintMath;
 # - Perl IVs are signed 64-bit; 0xFFFFFFFF * 0xFFFFFFFF overflows an IV and
 #   silently degrades to an NV (53-bit mantissa, wrong low bits). `umul`
 #   therefore uses a 16-bit-split multiply so every intermediate fits an IV.
+# - On a 32-bit-IV perl (ivsize == 4, e.g. an i386 build) the same hazards
+#   appear one scale earlier: any integer magnitude at or above 2^31 leaves
+#   the IV range, and Perl's bitwise operators then truncate through the NV
+#   (wrong low bits) or wrap negatives through IV instead of UV. Every
+#   intermediate that can leave the 32-bit IV range is therefore reduced
+#   mod 2^32 with POSIX::fmod (exact in float64) before the final mask.
 # - float32 bit reinterpretation uses pack/unpack ('f' <-> 'L', both native
 #   byte order, so the round trip is exact on any IEEE-754 host).
 
 use strict;
 use warnings;
 use POSIX ();
+use Config ();
 use Exporter 'import';
 
 our @EXPORT_OK = qw(
@@ -29,16 +36,31 @@ our @EXPORT_OK = qw(
 
 use constant _MASK32 => 0xFFFFFFFF;
 
+# True on the usual 64-bit-IV builds; false on 32-bit-IV builds (i386 and
+# friends), where every out-of-IV-range intermediate must be reduced.
+my $IV64 = ($Config::Config{ivsize} >= 8) ? 1 : 0;
+
 my $INF = 9**9**9;
 my $NAN = $INF - $INF;
 
+# Reduce a finite float64 to an exact integer in [0, 2^32). fmod is exact for
+# integral float64 operands, so no low bits are lost on any build.
+sub _reduce32 {
+    my ($x) = @_;
+    my $m = POSIX::fmod($x, 4294967296.0);
+    $m += 4294967296.0 if $m < 0;
+    return $m;
+}
+
 # IEEE division: n/0 -> +-Inf, 0/0 -> NaN (Perl's / dies on zero divide).
 # Honors the sign of a negative-zero denominator (n / -0.0 == -Inf).
+# POSIX::signbit distinguishes -0.0 on every build (pack('Q') is unavailable
+# on 32-bit-IV perls).
 sub fdiv {
     my ($n, $d) = @_;
     if ($d == 0) {
         return $NAN if $n == 0 || $n != $n;
-        my $neg_zero = (unpack('Q', pack('d', $d)) >> 63) & 1;
+        my $neg_zero = POSIX::signbit($d) ? 1 : 0;
         my $inf = ($n > 0) == !$neg_zero ? $INF : -$INF;
         return $inf;
     }
@@ -51,15 +73,16 @@ sub fdiv {
 # Above 2^53 the value lives in an NV, and Perl's NV->IV conversion can
 # corrupt low bits — so reduce mod 2^32 with fmod (exact in float64) BEFORE
 # converting. fmod keeps the dividend's sign; the caller's `& MASK` restores
-# two's-complement semantics for negatives.
+# two's-complement semantics for negatives. On a 32-bit-IV perl the NV->IV
+# corruption starts at 2^31, so the fmod reduction applies from there.
 sub _int_operand {
     my ($x) = @_;
     return 0 if $x != $x;                       # NaN
     return 0 if $x == $INF || $x == -$INF;      # +-Inf
-    if ($x >= 9007199254740992.0 || $x <= -9007199254740992.0) {    # beyond 2^53
-        my $m = POSIX::fmod(POSIX::trunc($x), 4294967296.0);
-        $m += 4294967296.0 if $m < 0;
-        return int($m);
+    if ($IV64
+        ? ($x >= 9007199254740992.0 || $x <= -9007199254740992.0)   # beyond 2^53
+        : ($x >= 2147483648.0 || $x <= -2147483648.0)) {            # beyond 2^31
+        return int(_reduce32(POSIX::trunc($x)));
     }
     return int($x);                             # truncates toward zero
 }
@@ -68,19 +91,42 @@ sub _int_operand {
 sub u32 { _int_operand($_[0]) & _MASK32 }
 
 # JS `Math.imul(a, b) >>> 0` — 32-bit wrapping multiply, unsigned result.
-# 16-bit split keeps every intermediate below 2^48 (IV-safe).
+# 16-bit split keeps every intermediate below 2^48 (IV-safe on 64-bit builds;
+# on 32-bit builds the partial products are fmod-reduced before the mask).
 sub umul {
     my ($a, $b) = @_;
     $a = u32($a);
     $b = u32($b);
-    my $lo = ($a & 0xFFFF) * $b;
-    my $hi = (($a >> 16) & 0xFFFF) * $b;
-    return ($lo + (($hi & 0xFFFF) << 16)) & _MASK32;
+    if ($IV64) {
+        my $lo = ($a & 0xFFFF) * $b;
+        my $hi = (($a >> 16) & 0xFFFF) * $b;
+        return ($lo + (($hi & 0xFFFF) << 16)) & _MASK32;
+    }
+    my $lo = ($a & 0xFFFF) * $b;            # < 2^48, exact in float64
+    my $hi = (($a >> 16) & 0xFFFF) * $b;    # < 2^48, exact in float64
+    # (lo + hi * 2^16) mod 2^32: only lo's low 32 bits and hi's low 16 bits
+    # survive, and both fmod reductions are exact in float64.
+    return _reduce32(
+        POSIX::fmod($lo, 4294967296.0)
+            + POSIX::fmod($hi, 65536.0) * 65536.0,
+    ) & _MASK32;
 }
 
-sub uadd { (u32($_[0]) + u32($_[1])) & _MASK32 }
-sub usub { (u32($_[0]) - u32($_[1])) & _MASK32 }
-sub ushl { (u32($_[0]) << (u32($_[1]) & 0x1F)) & _MASK32 }
+sub uadd {
+    my $s = u32($_[0]) + u32($_[1]);
+    return $IV64 ? $s & _MASK32 : _reduce32($s) & _MASK32;
+}
+sub usub {
+    my $r = u32($_[0]) - u32($_[1]);
+    return $IV64 ? $r & _MASK32 : _reduce32($r) & _MASK32;
+}
+sub ushl {
+    my ($a, $b) = @_;
+    my $n = u32($b) & 0x1F;
+    if ($IV64) { return (u32($a) << $n) & _MASK32 }
+    my $v = POSIX::fmod(u32($a), 4294967296.0 / (2**$n));
+    return ($v * (2**$n)) & _MASK32;
+}
 sub ushr { (u32($_[0]) >> (u32($_[1]) & 0x1F)) & _MASK32 }
 sub uand { u32($_[0]) & u32($_[1]) }
 sub uor  { u32($_[0]) | u32($_[1]) }

@@ -90,8 +90,11 @@ sub dsl_error {
         my $resolved = resolve_automation_uniform($case->{config}, $case->{time}, $spec);
         # The oracle pins exact bits; compare as doubles and via their IEEE
         # patterns so a -0/+0 or 1-ulp slip cannot hide behind numeric ==.
+        # Two unsigned 32-bit halves ('Q<' is unavailable on 32-bit-IV perls)
+        # compare the same 64 bits exactly on every build.
         my $ok_case = defined $resolved
-            && unpack('Q<', pack('d<', $resolved)) eq unpack('Q<', pack('d<', $case->{expected}));
+            && join(',', unpack('L<L<', pack('d<', $resolved)))
+                eq join(',', unpack('L<L<', pack('d<', $case->{expected})));
         if (!$ok_case) {
             $failures++;
             last if $failures > 5;

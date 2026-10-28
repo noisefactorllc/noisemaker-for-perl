@@ -24,6 +24,7 @@ use strict;
 use warnings;
 use Scalar::Util ();
 use POSIX ();
+use Config ();
 
 use Math::Fractal::Noisemaker::UintMath qw(
     u32 umul uadd usub ushl ushr uand uor uxor fdiv
@@ -33,6 +34,8 @@ use Math::Fractal::Noisemaker::MetalDivision ();
 
 use constant _U32 => 0xFFFFFFFF;
 
+my $IV64_RUNTIME = ($Config::Config{ivsize} >= 8) ? 1 : 0;
+
 my $INF = 9**9**9;
 my $NAN = $INF - $INF;
 my $PI  = 3.141592653589793;
@@ -41,7 +44,32 @@ my $PI  = 3.141592653589793;
 # $rt->f32($x) (the first arg is the blessed runtime in that case).
 sub f32 { unpack('f', pack('f', ref $_[0] ? $_[1] : $_[0])) }
 
-sub _s32 { ((int($_[0]) + 0x80000000) & _U32) - 0x80000000 }
+# Signed 32-bit reinterpretation of an integer value (wrap mod 2^32 into
+# [-2^31, 2^31)). On a 32-bit-IV perl the + 2^31 intermediate can leave the
+# IV range (Perl then corrupts the bitwise mask through an NV), so that build
+# reduces with POSIX::fmod (exact in float64) instead.
+sub _s32 {
+    if ($IV64_RUNTIME) {
+        return ((int($_[0]) + 0x80000000) & _U32) - 0x80000000;
+    }
+    my $m = POSIX::fmod(int($_[0]), 4294967296.0);
+    $m += 4294967296.0 if $m < 0;
+    $m -= 4294967296.0 if $m >= 2147483648.0;
+    return $m;
+}
+
+# Arithmetic (sign-filling) right shift for an int32 operand. On 64-bit-IV
+# builds Perl's logical >> over the 64-bit UV keeps the low 32 bits equal to
+# the arithmetic result, so the raw operator works with _s32. On 32-bit-IV
+# builds the 32-bit UV drops the shifted-in top bits, so shift with an exact
+# floor division by 2^n instead (both operands are int32, so the NV quotient
+# is exact and its floor matches the arithmetic shift).
+sub _arithmetic_shr {
+    my ($a, $b) = @_;
+    my $n = $b & 31;
+    return $a >> $n if $IV64_RUNTIME;
+    return POSIX::floor($a / (2**$n));
+}
 
 sub _is_vec { ref $_[0] eq 'ARRAY' || ref $_[0] eq 'Math::Fractal::Noisemaker::Runtime::IVec' }
 sub _is_ivec { ref $_[0] eq 'Math::Fractal::Noisemaker::Runtime::IVec' }
@@ -389,7 +417,7 @@ sub _js_uint_binary {
     my $sa = _s32(Math::Fractal::Noisemaker::UintMath::u32($a));
     my $sb = _s32(Math::Fractal::Noisemaker::UintMath::u32($b));
     return _s32(uxor($sa, $sb))           if $op eq '^';
-    return _s32($sa >> ($sb & 31))        if $op eq '>>';
+    return _s32(_arithmetic_shr($sa, $sb)) if $op eq '>>';
     return $sb ? ($sa - $sb * int($sa / $sb)) : 0 if $op eq '%';
     return _int_scalar($op, $sa, $sb, 'uint');
 }
@@ -397,8 +425,17 @@ sub _js_uint_binary {
 sub _int_scalar {
     my ($op, $a, $b, $base) = @_;
     if ($base eq 'uint') {
-        $a &= _U32;
-        $b &= _U32;
+        if ($IV64_RUNTIME) {
+            $a &= _U32;
+            $b &= _U32;
+        }
+        else {
+            # A 32-bit-IV perl cannot apply the bitmask to a value at or
+            # above 2^32 (the NV no longer converts losslessly), so reduce
+            # through the uint helpers' exact modulo path instead.
+            $a = Math::Fractal::Noisemaker::UintMath::u32($a);
+            $b = Math::Fractal::Noisemaker::UintMath::u32($b);
+        }
         return uadd($a, $b) if $op eq '+';
         return usub($a, $b) if $op eq '-';
         return umul($a, $b) if $op eq '*';
@@ -419,11 +456,9 @@ sub _int_scalar {
     return _s32($a ^ $b) if $op eq '^';
     return _s32($a << ($b & 31)) if $op eq '<<';
     if ($op eq '>>') {
-        # Perl's >> on a negative IV is a 64-bit LOGICAL shift; GLSL/JS/Python
-        # use an arithmetic shift. The low 32 bits of the logical result equal
-        # the arithmetic-shift result for int32-range operands; _s32 restores
-        # the sign.
-        return _s32($a >> ($b & 31));
+        # Arithmetic (sign-filling) shift; see _arithmetic_shr for why the
+        # raw Perl operator is only correct on 64-bit-IV builds.
+        return _s32(_arithmetic_shr($a, $b));
     }
     if ($op eq '/') { return $b ? _s32(int($a / $b)) : 0 }
     if ($op eq '%') { return $b ? _s32($a - $b * int($a / $b)) : 0 }

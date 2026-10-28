@@ -27,17 +27,20 @@ use Exporter 'import';
 our @EXPORT_OK = qw(js_sin js_cos);
 
 # 64-bit pattern of a double, and back. Both directions use an explicit
-# byte order, so the mapping is host-independent.
+# byte order, so the mapping is host-independent. The bit pattern is read as
+# two unsigned 32-bit halves ('Q>' is unavailable on 32-bit-IV perls).
 sub _bits {
-    return unpack('Q>', pack('d>', $_[0]));
+    return unpack('L>L>', pack('d>', $_[0]));
 }
 
 sub _high_word {
-    return _bits($_[0]) >> 32;
+    my ($high, $low) = _bits($_[0]);
+    return $high;
 }
 
 sub _low_word {
-    return _bits($_[0]) & 0xFFFFFFFF;
+    my ($high, $low) = _bits($_[0]);
+    return $low;
 }
 
 sub _from_words {
@@ -47,7 +50,7 @@ sub _from_words {
 
 sub _set_low {
     my ($x, $v) = @_;
-    return _from_words(_bits($x) >> 32, $v);
+    return _from_words(_high_word($x), $v);
 }
 
 sub _kernel_sin {
