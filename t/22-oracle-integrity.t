@@ -105,7 +105,11 @@ write_file('package.json', "{}\n");
 }
 {
     my $cache = tempdir(CLEANUP => 1);
-    my $pin_dir = "$cache/noisemaker-for-cpu-pin/fixture";
+    # Build the expected directory the same way provision_oracle builds it,
+    # with File::Spec->catdir: on Windows the resolved path is normalized to
+    # backslashes, so a string-built expectation with forward slashes would
+    # not compare equal even when resolution is correct.
+    my $pin_dir = File::Spec->catdir($cache, 'noisemaker-for-cpu-pin', 'fixture');
     write_file('bin/noisemaker-cpu.js', "// reference\n", $pin_dir);
     write_file('src/runtime.js', "// runtime\n", $pin_dir);
     write_file('package.json', "{}\n", $pin_dir);
