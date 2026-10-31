@@ -282,7 +282,7 @@
     "synth/roll:roll": "561ce4ece2834934c62ec34076516a38d213e45c37852dc8c1c997bfb6e815ef",
     "synth/sacredGeometry:sacredGeometry": "61a4f6b49daf95a2968d278f9213a6322f6950b15e5e424db26ec38eebeb05b0",
     "synth/scope:scope": "d101e24680c675de3e2086d9ac6c65ce6d9ec6498e6db065dad800d7d96f0f78",
-    "synth/shape:shape": "09c3cdce880fe65dcb741ab8225e404d05fd282bd86deca0d508dd0d3e3a439e",
+    "synth/shape:shape": "6f9aacf4dd1afbe6a5432e13edc59d93566fcb2f659805f613f05d19c5dd3362",
     "synth/solid:solid": "1ad5094ee24be64efc809666858121a0e6a8f4b7b2f5c75830d47f19cbc88ad6",
     "synth/spectrum:spectrum": "57d15bb3ab9f61de5c53dc98f28bf95ee08367efbc8f23ac7b77252a895fa1de",
     "synth/subdivide:subdivide": "c4ad631bbdbc1adff613a0a284c122c87f18e043ee8c9556995effd80e404cd2",
@@ -298,5 +298,5 @@
   },
   "source": "https://shaders.noisedeck.app",
   "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-  "version": "1.0.312"
+  "version": "1.0.319"
 }
