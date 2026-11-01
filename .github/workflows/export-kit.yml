@@ -278,6 +278,28 @@ jobs:
                                 'loader_sha256': hashlib.sha256(loader.read_bytes()).hexdigest(),
                                 'maps': maps.splitlines()}), flush=True)
 
+          def is_owned_tracee(pid):
+              try:
+                  lines = Path(f'/proc/{pid}/status').read_text().splitlines()
+              except (FileNotFoundError, ProcessLookupError):
+                  return False
+              tracer = next(line.split()[1] for line in lines if line.startswith('TracerPid:'))
+              return int(tracer) == os.getpid()
+
+          def kill_owned_tracee(pid):
+              try:
+                  descriptor = os.pidfd_open(pid)
+              except ProcessLookupError:
+                  return
+              try:
+                  if is_owned_tracee(pid):
+                      try:
+                          signal.pidfd_send_signal(descriptor, signal.SIGKILL)
+                      except ProcessLookupError:
+                          pass
+              finally:
+                  os.close(descriptor)
+
           def trace_command(command, on_exec, follow):
               def traceme():
                   try:
@@ -296,6 +318,8 @@ jobs:
                           traced.discard(pid)
                       raise RuntimeError(f'Executable did not reach its deterministic exec stop: {status}')
                   ptrace(0x4200, pid, 0x100000 | (0x2 | 0x4 | 0x10 if follow else 0))
+                  if not is_owned_tracee(pid):
+                      raise RuntimeError('Initial exec is not owned by this observer')
                   on_exec(pid, True)
                   if not follow:
                       ptrace(17, pid)
@@ -305,21 +329,28 @@ jobs:
                   while traced:
                       pid, status = os.waitpid(-1, 0x40000000)
                       if os.WIFEXITED(status) or os.WIFSIGNALED(status):
+                          newborn.discard(pid)
                           traced.discard(pid)
-                          if pid == process.pid:
+                          if pid == process.pid and process.returncode is None:
                               process.returncode = os.waitstatus_to_exitcode(status)
                           continue
                       if not os.WIFSTOPPED(status):
                           raise RuntimeError(f'Unexpected tracing wait status: {status}')
+                      if pid not in traced:
+                          traced.add(pid)
+                          newborn.add(pid)
                       event = status >> 16
                       stopped_signal = os.WSTOPSIG(status)
                       if event in (1, 2):
                           child = ctypes.c_ulong()
                           ptrace(0x4201, pid, ctypes.addressof(child))
-                          traced.add(child.value)
-                          newborn.add(child.value)
+                          if child.value not in traced and is_owned_tracee(child.value):
+                              traced.add(child.value)
+                              newborn.add(child.value)
                       if event == 4:
-                          on_exec(pid, pid == process.pid)
+                          if not is_owned_tracee(pid):
+                              raise RuntimeError('Child exec is not owned by this observer')
+                          on_exec(pid, pid == process.pid and process.returncode is None)
                       injected = 0 if event else stopped_signal
                       if pid in newborn and stopped_signal == signal.SIGSTOP:
                           newborn.remove(pid)
@@ -330,27 +361,37 @@ jobs:
                   return process.returncode
               except BaseException:
                   for pid in traced:
-                      try:
-                          os.kill(pid, signal.SIGKILL)
-                      except ProcessLookupError:
-                          pass
+                      kill_owned_tracee(pid)
                   while traced:
                       try:
                           pid, status = os.waitpid(-1, 0x40000000)
                       except ChildProcessError:
                           break
                       if os.WIFSTOPPED(status):
+                          traced.add(pid)
                           if status >> 16 in (1, 2):
                               child = ctypes.c_ulong()
                               ptrace(0x4201, pid, ctypes.addressof(child))
-                              traced.add(child.value)
-                              os.kill(child.value, signal.SIGKILL)
-                          os.kill(pid, signal.SIGKILL)
+                              if is_owned_tracee(child.value):
+                                  traced.add(child.value)
+                                  kill_owned_tracee(child.value)
+                          kill_owned_tracee(pid)
                       else:
+                          newborn.discard(pid)
                           traced.discard(pid)
-                          if pid == process.pid:
+                          if pid == process.pid and process.returncode is None:
                               process.returncode = os.waitstatus_to_exitcode(status)
                   raise
+
+          def verify_nested_tree(parents, root):
+              if len(parents) != 3 or root not in parents or parents[root] in parents:
+                  raise RuntimeError('Expected one actual root, child and grandchild')
+              children = [pid for pid, parent in parents.items() if parent == root]
+              if len(children) != 1:
+                  raise RuntimeError('Expected one actual direct child')
+              grandchildren = [pid for pid, parent in parents.items() if parent == children[0]]
+              if len(grandchildren) != 1:
+                  raise RuntimeError('Expected one actual grandchild')
 
           def main():
               if struct.calcsize('P') != 8 or platform.machine() != 'x86_64' or elf('/proc/self/exe') != (2, 62):
@@ -364,17 +405,27 @@ jobs:
               print(json.dumps({'observer': os.readlink('/proc/self/exe'), 'pointer_bytes': 8,
                                 'phase': phase, 'argv': command}), flush=True)
               child_seen = phase not in ('prove', 'summary')
+              nested_parents = {}
+              nested_root = None
               def observe(pid, is_root):
-                  nonlocal child_seen
+                  nonlocal child_seen, nested_root
                   args = Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')
                   wanted = any(arg.endswith(b'.t') for arg in args) if phase == 'prove' else any(arg.endswith(b'/parity.pl') for arg in args)
-                  if is_root or (not child_seen and wanted):
+                  if is_root or phase == 'nested' or (not child_seen and wanted):
                       require_native(pid, target, loader, expected_sha, phase if is_root else phase + '-child')
+                      if phase == 'nested':
+                          status_text = Path(f'/proc/{pid}/status').read_text().splitlines()
+                          nested_parents[pid] = int(next(line.split()[1] for line in status_text if line.startswith('PPid:')))
+                          if is_root:
+                              nested_root = pid
                       if not is_root:
                           child_seen = True
-              status = trace_command(command, observe, phase in ('prove', 'summary'))
+              status = trace_command(command, observe, phase in ('prove', 'summary', 'nested'))
               if status:
                   raise SystemExit(status if status > 0 else 128 - status)
+              if phase == 'nested':
+                  verify_nested_tree(nested_parents, nested_root)
+                  print(json.dumps({'native_nested_exec_parents': nested_parents}), flush=True)
               if not child_seen:
                   raise RuntimeError(f'No actual {phase} Perl child was observed')
 
@@ -438,6 +489,12 @@ jobs:
             open my $exe, "<:raw", "/proc/self/exe" or die $!; read $exe, my $header, 20;
             die "Unexpected process ELF" unless substr($header,0,5) eq "\x7fELF\x01" && unpack("v",substr($header,18,2)) == 3;
             print "executable=$^X perlpath=$Config{perlpath} arch=$Config{archname} ptr=$Config{ptrsize} IV=$Config{ivsize} NV=$Config{nvsize}\n";
+          PL
+          timeout 30s python3 "$RUNNER_TEMP/observe-perl32.py" nested "$PERL32_PREFIX/bin/perl" <<'PL'
+          my $child = q{system($^X, "-e", "exit 7"); exit($? >> 8);};
+          system($^X, "-e", $child);
+          die "Nested native observer lost child exit status" unless $? == (7 << 8);
+          exit 0;
           PL
           printf '%s\n' "$PERL32_PREFIX/bin" >> "$GITHUB_PATH"
           printf 'PERL32_PREFIX=%s\n' "$PERL32_PREFIX" >> "$GITHUB_ENV"
