@@ -35,7 +35,7 @@ my $CLI = File::Spec->catfile($CPU_DIR, 'bin', 'noisemaker-cpu.js');
 my $PARITY_SCRIPT = File::Spec->catfile($FindBin::Bin, '..', 'scripts', 'parity.pl');
 
 plan skip_all => 'JS oracle (node + noisemaker-cpu) not available'
-    unless system('node --version >/dev/null 2>&1') == 0;
+    unless _quiet_system(undef, 'node', '--version') == 0;
 pass('reference runtime matches the recorded oracle pin');
 
 my $TMP = File::Temp::tempdir(CLEANUP => 1);
@@ -52,6 +52,29 @@ isnt($unknown_status, 0, 'parity harness fails when no requested effect exists')
 my $mixed_status = system($^X, $PARITY_SCRIPT, '--only', 'synth/solid,not/an-effect');
 isnt($mixed_status, 0, 'parity harness fails when any requested effect is unknown');
 
+sub _quiet_system {
+    my ($input, @cmd) = @_;
+    open my $saved_in,  '<&', \*STDIN  or die "cannot save STDIN: $!\n";
+    open my $saved_out, '>&', \*STDOUT or die "cannot save STDOUT: $!\n";
+    open my $saved_err, '>&', \*STDERR or die "cannot save STDERR: $!\n";
+    my $status;
+    my $ok = eval {
+        if (defined $input) {
+            open STDIN, '<', $input or die "cannot redirect STDIN: $!\n";
+        }
+        open STDOUT, '>', File::Spec->devnull or die "cannot redirect STDOUT: $!\n";
+        open STDERR, '>', File::Spec->devnull or die "cannot redirect STDERR: $!\n";
+        $status = system { $cmd[0] } @cmd;
+        1;
+    };
+    my $error = $@;
+    open STDIN,  '<&', $saved_in  or die "cannot restore STDIN: $!\n";
+    open STDOUT, '>&', $saved_out or die "cannot restore STDOUT: $!\n";
+    open STDERR, '>&', $saved_err or die "cannot restore STDERR: $!\n";
+    die $error unless $ok;
+    return $status;
+}
+
 sub js_effect {
     my ($effect_id, @extra) = @_;
     my $out = File::Spec->catfile($TMP, 'js.png');
@@ -60,7 +83,7 @@ sub js_effect {
         '--width', 8, '--height', 8, '--seed', 1, '--time', 0.25,
         '--output', $out, @extra,
     );
-    system(join(' ', map { quotemeta } @cmd) . ' >/dev/null 2>&1') == 0 or die "oracle failed\n";
+    _quiet_system(undef, @cmd) == 0 or die "oracle failed\n";
     open my $fh, '<:raw', $out or die $!;
     local $/;
     return decode_png(scalar <$fh>);
@@ -78,7 +101,7 @@ sub js_apply {
         '--width', 8, '--height', 8, '--seed', 1, '--time', 0.25,
         '--output', $out, @extra,
     );
-    system(join(' ', map { quotemeta } @cmd) . ' >/dev/null 2>&1') == 0 or die "oracle failed\n";
+    _quiet_system(undef, @cmd) == 0 or die "oracle failed\n";
     open my $output_fh, '<:raw', $out or die $!;
     local $/;
     return decode_png(scalar <$output_fh>);
@@ -96,7 +119,7 @@ sub js_dsl {
         '--width', 8, '--height', 8, '--seed', 1, '--time', 0.25,
         '--output', $out,
     );
-    system(join(' ', map { quotemeta } @cmd) . " <\Q$in\E >/dev/null 2>&1") == 0 or die "oracle failed\n";
+    _quiet_system($in, @cmd) == 0 or die "oracle failed\n";
     open my $output_fh, '<:raw', $out or die $!;
     local $/;
     return decode_png(scalar <$output_fh>);
