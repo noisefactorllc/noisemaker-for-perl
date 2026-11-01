@@ -4,7 +4,7 @@ name: Perl CI and export kit
 # release workflow, which builds this repo's export kit at this exact
 # SHA and ships it to kits.noisedeck.app.
 #
-# Pushes run the fast prove suite. The weekly run and workflow_dispatch also
+# Pushes run the required source and distribution tests. Full runs also
 # run the oracle parity tests and the whole-port PARITY-SUMMARY against the
 # pinned noisemaker-for-cpu (on Linux and Windows), then release a kit, unless
 # the SHA already carries a kit tag.
@@ -47,19 +47,45 @@ jobs:
           - { os: ubuntu-latest, perl: '5.22' }
           - { os: ubuntu-latest, perl: '5.42' }
           - { os: macos-latest, perl: '5.42' }
+    defaults:
+      run:
+        working-directory: port
+    env:
+      NOISEMAKER_CPU_DIR: ${{ github.workspace }}/oracle
+      RELEASE_TESTING: '1'
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
+          path: port
           persist-credentials: false
       - uses: shogo82148/actions-setup-perl@ac3202722f5744e62a8fa3af3e1aaaebb08861f3 # v1
         with:
           perl-version: ${{ matrix.perl }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '22'
+      - name: Read reference revision
+        id: oracle
+        run: |
+          perl -MJSON::PP -e 'local $/; my $p=decode_json(<>); die "Invalid oracle revision" unless $p->{revision} =~ /\A[0-9a-f]{40}\z/; print "revision=$p->{revision}\n"' scripts/oracle-lock.json >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          repository: noisefactorllc/noisemaker-for-cpu
+          ref: ${{ steps.oracle.outputs.revision }}
+          path: oracle
+          persist-credentials: false
       - name: Test source and packaged distribution
         run: |
+          set -euo pipefail
+          require_no_skips() {
+            perl -ne 'die "Required test skipped: $_" if /#\s*SKIP\b|\bskipped:/i' "$1"
+          }
           perl Makefile.PL
-          make test
+          make test TEST_VERBOSE=1 | tee "$RUNNER_TEMP/source-tests.log"
+          require_no_skips "$RUNNER_TEMP/source-tests.log"
           make distcheck
-          make disttest
+          make disttest TEST_VERBOSE=1 | tee "$RUNNER_TEMP/distribution-tests.log"
+          require_no_skips "$RUNNER_TEMP/distribution-tests.log"
       - name: Check public POD
         run: |
           perl -MPod::Checker=podchecker -e 'my $bad=0; for (@ARGV) { $bad++ if podchecker($_) > 0 } exit($bad ? 1 : 0)' lib/Math/Fractal/Noisemaker.pm lib/Math/Fractal/Noisemaker/*.pm lib/Math/Fractal/Noisemaker/Transpiler/Build.pm
@@ -144,7 +170,16 @@ jobs:
       - name: Prove suite
         working-directory: port
         shell: pwsh
-        run: perl -S prove -lr t
+        env:
+          NOISEMAKER_CPU_DIR: ${{ github.workspace }}/oracle
+          RELEASE_TESTING: '1'
+        run: |
+          $env:NOISEMAKER_CPU_DIR = $env:NOISEMAKER_CPU_DIR.Replace('\', '/')
+          $tapLog = Join-Path $env:RUNNER_TEMP 'windows-prove.log'
+          perl -S prove -lrv t | Tee-Object -FilePath $tapLog
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          perl -ne 'die "Required test skipped: $_" if /#\s*SKIP\b|\bskipped:/i' $tapLog
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Whole-port PARITY-SUMMARY, exact RGBA8 comparison
         working-directory: port
         shell: pwsh
