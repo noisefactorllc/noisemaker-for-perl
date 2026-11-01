@@ -328,7 +328,7 @@ for my $eid (@ids) {
     # c24b348cf654 at the delivered pin, then c3356dc1e5ae at the
     # base-color-memory pin, then 9b7294820eec at the base-color-default pin,
     # then db42f30c at the prng-sign-folds pin, then 515528f at the
-    # boolean-mix pin;
+    # boolean-mix pin, then 9410b683cb8f at the context-loss pin;
     # size-64/seed-97/time-0.75 protocol:
     # 1 changed pixel, NEAR accepted, exit 0; captures retained).
     elsif (($oracle_pin->{revision} eq '2e751f4c09154bd67e5d83f50d2185425aba0c1a'
@@ -337,7 +337,8 @@ for my $eid (@ids) {
             || $oracle_pin->{revision} eq 'c3356dc1e5ae75963acb14f63fae4d0463f4af9e'
             || $oracle_pin->{revision} eq '9b7294820eec2a0b95c66790b1dae374fa079c13'
             || $oracle_pin->{revision} eq 'db42f30c5c3ab711362bf5dbd4013b16637b48f5'
-            || $oracle_pin->{revision} eq '515528f40a37e71875320ea725ba70bcf79cf6a1')
+            || $oracle_pin->{revision} eq '515528f40a37e71875320ea725ba70bcf79cf6a1'
+            || $oracle_pin->{revision} eq '9410b683cb8f3d0112f65d374a9fae2ec96871be')
         && $reviewed_grain_seed_time) {
         push @near, [$eid, $d, $changed_pixels];
     }
