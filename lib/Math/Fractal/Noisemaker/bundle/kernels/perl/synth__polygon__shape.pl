@@ -44,7 +44,7 @@ my $run_pixel = sub {
             scalar do { @{$st} = map { $rt->f32($_) } @{($rt->construct(2, $rt->swizzle($st, 'y'), $rt->unary('-', $rt->swizzle($st, 'x'))))}; $st };
         }
         $d = $rt->metal_divide($polygon__vec2_float->($st, $sidesF), $rt->component_wise('cos', $rt->metal_divide($rt->f(3.1415926535900001), $sidesF)));
-        $m = $rt->component_wise('smoothstep', $_u_radius, $rt->binary('-', $_u_radius, $_u_smoothing, 1, 'float'), $d);
+        $m = (($rt->binary('>', $_u_smoothing, $rt->f(0))) ? ($rt->component_wise('smoothstep', $_u_radius, $rt->binary('-', $_u_radius, $_u_smoothing, 1, 'float'), $d)) : ($rt->construct(1, $rt->binary('<', $d, $_u_radius))));
         $fgMask = $rt->binary('*', $m, $_u_fgAlpha, 1, 'float');
         $bgMask = $rt->binary('*', $rt->binary('-', $rt->f(1), $m, 1, 'float'), $_u_bgAlpha, 1, 'float');
         $totalAlpha = $rt->binary('+', $fgMask, $bgMask, 1, 'float');

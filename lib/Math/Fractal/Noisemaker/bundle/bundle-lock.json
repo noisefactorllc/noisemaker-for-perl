@@ -274,7 +274,7 @@
     "synth/osc2d:osc2d": "5231685e7b4e594563bc6f09876204c91fb851455942bd0cff189b1317c24cc2",
     "synth/pattern:pattern": "5880be776e572e54b6e53182ffe2bfae44e56a9552875046e1f4668403999c26",
     "synth/perlin:perlin": "e1be748276197874b659a212d2944e27aed0dc6edef2e01d4b6753e48756781c",
-    "synth/polygon:shape": "49a231e38a8f1f9c17fec70216f12710137d366ccb9761b0943c8fb96a29ef36",
+    "synth/polygon:shape": "4acfdb2d99ec98f23da51ca1177395a269e6d4553eb35f9e5a55ec6d0d96e3bb",
     "synth/reactionDiffusion:rd": "ab8051c7a8009d3fe28fa9321f2863bb5fb550b5d37d459139ce68af679099ac",
     "synth/reactionDiffusion:rdFb": "8e7de4a31b702f86d537b1b617e8ae84adf6e87c3dbe672b64f9b0d2eb8ad211",
     "synth/remap:remap": "25aa18519ff02194bbd24a4249664f6f75d480241cd8058dfbfdfd2f3719c382",
@@ -298,5 +298,5 @@
   },
   "source": "https://shaders.noisedeck.app",
   "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-  "version": "1.0.319"
+  "version": "1.0.325"
 }
