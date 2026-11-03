@@ -1,7 +1,7 @@
 {
   "repository": "noisefactorllc/noisemaker-for-cpu",
-  "revision": "9410b683cb8f3d0112f65d374a9fae2ec96871be",
-  "upstream_revision": "67d6e44c750e4f9bebb34f88645b934e3b933a84",
-  "upstream_source_sha256": "ac488e44cc3e91be7dbaa2da3dcc01dea0233c02a4d41bcfd1a84c546a155c21",
-  "runtime_sha256": "af665a0609fb6f609d8c479fae889ffe3a59f5e3423b29b125ba3b1267a07315"
+  "revision": "e982ba91731754c727cfea317bc874b7d98c9478",
+  "upstream_revision": "7153bec4360709f41c1a9132ba78e30af633126e",
+  "upstream_source_sha256": "33394c0762db27af3c28e51da178d48176b0ff5fe7303b87574b7dc0a972d633",
+  "runtime_sha256": "a927126756e489018296d9a2eff057ce9afa54d6dc30c6c9c875d1172cb5e9fe"
 }

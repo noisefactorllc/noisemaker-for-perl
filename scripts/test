@@ -51,9 +51,40 @@ if (defined $ENV{NM_CHANGED_FILES} && $ENV{NM_CHANGED_FILES} =~ /\S/) {
     }
 }
 
+# NM_SHARD_INDEX / NM_SHARD_COUNT — run only this shard's round-robin slice
+# of the test list, so a set of shard invocations together runs every such
+# test while each invocation stays within the bounded time cap. Both
+# variables must be set, and the count must match .nm-test-shards at the
+# repository root when that file exists.
+my $sharded = 0;
+if (defined $ENV{NM_SHARD_INDEX} && defined $ENV{NM_SHARD_COUNT}) {
+    my $index = $ENV{NM_SHARD_INDEX};
+    my $count = $ENV{NM_SHARD_COUNT};
+    die "NM_SHARD_INDEX must be a non-negative integer\n" unless $index =~ /^\d+$/;
+    die "NM_SHARD_COUNT must be a positive integer\n" unless $count =~ /^\d+$/ && $count > 0;
+    my $shard_file = File::Spec->catfile($root, '.nm-test-shards');
+    if (-f $shard_file) {
+        open my $sf, '<', $shard_file or die "cannot read $shard_file: $!\n";
+        my $declared = <$sf>;
+        close $sf;
+        $declared //= '';
+        $declared =~ s/\s+//g;
+        die "NM_SHARD_COUNT $count does not match .nm-test-shards $declared\n"
+            unless $declared eq $count;
+    }
+    die "NM_SHARD_INDEX $index is outside 0.." . ($count - 1) . "\n" if $index >= $count;
+    @tests = map { $tests[$_] } grep { $_ % $count == $index } 0 .. $#tests;
+    $sharded = 1;
+    print "NM_SHARD_INDEX $index of $count: running shard $index of the test list\n";
+    unless (@tests) {
+        print "No tests assigned to shard $index; nothing to run\n";
+        exit 0;
+    }
+}
+
 print "== prove suite ==\n";
 my @prove = ('prove', '-j2', '-lr');
-if ($scoped) { push @prove, @tests }
+if ($scoped || $sharded) { push @prove, @tests }
 else { push @prove, 't' }
 if (system(@prove) != 0) {
     print "FAIL: test suite reported failures\n";

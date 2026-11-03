@@ -229,14 +229,8 @@ for my $effect_id (qw(filter/mosaicTiles filter/stipple filter/strokes)) {
     is(max_diff($js, $pl), 0, "$effect_id canonical rounding byte-exact");
 }
 
-# renderLandscape3d accepts both filtering choices and renders each as the
-# reference does.
-for my $filtering (qw(isosurface voxel)) {
-    my $source = "search synth3d, render\nnoise3d(volumeSize: x16)"
-        . ".renderLandscape3d(filtering: $filtering).write(o0)\nrender(o0)";
-    $js = js_dsl($source);
-    $pl = render_dsl($source, width => 8, height => 8, seed => 1, time => 0.25);
-    is(max_diff($js, $pl), 0, "renderLandscape3d filtering: $filtering is CPU byte-exact");
-}
+# renderLandscape3d's two filtering renders are the heavy tail of this suite
+# (minutes of Perl each); they live in t/05b-landscape3d.t, a sibling test
+# file the sharded entrypoint runs as its own bounded shard.
 
 done_testing();

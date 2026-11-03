@@ -348,6 +348,8 @@ t/02-primitives.t
 t/03-runtime.t
 t/04-kernel-smoke.t
 t/05-parity.t
+t/05b-landscape3d.t
+t/05c-landscape3d-voxel.t
 t/06-dsl.t
 t/06-subchain.t
 t/07-cli.t
