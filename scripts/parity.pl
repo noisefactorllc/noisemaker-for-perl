@@ -331,7 +331,8 @@ for my $eid (@ids) {
     # boolean-mix pin, then 9410b683cb8f at the context-loss pin, then
     # e982ba917317 at the fresh-canvas pin, then f5598699 at the
     # zero-smoothing polygon hard edge pin, then 52eb9d8838054 at the
-    # canvas-upload source-context pin;
+    # canvas-upload source-context pin, then
+    # 61f1877ec84b22bbb84e7198a438e77ed369e673 at the scatter jitter integers pin;
     # size-64/seed-97/time-0.75 protocol:
     # 1 changed pixel, NEAR accepted, exit 0; captures retained).
     elsif (($oracle_pin->{revision} eq '2e751f4c09154bd67e5d83f50d2185425aba0c1a'
