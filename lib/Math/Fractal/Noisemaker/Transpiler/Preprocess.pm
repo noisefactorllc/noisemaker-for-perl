@@ -42,10 +42,6 @@ sub _canonical_compatibility {
     $source =~ s{\bmod\(\s*([A-Za-z_]\w*(?:\.[xyzw]{1,4})?)\s*\+\s*1\.0\s*,\s*2\.0\s*\)\s*-\s*1\.0\b}{($1 - 2.0 * floor(($1 + 1.0) * 0.5))}g;
     $source =~ s{\Qreturn fract((p3.x + p3.y) * p3.z);\E}{return fract(float(float(p3.x + p3.y) * p3.z));}g;
     $source =~ s{\Qreturn fract((p3.xx + p3.yz) * p3.zy);\E}{return fract(vec2(float(float(p3.x + p3.y) * p3.z), float(float(p3.x + p3.z) * p3.y)));}g;
-    if (defined $canonical_key && $canonical_key eq 'filter/scatter:scatterJitter') {
-        my $seed = ($source =~ s{\Qhash22(hashCoord + float(seed) * 101.7)\E}{hash22(hashCoord + float(seed * 101.7))}g);
-        die "scatter canonical seed pattern changed\n" unless $seed == 1;
-    }
     if (defined $canonical_key && $canonical_key eq 'filter/extrude:extrude') {
         my $scale = ($source =~ s{\Qfloat s = 1.0 + h * (depth / 100.0) * 0.4;\E}{float s = float(1.0 + h * (depth / 100.0) * 0.4);}g);
         my $face = ($source =~ s{\Qbool topHit = all(lessThanEqual(abs(P - faceCenter), faceHalf));\E}{bool topHit = all(lessThanEqual(abs((P - imgCenter) - (cellC - imgCenter) * s), faceHalf));}g);

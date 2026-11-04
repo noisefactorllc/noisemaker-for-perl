@@ -29,20 +29,31 @@ sub render_probe {
     return Math::Fractal::Noisemaker::PassRunner::run_pass($kernel->{kernel}, $ctx, 1, 1)->data;
 }
 
-my $scatter = <<'GLSL';
+my $scatter_uint = <<'GLSL';
 uniform int seed;
 out vec4 fragColor;
-vec2 hash22(vec2 p) { return p; }
 void main() {
-    vec2 hashCoord = vec2(512.5, 15.5);
-    vec2 rnd = hash22(hashCoord + float(seed) * 101.7);
-    fragColor = vec4(rnd, 0.0, 1.0);
+    uvec3 h = uvec3(uint(seed), 3735928559u, 0u);
+    uvec2 steps = h.xy >> uvec2(16u);
+    fragColor = vec4(steps, 0.0, 1.0);
 }
 GLSL
-is_deeply(render_probe('filter/scatter:scatterJitter', $scatter, {seed => 7}),
-    [1224.39990234375, 727.3999633789062, 0, 1], 'scatter rounds seed before the coordinate add');
-is_deeply(render_probe('filter/scatter:scatterJitter', $scatter, {seed => 16777217}),
-    [1706243456, 1706242944, 0, 1], 'scatter retains integer seed precision until the product is rounded');
+is_deeply(render_probe('filter/scatter:scatterJitter', $scatter_uint, {seed => -1}),
+    [65535, 57005, 0, 1], 'scatter shifts full-range uint hash words without float32 rounding');
+
+my $scatter_steps = <<'GLSL';
+uniform int seed;
+out vec4 fragColor;
+void main() {
+    uvec2 h = uvec2(4294967295u, 4293910527u);
+    uint r256 = uint(min(abs(16.0), 128.0) * 256.0);
+    uvec2 steps = ((h >> uvec2(16u)) * (2u * r256)) >> uvec2(16u);
+    vec2 offset = vec2(ivec2(steps) - int(r256)) / 256.0;
+    fragColor = vec4(offset, 0.0, 1.0);
+}
+GLSL
+is_deeply(render_probe('filter/scatter:scatterJitter', $scatter_steps, {seed => 7}),
+    [15.99609375, 15.98828125, 0, 1], 'scatter recenters the uint jitter steps in signed texels');
 
 my $scatter_hash = <<'GLSL';
 uniform int seed;

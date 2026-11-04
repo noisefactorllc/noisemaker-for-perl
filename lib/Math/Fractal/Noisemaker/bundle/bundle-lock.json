@@ -130,7 +130,7 @@
     "filter/rotate:rot": "14a7bba1b448f5f0c97c56316aa110fe63215dfb8ee96bb71b8733abdb24f0e1",
     "filter/scale:scale": "e0902531c605af1fefd15fe7f1df7e53d892647531df8df58b3c707637b70d27",
     "filter/scanlineError:scanlineError": "91646e936d7bb142ab9ac14370c8434bf7122959debc8a00bd8518b555b08372",
-    "filter/scatter:scatterJitter": "2cf31ef7d6afceb95e3114c8f5a17d3626c7cba0226fe020f8cf637cf5254c19",
+    "filter/scatter:scatterJitter": "3ea4ed4c550c80ae9451d4e499ce3dac19d83b6a8814aa4ca4b9ad7b9b1f48de",
     "filter/scatter:scatterSmooth": "5a805ba355d7fc90068a5476d42445c4d7c6e82ac32a742934b1d4e0b1ab364b",
     "filter/scratches:scratchesBlend": "4421ced9bbe7f26e876077378c6dd5393e33dcfbf60d9529032ef86f78d55ac6",
     "filter/scroll:scroll": "ce2117916b0d9513890942332835c6cfd1753a39d9d773626c66c6107050d457",
@@ -298,5 +298,5 @@
   },
   "source": "https://shaders.noisedeck.app",
   "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-  "version": "1.0.325"
+  "version": "1.0.336"
 }

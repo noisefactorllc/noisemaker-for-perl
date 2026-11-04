@@ -229,6 +229,16 @@ for my $effect_id (qw(filter/mosaicTiles filter/stipple filter/strokes)) {
     is(max_diff($js, $pl), 0, "$effect_id canonical rounding byte-exact");
 }
 
+# filter/scatter's jitter hash (upstream 7aa54b54) is only observable on a
+# structured input: a solid input samples the same texel at every offset.
+# Mirrors the authority case testPattern(pattern: uvMap).scatter(radius:
+# 16.934, seed: 9).
+$js = js_apply('filter/scatter', $pattern,
+    '--seed', '9', '--param', 'radius=16.934', '--param', 'seed=9');
+$pl = render_effect('filter/scatter', { radius => 16.934, seed => 9 },
+    { inputTex => $pattern }, width => 8, height => 8, seed => 9, time => 0.25);
+is(max_diff($js, $pl), 0, 'filter/scatter pcg3d jitter hash is CPU byte-exact');
+
 # renderLandscape3d's two filtering renders are the heavy tail of this suite
 # (minutes of Perl each); they live in t/05b-landscape3d.t, a sibling test
 # file the sharded entrypoint runs as its own bounded shard.
