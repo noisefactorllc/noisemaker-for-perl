@@ -42,7 +42,7 @@
     "filter/convolutionFeedback:cfBlur": "b22ab2ca3161642909a201a488b08caf68567f3ea888c16f71f7873c6fd816a8",
     "filter/convolutionFeedback:cfSharpen": "763a11820101b7f326f00217da3732b15db4ac1d16cd01b151a13f3518bdfdde",
     "filter/corrupt:corrupt": "1dd70f3abf27498f44e161fd741004911bb11ceb6e222f05fe944cd2731c2cf3",
-    "filter/craquelure:craquelure": "4a4e45337334727178f889fe11cc59cf03b9830a6f8a9cf13689de900cd38219",
+    "filter/craquelure:craquelure": "40adc4b0bc7dfaa91f5ecf7960dc83fe75a57f1ed64e414d0add98d0a4e70555",
     "filter/crt:crt": "dfbba2918a68889c5b82ef619bf472387acec116b4d72bf76d62f35a60c9aa7f",
     "filter/degauss:degauss": "24273ebee92991305a127f025dfe12d878f175b4a005b9a8e64f8529580f3f02",
     "filter/deriv:deriv": "e1283736b0b1aeacf1bb795eda742871f0b6027bdf98659a3c7fa4a68d91f3ce",
@@ -52,7 +52,7 @@
     "filter/emboss:emboss": "54adcd106eceac87d75e2ed51f006cdf677be315e486adde1704e031a1f8259d",
     "filter/extrude:extrude": "a8301045610c5284d1a55de5590e4d3f8933a3dd675830a2df6d48c6c0065639",
     "filter/feedback:copy": "9ea4809b4d6dd93a51dcdc82d206980d0404e9751d7c5af4fe69d2aed1d51718",
-    "filter/feedback:feedback": "32eba8fb704242bf36574c4e89e518ad11485a12d71dd72c4029a09692d1fffc",
+    "filter/feedback:feedback": "9b62c87abd5efdda7a32eda6971132fb6d9a505e3138b8464463451678c5b065",
     "filter/fibers:fibersBlend": "c8c1b4a4dcbf6ad92cc7fcd2182e8c55472b2a85bf67f6475ae2a2de5098f61b",
     "filter/flipMirror:flipMirror": "ce6ddc95ded4628892f42ca6b9889234983ad91a8cf985b15d81940611835d8e",
     "filter/fxaa:fxaa": "d9018bc38deeee1956c2e77b23a7da0536d133b54b42aa172b763a2e1073979d",
@@ -152,7 +152,7 @@
     "filter/stamp:stBlurV": "90c3c9e52a9533927e50519ec740fb1fa442df09e0228d425eedc115963b35e9",
     "filter/stamp:stThreshold": "36b2bc7ecff356e81ca08fbb24c6fb6c1d95d8e77456779c17ff896aa7a23fd1",
     "filter/step:step": "857873537079395e7b321e393351f0dd7e2ad531ed37ae8b915807ad78df1648",
-    "filter/stipple:stipple": "39cf37ee3bc53445d6795599a93d11e098b4a92eb6555613651cc350bc7b8949",
+    "filter/stipple:stipple": "6fb70a6c19a406c4dec828351bc59ccf92b6bf0ae4a367536f0307979d0e9fa5",
     "filter/strayHair:strayHairBlend": "bacff9ec121ac6e28d377702145eb14cdd8dfa2cbfc4ec9ba89765f658b1345c",
     "filter/strokes:stkPost": "c60d28531ebf1ba198d53637f0a0eda82e81afe5953b6ae7c30304ea6b795686",
     "filter/strokes:stkSmear": "12a8ba6ecdc5a1087f54c02582f71d284b0a80ee94332932f2a7cc0f25a5fcee",
@@ -298,5 +298,5 @@
   },
   "source": "https://shaders.noisedeck.app",
   "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-  "version": "1.0.336"
+  "version": "1.0.340"
 }

@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($hash12__vec2, $hash22__vec2, $lum__vec3, $vnoise__vec2, $fbm__vec2, $voronoiCell__vec2_float_float, $tonemap2__float_vec3_vec3, $rotate2D__vec2_float, $main__void);
+    my ($pcg3d__uvec3, $hash16__uvec2_uint, $unorm16__float, $lum16__vec3, $smooth12__uint, $vnoise__uvec2_uvec2_uint, $fbm__uvec2_uint_uint, $isqrt__uint, $inkStep__uint_uint_int, $main__void);
     my $_retc;
     my $_u_MODE = exists $U->{'MODE'} ? $U->{'MODE'} : 0;
     my $_u_inputTex = $ctx->texture_binding('inputTex');
@@ -19,172 +19,202 @@ my $run_pixel = sub {
     my $_u_paperColor = exists $U->{'paperColor'} ? $U->{'paperColor'} : $rt->construct(3, 0.0);
     my $_u_seed = exists $U->{'seed'} ? $U->{'seed'} : 0;
     $g->{fragColor} = $rt->construct(4, 0.0);
-    $hash12__vec2 = sub {
-        my ($p) = @_;
-        $p = $rt->copy($p, 'float');
-        my ($p3);
-        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->f(0.1031), 3, 'float'));
-        scalar do { @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))}; $p3 };
-        return $rt->component_wise('fract', $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')));
+    $pcg3d__uvec3 = sub {
+        my ($v_in) = @_;
+        $v_in = $rt->copy($v_in, 'uint');
+        my ($v);
+        $v = $rt->binary('+', $rt->binary('*', $v_in, $rt->i(1664525), 3, 'uint'), $rt->i(1013904223), 3, 'uint');
+        $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
+        $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
+        $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
+        scalar do { @{$v} = @{($rt->binary('^', $v, $rt->binary('>>', $v, $rt->construct(3, $rt->i(16), 'uint'), 3, 'uint'), 3, 'uint'))}; $v };
+        $v = $rt->assign_swizzle($v, 'x', $rt->binary('+', $rt->swizzle($v, 'x'), $rt->binary('*', $rt->swizzle($v, 'y'), $rt->swizzle($v, 'z'), 1, 'uint'), 1, 'uint'));
+        $v = $rt->assign_swizzle($v, 'y', $rt->binary('+', $rt->swizzle($v, 'y'), $rt->binary('*', $rt->swizzle($v, 'z'), $rt->swizzle($v, 'x'), 1, 'uint'), 1, 'uint'));
+        $v = $rt->assign_swizzle($v, 'z', $rt->binary('+', $rt->swizzle($v, 'z'), $rt->binary('*', $rt->swizzle($v, 'x'), $rt->swizzle($v, 'y'), 1, 'uint'), 1, 'uint'));
+        return $v;
     };
-    $hash22__vec2 = sub {
-        my ($p) = @_;
-        $p = $rt->copy($p, 'float');
-        my ($p3);
-        $p3 = $rt->component_wise('fract', $rt->binary('*', $rt->construct_raw(3, $rt->swizzle($p, 'xyx')), $rt->construct_raw(3, $rt->f(0.1031), $rt->f(0.10299999999999999), $rt->f(0.097299999999999998)), 3, 'float'));
-        scalar do { @{$p3} = map { $rt->f32($_) } @{($rt->binary('+', $p3, $rt->dot($p3, $rt->binary('+', $rt->swizzle($p3, 'yzx'), $rt->f(33.329999999999998), 3, 'float')), 3, 'float'))}; $p3 };
-        return $rt->component_wise('fract', $rt->construct(2, $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'y'), 1, 'float')), $rt->swizzle($p3, 'z'), 1, 'float')), $rt->construct(1, $rt->binary('*', $rt->construct(1, $rt->binary('+', $rt->swizzle($p3, 'x'), $rt->swizzle($p3, 'z'), 1, 'float')), $rt->swizzle($p3, 'y'), 1, 'float'))));
+    $hash16__uvec2_uint = sub {
+        my ($cell, $s) = @_;
+        $cell = $rt->copy($cell, 'uint');
+        return $rt->binary('>>', $rt->swizzle($rt->pcg3d($rt->construct(3, $cell, $s, 'uint')), 'x'), $rt->i(16), 1, 'uint');
     };
-    $lum__vec3 = sub {
+    $unorm16__float = sub {
+        my ($x) = @_;
+        return $rt->component_wise('min', $rt->construct(1, $rt->binary('*', $rt->component_wise('clamp', $x, $rt->f(0), $rt->f(1)), $rt->f(65536), 1, 'float'), 'uint'), $rt->i(65535));
+    };
+    $lum16__vec3 = sub {
         my ($c) = @_;
         $c = $rt->copy($c, 'float');
-        return $rt->dot($c, $rt->construct(3, $rt->f(0.21260000000000001), $rt->f(0.71519999999999995), $rt->f(0.0722)));
+        return $rt->binary('>>', $rt->binary('+', $rt->binary('+', $rt->binary('*', $unorm16__float->($rt->swizzle($c, 'r')), $rt->i(13933), 1, 'uint'), $rt->binary('*', $unorm16__float->($rt->swizzle($c, 'g')), $rt->i(46872), 1, 'uint'), 1, 'uint'), $rt->binary('*', $unorm16__float->($rt->swizzle($c, 'b')), $rt->i(4731), 1, 'uint'), 1, 'uint'), $rt->i(16), 1, 'uint');
     };
-    $vnoise__vec2 = sub {
-        my ($p) = @_;
-        $p = $rt->copy($p, 'float');
-        my ($f, $i, $u);
-        $i = $rt->component_wise('floor', $p);
-        $f = $rt->component_wise('fract', $p);
-        $u = $rt->construct(2, $rt->binary('*', $rt->binary('*', $f, $f, 2, 'float'), $rt->binary('-', $rt->f(3), $rt->binary('*', $rt->f(2), $f, 2, 'float'), 2, 'float'), 2, 'float'));
-        return $rt->component_wise('mix', $rt->component_wise('mix', $hash12__vec2->($i), $hash12__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(1), $rt->f(0)), 2, 'float'))), $rt->swizzle($u, 'x')), $rt->component_wise('mix', $hash12__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(0), $rt->f(1)), 2, 'float'))), $hash12__vec2->($rt->construct(2, $rt->binary('+', $i, $rt->construct_raw(2, $rt->f(1), $rt->f(1)), 2, 'float'))), $rt->swizzle($u, 'x')), $rt->swizzle($u, 'y'));
+    $smooth12__uint = sub {
+        my ($t) = @_;
+        return $rt->binary('>>', $rt->binary('*', $rt->binary('>>', $rt->binary('*', $t, $t, 1, 'uint'), $rt->i(12), 1, 'uint'), $rt->binary('-', $rt->i(12288), $rt->binary('*', $rt->i(2), $t, 1, 'uint'), 1, 'uint'), 1, 'uint'), $rt->i(12), 1, 'uint');
     };
-    $fbm__vec2 = sub {
-        my ($p) = @_;
-        $p = $rt->copy($p, 'float');
-        my ($_for0_first, $a, $i, $v);
-        $v = $rt->f(0);
-        $a = $rt->f(0.5);
-        $i = $rt->i(0);
+    $vnoise__uvec2_uvec2_uint = sub {
+        my ($n, $d, $s) = @_;
+        $n = $rt->copy($n, 'uint');
+        $d = $rt->copy($d, 'uint');
+        my ($ab, $cd, $f, $i, $ux, $uy);
+        $i = $rt->binary('/', $n, $d, 2, 'uint');
+        $f = $rt->binary('/', $rt->binary('<<', $rt->binary('-', $n, $rt->binary('*', $i, $d, 2, 'uint'), 2, 'uint'), $rt->construct(2, $rt->i(12), 'uint'), 2, 'uint'), $d, 2, 'uint');
+        $ux = $smooth12__uint->($rt->swizzle($f, 'x'));
+        $uy = $smooth12__uint->($rt->swizzle($f, 'y'));
+        $ab = $rt->binary('>>', $rt->binary('+', $rt->binary('*', $hash16__uvec2_uint->($i, $s), $rt->binary('-', $rt->i(4096), $ux, 1, 'uint'), 1, 'uint'), $rt->binary('*', $hash16__uvec2_uint->($rt->binary('+', $i, $rt->construct(2, $rt->i(1), $rt->i(0), 'uint'), 2, 'uint'), $s), $ux, 1, 'uint'), 1, 'uint'), $rt->i(12), 1, 'uint');
+        $cd = $rt->binary('>>', $rt->binary('+', $rt->binary('*', $hash16__uvec2_uint->($rt->binary('+', $i, $rt->construct(2, $rt->i(0), $rt->i(1), 'uint'), 2, 'uint'), $s), $rt->binary('-', $rt->i(4096), $ux, 1, 'uint'), 1, 'uint'), $rt->binary('*', $hash16__uvec2_uint->($rt->binary('+', $i, $rt->construct(2, $rt->i(1), $rt->i(1), 'uint'), 2, 'uint'), $s), $ux, 1, 'uint'), 1, 'uint'), $rt->i(12), 1, 'uint');
+        return $rt->binary('>>', $rt->binary('+', $rt->binary('*', $ab, $rt->binary('-', $rt->i(4096), $uy, 1, 'uint'), 1, 'uint'), $rt->binary('*', $cd, $uy, 1, 'uint'), 1, 'uint'), $rt->i(12), 1, 'uint');
+    };
+    $fbm__uvec2_uint_uint = sub {
+        my ($n, $grain, $s) = @_;
+        $n = $rt->copy($n, 'uint');
+        my ($M, $_for0_first, $dk, $k, $v);
+        $M = $rt->array([$rt->i(65536), $rt->i(32284), $rt->i(15903), $rt->i(7834), $rt->i(3859)]);
+        $v = $rt->i(0);
+        $k = $rt->i(0);
         $_for0_first = 1;
         for my $_for0 (0 .. 1048575) {
             if (!$_for0_first) {
-                $i = $rt->binary('+', $i, $rt->i(1), 1, 'int');
+                $k = $rt->binary('+', $k, $rt->i(1), 1, 'int');
             }
             $_for0_first = 0;
-            if (!($rt->binary('<', $i, $rt->i(5)))) {
+            if (!($rt->binary('<', $k, $rt->i(5)))) {
                 last;
             }
-            $v = $rt->binary('+', $v, $rt->binary('*', $a, $vnoise__vec2->($p), 1, 'float'), 1, 'float');
-            scalar do { @{$p} = map { $rt->f32($_) } @{($rt->binary('*', $p, $rt->f(2.0299999999999998), 2, 'float'))}; $p };
-            $a = $rt->binary('*', $a, $rt->f(0.5), 1, 'float');
+            $dk = $rt->component_wise('max', $rt->binary('>>', $rt->binary('+', $rt->binary('*', $grain, $M->[int($k)], 1, 'uint'), $rt->i(8192), 1, 'uint'), $rt->i(14), 1, 'uint'), $rt->i(1));
+            $v = $rt->binary('+', $v, $rt->binary('>>', $vnoise__uvec2_uvec2_uint->($n, $rt->construct(2, $dk, 'uint'), $s), $rt->construct(1, $rt->binary('+', $k, $rt->i(1), 1, 'int'), 'uint'), 1, 'uint'), 1, 'uint');
         }
         return $v;
     };
-    $voronoiCell__vec2_float_float = sub {
-        my ($p, $jitter, $seedVal) = @_;
-        $p = $rt->copy($p, 'float');
-        my ($_for1_first, $_for2_first, $_g, $best, $cell, $d, $f, $pt, $res, $x, $y);
-        $_g = $rt->component_wise('floor', $p);
-        $f = $rt->construct(2, $rt->binary('-', $p, $_g, 2, 'float'));
-        $best = $rt->f(1000000000);
-        $res = $rt->construct(4, $rt->f(0));
-        $y = $rt->unary('-', $rt->i(1));
-        $_for1_first = 1;
-        for my $_for1 (0 .. 1048575) {
-            if (!$_for1_first) {
-                $y = $rt->binary('+', $y, $rt->i(1), 1, 'int');
-            }
-            $_for1_first = 0;
-            if (!($rt->binary('<=', $y, $rt->i(1)))) {
-                last;
-            }
-            $x = $rt->unary('-', $rt->i(1));
-            $_for2_first = 1;
-            for my $_for2 (0 .. 1048575) {
-                if (!$_for2_first) {
-                    $x = $rt->binary('+', $x, $rt->i(1), 1, 'int');
-                }
-                $_for2_first = 0;
-                if (!($rt->binary('<=', $x, $rt->i(1)))) {
-                    last;
-                }
-                $cell = $rt->construct(2, $rt->construct(1, $x), $rt->construct(1, $y));
-                $pt = $rt->construct(2, $rt->binary('+', $rt->construct(2, $rt->binary('+', $cell, $rt->f(0.5), 2, 'float')), $rt->construct(2, $rt->binary('*', $rt->construct(2, $rt->binary('-', $hash22__vec2->($rt->construct(2, $rt->binary('+', $rt->binary('+', $_g, $cell, 2, 'float'), $rt->binary('*', $seedVal, $rt->f(101.7), 1, 'float'), 2, 'float'))), $rt->f(0.5), 2, 'float')), $jitter, 2, 'float')), 2, 'float'));
-                $d = $rt->dot($rt->binary('-', $pt, $f, 2, 'float'), $rt->binary('-', $pt, $f, 2, 'float'));
-                if ($rt->binary('<', $d, $best)) {
-                    $best = $d;
-                    scalar do { @{$res} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('+', $_g, $pt, 2, 'float'), $rt->binary('+', $_g, $cell, 2, 'float')))}; $res };
-                }
-            }
+    $isqrt__uint = sub {
+        my ($x) = @_;
+        my ($r);
+        $r = $rt->construct(1, $rt->component_wise('sqrt', $rt->construct(1, $x)), 'uint');
+        if ($rt->binary('>', $rt->binary('*', $r, $r, 1, 'uint'), $x)) {
+            $r = $rt->binary('-', $r, $rt->i(1), 1, 'uint');
         }
-        return $res;
+        if ($rt->binary('>', $rt->binary('*', $r, $r, 1, 'uint'), $x)) {
+            $r = $rt->binary('-', $r, $rt->i(1), 1, 'uint');
+        }
+        if ($rt->binary('<=', $rt->binary('*', $rt->binary('+', $r, $rt->i(1), 1, 'uint'), $rt->binary('+', $r, $rt->i(1), 1, 'uint'), 1, 'uint'), $x)) {
+            $r = $rt->binary('+', $r, $rt->i(1), 1, 'uint');
+        }
+        if ($rt->binary('<=', $rt->binary('*', $rt->binary('+', $r, $rt->i(1), 1, 'uint'), $rt->binary('+', $r, $rt->i(1), 1, 'uint'), 1, 'uint'), $x)) {
+            $r = $rt->binary('+', $r, $rt->i(1), 1, 'uint');
+        }
+        return $r;
     };
-    $tonemap2__float_vec3_vec3 = sub {
-        my ($t, $ink, $paper) = @_;
-        $ink = $rt->copy($ink, 'float');
-        $paper = $rt->copy($paper, 'float');
-        return $rt->component_wise('mix', $ink, $paper, $rt->component_wise('clamp', $t, $rt->f(0), $rt->f(1)));
-    };
-    $rotate2D__vec2_float = sub {
-        my ($v, $angleDeg) = @_;
-        $v = $rt->copy($v, 'float');
-        my ($a, $co, $si);
-        $a = $rt->component_wise('radians', $angleDeg);
-        $co = $rt->component_wise('cos', $a);
-        $si = $rt->component_wise('sin', $a);
-        return $rt->construct(2, $rt->matrix_mult($rt->construct(4, $co, $rt->unary('-', $si), $si, $co), $v, 2));
+    $inkStep__uint_uint_int = sub {
+        my ($edge, $value, $d256) = @_;
+        return (($rt->binary('>=', $rt->binary('+', $rt->binary('*', $rt->i(25), $rt->construct(1, $value, 'int'), 1, 'int'), $rt->i(819200), 1, 'int'), $rt->binary('+', $rt->binary('*', $rt->i(25), $rt->construct(1, $edge, 'int'), 1, 'int'), $rt->binary('*', $rt->i(64), $d256, 1, 'int'), 1, 'int'))) ? ($rt->f(1)) : ($rt->f(0)));
     };
     $main__void = sub {
-        my ($aa, $alpha, $cell, $clumpNoise, $d, $gc, $globalCoord, $inside, $l, $n, $noiseP, $p, $radius, $result, $seedColor, $seedGc, $seedUV, $src, $uv);
-        $globalCoord = $rt->construct(2, $rt->binary('+', $rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_tileOffset, 2, 'float'));
-        $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
-        $alpha = $rt->swizzle($rt->texture($_u_inputTex, $uv), 'a');
+        my ($_for1_first, $_for2_first, $_g, $aa, $amp, $best, $bestPt, $c256, $cell, $center, $clumpNoise, $d, $d256, $dd, $dv, $f, $g256, $grain, $h, $ink, $inside, $l, $lattice, $n, $paper, $pos, $pt, $px, $radius, $result, $s, $seed256, $seedColor, $seedTexel, $src, $t, $texSize, $texel, $x, $y);
+        $texel = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
+        $texSize = $rt->texture_size($_u_inputTex);
+        $px = $rt->construct(2, $rt->binary('+', $texel, $rt->construct(2, $_u_tileOffset, 'int'), 2, 'int'), 'uint');
+        $center = $rt->binary('*', $rt->binary('+', $rt->binary('*', $rt->i(2), $px, 2, 'uint'), $rt->i(1), 2, 'uint'), $rt->i(128), 2, 'uint');
+        $src = $rt->texel_fetch($_u_inputTex, $texel, $rt->i(0));
+        $s = $rt->construct(1, $_u_seed, 'uint');
+        $d256 = $rt->construct(1, $rt->component_wise('floor', $rt->binary('*', $_u_density, $rt->f(256), 1, 'float')), 'int');
+        $g256 = $rt->component_wise('clamp', $rt->construct(1, $rt->binary('*', $rt->component_wise('max', $_u_grainSize, $rt->f(0)), $rt->f(256), 1, 'float'), 'uint'), $rt->i(1), $rt->i(32768));
         $result = $rt->construct(3, 0.0);
-        $aa = $rt->f(0.0);
-        $cell = $rt->construct(4, 0.0);
-        $clumpNoise = $rt->f(0.0);
-        $d = $rt->f(0.0);
-        $gc = $rt->construct(2, 0.0);
-        $inside = $rt->f(0.0);
-        $l = $rt->f(0.0);
-        $n = $rt->f(0.0);
-        $noiseP = $rt->construct(2, 0.0);
-        $p = $rt->construct(2, 0.0);
-        $radius = $rt->f(0.0);
+        $aa = 0;
+        $amp = 0;
+        $best = 0;
+        $bestPt = $rt->construct(2, 0.0, 'int');
+        $c256 = 0;
+        $clumpNoise = 0;
+        $d = 0;
+        $f = $rt->construct(2, 0.0, 'int');
+        $_g = $rt->construct(2, 0.0, 'uint');
+        $grain = 0;
+        $ink = $rt->construct(3, 0.0, 'uint');
+        $inside = 0;
+        $l = 0;
+        $lattice = $rt->construct(2, 0.0, 'uint');
+        $n = 0;
+        $paper = $rt->construct(3, 0.0, 'uint');
+        $pos = $rt->construct(2, 0.0, 'uint');
+        $radius = 0;
+        $seed256 = $rt->construct(2, 0.0, 'int');
         $seedColor = $rt->construct(3, 0.0);
-        $seedGc = $rt->construct(2, 0.0);
-        $seedUV = $rt->construct(2, 0.0);
-        $src = $rt->construct(3, 0.0);
+        $seedTexel = $rt->construct(2, 0.0, 'int');
+        $t = 0;
         if ($rt->binary('==', $_u_MODE, $rt->i(0))) {
-            $p = $rt->construct(2, $rt->metal_divide($globalCoord, $_u_cellSize));
-            $cell = $voronoiCell__vec2_float_float->($p, $rt->f(0.90000000000000002), $rt->construct(1, $_u_seed));
-            $seedGc = $rt->construct(2, $rt->binary('*', $rt->swizzle($cell, 'xy'), $_u_cellSize, 2, 'float'));
-            $seedUV = $rt->component_wise('clamp', $rt->metal_divide($rt->binary('-', $seedGc, $_u_tileOffset, 2, 'float'), $_u_resolution), $rt->f(0), $rt->f(1));
-            $seedColor = $rt->swizzle($rt->texture($_u_inputTex, $seedUV), 'rgb');
-            $radius = $rt->binary('+', $rt->f(0.34999999999999998), $rt->binary('*', $rt->f(0.40000000000000002), $rt->binary('-', $rt->f(1), $lum__vec3->($seedColor), 1, 'float'), 1, 'float'), 1, 'float');
-            $d = $rt->length($rt->binary('-', $p, $rt->swizzle($cell, 'xy'), 2, 'float'));
-            $aa = $rt->component_wise('max', $rt->binary('*', $rt->fwidth($d), $rt->f(1.5), 1, 'float'), $rt->f(1.0000000000000001e-05));
-            $inside = $rt->binary('-', $rt->f(1), $rt->component_wise('smoothstep', $rt->binary('-', $radius, $aa, 1, 'float'), $rt->binary('+', $radius, $aa, 1, 'float'), $d), 1, 'float');
-            scalar do { @{$result} = map { $rt->f32($_) } @{($rt->component_wise('mix', $_u_paperColor, $seedColor, $inside))}; $result };
+            $c256 = $rt->component_wise('clamp', $rt->construct(1, $rt->binary('*', $rt->component_wise('max', $_u_cellSize, $rt->f(0)), $rt->f(256), 1, 'float'), 'uint'), $rt->i(1), $rt->i(65535));
+            $_g = $rt->binary('/', $center, $c256, 2, 'uint');
+            $f = $rt->construct(2, $rt->binary('/', $rt->binary('<<', $rt->binary('-', $center, $rt->binary('*', $_g, $c256, 2, 'uint'), 2, 'uint'), $rt->construct(2, $rt->i(12), 'uint'), 2, 'uint'), $c256, 2, 'uint'), 'int');
+            $best = $rt->i(2147483647);
+            $bestPt = $rt->construct(2, $rt->i(0), 'int');
+            $y = $rt->unary('-', $rt->i(1));
+            $_for1_first = 1;
+            for my $_for1 (0 .. 1048575) {
+                if (!$_for1_first) {
+                    $y = $rt->binary('+', $y, $rt->i(1), 1, 'int');
+                }
+                $_for1_first = 0;
+                if (!($rt->binary('<=', $y, $rt->i(1)))) {
+                    last;
+                }
+                $x = $rt->unary('-', $rt->i(1));
+                $_for2_first = 1;
+                for my $_for2 (0 .. 1048575) {
+                    if (!$_for2_first) {
+                        $x = $rt->binary('+', $x, $rt->i(1), 1, 'int');
+                    }
+                    $_for2_first = 0;
+                    if (!($rt->binary('<=', $x, $rt->i(1)))) {
+                        last;
+                    }
+                    $cell = $rt->construct(2, $x, $y, 'int');
+                    $h = $rt->binary('>>', $rt->swizzle($rt->pcg3d($rt->construct(3, $rt->construct(2, $rt->binary('+', $rt->construct(2, $_g, 'int'), $cell, 2, 'int'), 'uint'), $s, 'uint')), 'xy'), $rt->construct(2, $rt->i(16), 'uint'), 2, 'uint');
+                    $pt = $rt->binary('+', $rt->binary('+', $rt->binary('*', $cell, $rt->i(4096), 2, 'int'), $rt->i(205), 2, 'int'), $rt->construct(2, $rt->binary('>>', $rt->binary('/', $rt->binary('*', $h, $rt->i(9), 2, 'uint'), $rt->i(10), 2, 'uint'), $rt->construct(2, $rt->i(4), 'uint'), 2, 'uint'), 'int'), 2, 'int');
+                    $dv = $rt->binary('-', $pt, $f, 2, 'int');
+                    $dd = $rt->binary('+', $rt->binary('*', $rt->swizzle($dv, 'x'), $rt->swizzle($dv, 'x'), 1, 'int'), $rt->binary('*', $rt->swizzle($dv, 'y'), $rt->swizzle($dv, 'y'), 1, 'int'), 1, 'int');
+                    if ($rt->binary('<', $dd, $best)) {
+                        $best = $dd;
+                        scalar do { @{$bestPt} = @{($pt)}; $bestPt };
+                    }
+                }
+            }
+            $seed256 = $rt->binary('+', $rt->binary('*', $rt->binary('-', $rt->construct(2, $_g, 'int'), $rt->i(1), 2, 'int'), $rt->construct(1, $c256, 'int'), 2, 'int'), $rt->construct(2, $rt->binary('>>', $rt->binary('*', $rt->construct(2, $rt->binary('+', $bestPt, $rt->i(4096), 2, 'int'), 'uint'), $c256, 2, 'uint'), $rt->construct(2, $rt->i(12), 'uint'), 2, 'uint'), 'int'), 2, 'int');
+            $seedTexel = $rt->component_wise('clamp', $rt->binary('-', $rt->binary('>>', $rt->component_wise('max', $seed256, $rt->construct(2, $rt->i(0), 'int')), $rt->i(8), 2, 'int'), $rt->construct(2, $_u_tileOffset, 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $texSize, $rt->i(1), 2, 'int'));
+            $seedColor = $rt->swizzle($rt->texel_fetch($_u_inputTex, $seedTexel, $rt->i(0)), 'rgb');
+            $radius = $rt->binary('+', $rt->i(1434), $rt->construct(1, $rt->binary('>>', $rt->binary('*', $rt->i(1638), $rt->binary('-', $rt->i(65535), $lum16__vec3->($seedColor), 1, 'uint'), 1, 'uint'), $rt->i(16), 1, 'uint'), 'int'), 1, 'int');
+            $d = $rt->construct(1, $isqrt__uint->($rt->construct(1, $best, 'uint')), 'int');
+            $aa = $rt->construct(1, $rt->binary('/', $rt->i(2097152), $c256, 1, 'float'), 'int');
+            $t = (($rt->binary('<=', $d, $rt->binary('-', $radius, $aa, 1, 'int'))) ? ($rt->i(0)) : ((($rt->binary('>=', $d, $rt->binary('+', $radius, $aa, 1, 'int'))) ? ($rt->i(4096)) : ($rt->binary('/', $rt->binary('<<', $rt->construct(1, $rt->binary('+', $rt->binary('-', $d, $radius, 1, 'int'), $aa, 1, 'int'), 'uint'), $rt->i(12), 1, 'uint'), $rt->construct(1, $rt->binary('*', $rt->i(2), $aa, 1, 'int'), 'uint'), 1, 'float')))));
+            $inside = $rt->binary('-', $rt->i(4096), $smooth12__uint->($t), 1, 'uint');
+            $paper = $rt->construct(3, $unorm16__float->($rt->swizzle($_u_paperColor, 'r')), $unorm16__float->($rt->swizzle($_u_paperColor, 'g')), $unorm16__float->($rt->swizzle($_u_paperColor, 'b')), 'uint');
+            $ink = $rt->construct(3, $unorm16__float->($rt->swizzle($seedColor, 'r')), $unorm16__float->($rt->swizzle($seedColor, 'g')), $unorm16__float->($rt->swizzle($seedColor, 'b')), 'uint');
+            scalar do { @{$result} = map { $rt->f32($_) } @{($rt->binary('/', $rt->construct_raw(3, $rt->construct(3, $rt->binary('>>', $rt->binary('+', $rt->binary('*', $paper, $rt->binary('-', $rt->i(4096), $inside, 1, 'uint'), 3, 'uint'), $rt->binary('*', $ink, $inside, 3, 'uint'), 3, 'uint'), $rt->construct(3, $rt->i(12), 'uint'), 3, 'uint'))), $rt->f(65536), 3, 'float'))}; $result };
         } else {
             if ((((($rt->binary('==', $_u_MODE, $rt->i(1))) || ($rt->binary('==', $_u_MODE, $rt->i(2))) ? 1 : 0)) || ($rt->binary('==', $_u_MODE, $rt->i(3))) ? 1 : 0)) {
-                $gc = $rt->fresh($globalCoord);
+                $pos = $rt->fresh($center);
+                $grain = $g256;
                 if ($rt->binary('==', $_u_MODE, $rt->i(3))) {
-                    scalar do { @{$gc} = map { $rt->f32($_) } @{($rotate2D__vec2_float->($gc, $rt->f(45)))}; $gc };
+                    scalar do { @{$pos} = @{($rt->construct(2, $rt->binary('*', $rt->binary('+', $rt->binary('+', $rt->swizzle($px, 'x'), $rt->swizzle($px, 'y'), 1, 'uint'), $rt->i(1), 1, 'uint'), $rt->i(256), 1, 'uint'), $rt->binary('*', $rt->binary('-', $rt->binary('+', $rt->swizzle($px, 'y'), $rt->i(1048576), 1, 'uint'), $rt->swizzle($px, 'x'), 1, 'uint'), $rt->i(256), 1, 'uint'), 'uint'))}; $pos };
+                    $grain = $rt->binary('>>', $rt->binary('+', $rt->binary('*', $g256, $rt->i(92682), 1, 'uint'), $rt->i(32768), 1, 'uint'), $rt->i(16), 1, 'uint');
                 }
-                $noiseP = $rt->construct(2, 0.0);
+                $lattice = $rt->construct(2, 0.0, 'uint');
                 if ($rt->binary('==', $_u_MODE, $rt->i(1))) {
-                    scalar do { @{$noiseP} = map { $rt->f32($_) } @{($rt->metal_divide($gc, $_u_grainSize))}; $noiseP };
+                    scalar do { @{$lattice} = @{($rt->construct(2, $grain, 'uint'))}; $lattice };
                 } else {
-                    scalar do { @{$noiseP} = map { $rt->f32($_) } @{($rt->binary('*', $gc, $rt->construct_raw(2, $rt->metal_divide($rt->f(1), $_u_grainSize), $rt->metal_divide($rt->f(1), $rt->binary('*', $_u_grainSize, $rt->f(8), 1, 'float'))), 2, 'float'))}; $noiseP };
+                    scalar do { @{$lattice} = @{($rt->construct(2, $grain, $rt->binary('*', $grain, $rt->i(8), 1, 'uint'), 'uint'))}; $lattice };
                 }
-                $n = $vnoise__vec2->($rt->construct(2, $rt->binary('+', $noiseP, $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(101.7), 1, 'float'), 2, 'float')));
-                $n = $rt->binary('+', $n, $rt->binary('/', $rt->binary('-', $_u_density, $rt->f(50), 1, 'float'), $rt->f(100), 1, 'float'), 1, 'float');
-                $src = $rt->swizzle($rt->texture($_u_inputTex, $uv), 'rgb');
-                scalar do { @{$result} = map { $rt->f32($_) } @{($rt->construct(3, $rt->component_wise('step', $n, $rt->swizzle($src, 'r')), $rt->component_wise('step', $n, $rt->swizzle($src, 'g')), $rt->component_wise('step', $n, $rt->swizzle($src, 'b'))))}; $result };
+                $n = $vnoise__uvec2_uvec2_uint->($pos, $lattice, $s);
+                scalar do { @{$result} = map { $rt->f32($_) } @{($rt->construct(3, $inkStep__uint_uint_int->($n, $unorm16__float->($rt->swizzle($src, 'r')), $d256), $inkStep__uint_uint_int->($n, $unorm16__float->($rt->swizzle($src, 'g')), $d256), $inkStep__uint_uint_int->($n, $unorm16__float->($rt->swizzle($src, 'b')), $d256)))}; $result };
             } else {
-                $src = $rt->swizzle($rt->texture($_u_inputTex, $uv), 'rgb');
-                $l = $lum__vec3->($src);
-                $clumpNoise = $rt->binary('*', $fbm__vec2->($rt->construct(2, $rt->binary('+', $rt->metal_divide($globalCoord, $rt->binary('*', $_u_grainSize, $rt->f(4), 1, 'float')), $rt->binary('*', $rt->construct(1, $_u_seed), $rt->f(101.7), 1, 'float'), 2, 'float'))), $rt->component_wise('mix', $rt->f(1.2), $rt->f(0.59999999999999998), $l), 1, 'float');
-                $clumpNoise = $rt->binary('+', $clumpNoise, $rt->binary('/', $rt->binary('-', $_u_density, $rt->f(50), 1, 'float'), $rt->f(100), 1, 'float'), 1, 'float');
-                scalar do { @{$result} = map { $rt->f32($_) } @{($tonemap2__float_vec3_vec3->($rt->component_wise('step', $clumpNoise, $l), $rt->construct(3, $rt->f(0.050000000000000003)), $rt->construct(3, $rt->f(0.96999999999999997))))}; $result };
+                $l = $lum16__vec3->($rt->swizzle($src, 'rgb'));
+                $amp = $rt->binary('-', $rt->i(78643), $rt->binary('>>', $rt->binary('*', $rt->i(39322), $l, 1, 'uint'), $rt->i(16), 1, 'uint'), 1, 'uint');
+                $clumpNoise = $rt->binary('>>', $rt->binary('*', $fbm__uvec2_uint_uint->($center, $g256, $s), $rt->binary('>>', $amp, $rt->i(2), 1, 'uint'), 1, 'uint'), $rt->i(14), 1, 'uint');
+                scalar do { @{$result} = map { $rt->f32($_) } @{((($rt->binary('>', $inkStep__uint_uint_int->($clumpNoise, $l, $d256), $rt->f(0.5))) ? ($rt->construct(3, $rt->f(0.96999999999999997))) : ($rt->construct(3, $rt->f(0.050000000000000003)))))}; $result };
             }
         }
-        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $alpha))}; $g->{fragColor} };
+        scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->construct(4, $result, $rt->swizzle($src, 'a')))}; $g->{fragColor} };
     };
     $main__void->();
     my $_c0 = $g->{fragColor};
     $out->[0] = $rt->f32($_c0->[0]); $out->[1] = $rt->f32($_c0->[1]); $out->[2] = $rt->f32($_c0->[2]); $out->[3] = $rt->f32($_c0->[3]);
 };
-{ kernel => $run_pixel, uses_derivatives => 1, output_names => ['fragColor'] };
+{ kernel => $run_pixel, uses_derivatives => 0, output_names => ['fragColor'] };

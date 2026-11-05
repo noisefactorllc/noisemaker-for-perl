@@ -7,7 +7,7 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($map__float_float_float_float_float, $blendOverlay__float_float, $blendSoftLight__float_float, $cloak__vec2, $blend__vec4_vec4_int_float, $brightnessContrast__vec3, $rotate2D__vec2_float, $hsv2rgb__vec3, $rgb2hsv__vec3, $getImage__vec2, $main__void);
+    my ($pin__float, $productError__float_float_float, $divRound__float_float, $map__float_float_float_float_float, $blendOverlay__float_float, $blendSoftLight__float_float, $cloak__vec2, $blend__vec4_vec4_int_float, $brightnessContrast__vec3, $rotate2D__vec2_float, $hsv2rgb__vec3, $rgb2hsv__vec3, $getImage__vec2, $main__void);
     my $_retc;
     my $_u_inputTex = $ctx->texture_binding('inputTex');
     my $_u_selfTex = $ctx->texture_binding('selfTex');
@@ -28,6 +28,31 @@ my $run_pixel = sub {
     my $_u_refractBDir = exists $U->{'refractBDir'} ? $U->{'refractBDir'} : $rt->f(0.0);
     my $_u_resetState = exists $U->{'resetState'} ? $U->{'resetState'} : 0;
     $g->{fragColor} = $rt->construct(4, 0.0);
+    $pin__float = sub {
+        my ($x) = @_;
+        my ($bound);
+        $bound = $rt->binary('*', $rt->f(1e+30), $rt->swizzle($_u_resolution, 'x'), 1, 'float');
+        return $rt->component_wise('min', $rt->component_wise('max', $x, $rt->unary('-', $bound)), $bound);
+    };
+    $productError__float_float_float = sub {
+        my ($a, $b, $p) = @_;
+        my ($ah, $al, $bh, $bl, $sa, $sb);
+        $sa = $pin__float->($rt->binary('*', $rt->f(4097), $a, 1, 'float'));
+        $ah = $pin__float->($rt->binary('-', $sa, $pin__float->($rt->binary('-', $sa, $a, 1, 'float')), 1, 'float'));
+        $al = $rt->binary('-', $a, $ah, 1, 'float');
+        $sb = $pin__float->($rt->binary('*', $rt->f(4097), $b, 1, 'float'));
+        $bh = $pin__float->($rt->binary('-', $sb, $pin__float->($rt->binary('-', $sb, $b, 1, 'float')), 1, 'float'));
+        $bl = $rt->binary('-', $b, $bh, 1, 'float');
+        return $rt->binary('+', $pin__float->($rt->binary('+', $pin__float->($rt->binary('+', $pin__float->($rt->binary('-', $pin__float->($rt->binary('*', $ah, $bh, 1, 'float')), $p, 1, 'float')), $pin__float->($rt->binary('*', $ah, $bl, 1, 'float')), 1, 'float')), $pin__float->($rt->binary('*', $al, $bh, 1, 'float')), 1, 'float')), $pin__float->($rt->binary('*', $al, $bl, 1, 'float')), 1, 'float');
+    };
+    $divRound__float_float = sub {
+        my ($a, $b) = @_;
+        my ($p, $q, $r);
+        $q = $pin__float->($rt->binary('/', $a, $b, 1, 'float'));
+        $p = $pin__float->($rt->binary('*', $q, $b, 1, 'float'));
+        $r = $pin__float->($rt->binary('-', $pin__float->($rt->binary('-', $a, $p, 1, 'float')), $productError__float_float_float->($q, $b, $p), 1, 'float'));
+        return $rt->binary('+', $q, $pin__float->($rt->binary('/', $r, $b, 1, 'float')), 1, 'float');
+    };
     $map__float_float_float_float_float = sub {
         my ($value, $inMin, $inMax, $outMin, $outMax) = @_;
         return $rt->binary('+', $outMin, $rt->binary('/', $rt->binary('*', $rt->binary('-', $outMax, $outMin, 1, 'float'), $rt->binary('-', $value, $inMin, 1, 'float'), 1, 'float'), $rt->binary('-', $inMax, $inMin, 1, 'float'), 1, 'float'), 1, 'float');
@@ -296,7 +321,7 @@ my $run_pixel = sub {
         return $tex;
     };
     $main__void = sub {
-        my ($color, $hsv, $leftColor, $leftLen, $leftUV, $ra, $rb, $rightColor, $rightLen, $rightUV, $uv);
+        my ($color, $hsv, $hueShift, $leftColor, $leftLen, $leftUV, $ra, $rb, $rightColor, $rightLen, $rightUV, $uv);
         $uv = $rt->construct(2, $rt->metal_divide($rt->swizzle($ctx->{frag_coord}, 'xy'), $_u_resolution));
         if ($_u_resetState) {
             scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($rt->texture($_u_inputTex, $uv))}; $g->{fragColor} };
@@ -329,7 +354,8 @@ my $run_pixel = sub {
             scalar do { @{$color} = map { $rt->f32($_) } @{($blend__vec4_vec4_int_float->($rt->texture($_u_inputTex, $leftUV), $getImage__vec2->($rightUV), $_u_blendMode, $rt->binary('*', $_u_mixAmt, $rt->f(0.01), 1, 'float')))}; $color };
         }
         $hsv = $rgb2hsv__vec3->($rt->swizzle($color, 'rgb'));
-        $hsv->[int($rt->i(0))] = $rt->f32($rt->component_wise('mod', $rt->binary('+', $hsv->[int($rt->i(0))], $map__float_float_float_float_float->($_u_hueRotation, $rt->unary('-', $rt->f(180)), $rt->f(180), $rt->unary('-', $rt->f(0.050000000000000003)), $rt->f(0.050000000000000003)), 1, 'float'), $rt->f(1)));
+        $hueShift = $pin__float->($rt->binary('+', $rt->unary('-', $rt->f(0.050000000000000003)), $divRound__float_float->($pin__float->($rt->binary('*', $rt->f(0.10000000000000001), $rt->binary('+', $_u_hueRotation, $rt->f(180), 1, 'float'), 1, 'float')), $rt->f(360)), 1, 'float'));
+        $hsv->[int($rt->i(0))] = $rt->f32($rt->component_wise('fract', $rt->binary('+', $hsv->[int($rt->i(0))], $hueShift, 1, 'float')));
         $color = $rt->assign_swizzle($color, 'rgb', $hsv2rgb__vec3->($hsv));
         $color = $rt->assign_swizzle($color, 'rgb', $brightnessContrast__vec3->($rt->swizzle($color, 'rgb')));
         scalar do { @{$g->{fragColor}} = map { $rt->f32($_) } @{($color)}; $g->{fragColor} };
