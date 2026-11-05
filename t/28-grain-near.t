@@ -21,6 +21,11 @@ my $root = File::Spec->rel2abs("$FindBin::Bin/..");
 my $script = "$root/scripts/parity.pl";
 my $tmp = tempdir(CLEANUP => 1);
 my @args = ('--only', 'filter/grain', '--size', '64', '--seed', '97', '--time', '0.75');
+# A reviewed NEAR case must retain its source-bound capture pair to count as
+# a pass; point the capture directory at this run's tempdir.
+my $captures = File::Spec->catdir($tmp, 'captures');
+mkdir $captures or die "cannot create $captures: $!\n";
+$ENV{NM_PARITY_CAPTURE_DIR} = $captures;
 
 sub run_capture {
     my ($name, @command) = @_;
@@ -42,6 +47,9 @@ my ($pin) = $receipt =~ /^Reference: ([0-9a-f]{40}) /m;
 ok(defined $pin, 'the receipt names its oracle pin');
 like($receipt, qr/^NEAR: 1$/m,
     'the reviewed single-pixel difference is classified as near, not exact');
+ok(-f File::Spec->catfile($captures, 'filter_grain.js.png')
+    && -f File::Spec->catfile($captures, 'filter_grain.perl.png'),
+    'the accepted NEAR run retains its source-bound capture pair');
 
 # Alter one additional pixel of a real render; the narrowly measured allowance
 # must reject it instead of accepting every small grain difference.

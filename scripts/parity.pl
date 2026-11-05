@@ -350,6 +350,10 @@ for my $eid (@ids) {
             || $oracle_pin->{revision} eq '61f1877ec84b22bbb84e7198a438e77ed369e673'
             || $oracle_pin->{revision} eq '0670ceace1c0c52791ef7d57493ded6e0b35a4b9')
         && $reviewed_grain_seed_time) {
+        # The reviewed allowance only counts as a pass with its source-bound
+        # capture pair retained: an unreviewed NEAR case must not pass.
+        die "reviewed NEAR case $eid requires NM_PARITY_CAPTURE_DIR for capture retention\n"
+            unless defined $ENV{NM_PARITY_CAPTURE_DIR} && length $ENV{NM_PARITY_CAPTURE_DIR};
         push @near, [$eid, $d, $changed_pixels];
     }
     else { push @diffs, [$eid, $d, $changed_pixels] }
