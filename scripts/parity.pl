@@ -333,7 +333,9 @@ for my $eid (@ids) {
     # zero-smoothing polygon hard edge pin, then 52eb9d8838054 at the
     # canvas-upload source-context pin, then
     # 61f1877ec84b22bbb84e7198a438e77ed369e673 at the scatter jitter integers pin, then
-    # 0670ceace1c0c52791ef7d57493ded6e0b35a4b9 at the stipple/craquelure integer-hash pin;
+    # 0670ceace1c0c52791ef7d57493ded6e0b35a4b9 at the stipple/craquelure integer-hash pin, then
+    # 207487f62486c9bf1ad417d32f3d2541a83d1816 at the per-instance stateful chain pin, then
+    # ae27c898ecbef822c945f42e850c21c2201af160 at the chain-scoped loop accumulator pin;
     # size-64/seed-97/time-0.75 protocol:
     # 1 changed pixel, NEAR accepted, exit 0; captures retained).
     elsif (($oracle_pin->{revision} eq '2e751f4c09154bd67e5d83f50d2185425aba0c1a'
@@ -350,7 +352,8 @@ for my $eid (@ids) {
             || $oracle_pin->{revision} eq '61f1877ec84b22bbb84e7198a438e77ed369e673'
             || $oracle_pin->{revision} eq '0670ceace1c0c52791ef7d57493ded6e0b35a4b9'
             || $oracle_pin->{revision} eq '3ea825a87224de9eb26d786acf5fc8262b4ce2eb'
-            || $oracle_pin->{revision} eq '207487f62486c9bf1ad417d32f3d2541a83d1816')
+            || $oracle_pin->{revision} eq '207487f62486c9bf1ad417d32f3d2541a83d1816'
+            || $oracle_pin->{revision} eq 'ae27c898ecbef822c945f42e850c21c2201af160')
         && $reviewed_grain_seed_time) {
         # The reviewed allowance only counts as a pass with its source-bound
         # capture pair retained: an unreviewed NEAR case must not pass.
