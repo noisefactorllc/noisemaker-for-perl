@@ -1206,7 +1206,7 @@ sub _group_iteration_count {
 
 sub _run_iteration_group {
     my ($group, $group_input, $surfaces, $external_textures, $width, $height, $seed, $time,
-        $external_inputs) = @_;
+        $external_inputs, $chain_resources) = @_;
     my $group_input_bundle = _chain_bundle($group_input);
     my @states;
     # The group's stateSize owner is its pointsEmit step, which an animated
@@ -1234,10 +1234,29 @@ sub _run_iteration_group {
     if ($group->{loop}) {
         my $input_image = $group_input_bundle->{image}
             or die "Loop iteration group requires a current image\n";
-        $group_resources{global_accum} = Math::Fractal::Noisemaker::Surface->new(
-            $input_image->width, $input_image->height,
-        );
-        $group_resources{global_accum}->clear;
+        # Upstream scopes the loop accumulator by chain (a global that different
+        # effects share keeps its chain scope), so a second loop region in the
+        # same chain continues the first region's feedback surface instead of a
+        # zeroed one. An inherited surface of the wrong size (cannot arise in
+        # one chain's image stream, but guarded) is dropped and re-created.
+        my $inherited = $chain_resources ? $chain_resources->{global_accum} : undef;
+        if ($inherited
+            && ($inherited->width != $input_image->width
+                || $inherited->height != $input_image->height))
+        {
+            delete $chain_resources->{global_accum};
+            $inherited = undef;
+        }
+        elsif ($inherited) {
+            delete $chain_resources->{global_accum};
+            $group_resources{global_accum} = $inherited;
+        }
+        unless ($group_resources{global_accum}) {
+            $group_resources{global_accum} = Math::Fractal::Noisemaker::Surface->new(
+                $input_image->width, $input_image->height,
+            );
+            $group_resources{global_accum}->clear;
+        }
     }
     my $last;
     for my $iteration (0 .. $count - 1) {
@@ -1258,6 +1277,13 @@ sub _run_iteration_group {
         }
         $last = $step_input;
     }
+    # The loop accumulator is chain-scoped: hand it to the chain's next loop
+    # region instead of dropping it with the group's other scratch resources
+    # (cpu's finishGroupResources).
+    if ($chain_resources && defined(my $accum = $group_resources{global_accum})) {
+        $chain_resources->{global_accum} = $accum;
+        delete $group_resources{global_accum};
+    }
     return $last;
 }
 
@@ -1269,6 +1295,11 @@ sub _run_iteration_group {
 sub _run_chain {
     my ($chain, $surfaces, $external_textures, $width, $height, $seed, $time,
         $external_inputs) = @_;
+    # The chain-scoped resource map carries the loop accumulator across the
+    # chain's loop regions, matching upstream's chain-scoped shared globals.
+    # Each inline chain argument is its own chain scope (a fresh map inside
+    # the recursive call).
+    my %chain_resources;
     my $current;
     for my $group (@{ compute_iteration_groups($chain->{steps}, meta()->{effects}) }) {
         my $step = @{ $group->{steps} } == 1 ? $group->{steps}[0] : undef;
@@ -1324,6 +1355,7 @@ sub _run_chain {
                 $current = _run_iteration_group(
                     $group, $current, $surfaces, $external_textures,
                     $width, $height, $seed, $time, $external_inputs,
+                    \%chain_resources,
                 );
             }
             else {

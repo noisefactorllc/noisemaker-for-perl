@@ -88,4 +88,63 @@ for my $case (
     );
 }
 
+# The loop accumulator is chain-scoped (upstream scopes a global that
+# different effects share by chain): a chain's second loopBegin/loopEnd region
+# continues the first region's feedback surface instead of a zeroed one.
+{
+    my $single = render_dsl(
+        "search synth, render\nperlin(seed: 1).loopBegin().loopEnd().write(o0)\nrender(o0)",
+        width => 4, height => 4, seed => 1, time => 0.25,
+    );
+    my $pair = render_dsl(
+        "search synth, render\nperlin(seed: 1).loopBegin().loopEnd().loopBegin().loopEnd().write(o0)\nrender(o0)",
+        width => 4, height => 4, seed => 1, time => 0.25,
+    );
+    my $same = @{ $pair->data } == @{ $single->data }
+        && !grep { $pair->data->[$_] != $single->data->[$_] } 0 .. $#{ $pair->data };
+    ok($same, 'two loop regions in one chain share the chain-scoped accumulator');
+}
+
+{
+    # A step between the two regions makes the shared feedback observable: the
+    # second region reads the first region's accumulator, which still holds
+    # the pre-invert image, so the chain is not the flattened
+    # fresh-per-region form.
+    my $shared = render_dsl(
+        "search synth, filter, render\n"
+            . "perlin(seed: 1).loopBegin(alpha: 100).loopEnd().invert().loopBegin(alpha: 100).loopEnd().write(o0)\nrender(o0)",
+        width => 4, height => 4, seed => 1, time => 0.25,
+    );
+    my $fresh = render_dsl(
+        "search synth, filter, render\n"
+            . "perlin(seed: 1).loopBegin(alpha: 100).loopEnd().write(o1)\nread(o1).invert().loopBegin(alpha: 100).loopEnd().write(o0)\nrender(o0)",
+        width => 4, height => 4, seed => 1, time => 0.25,
+    );
+    my $same = @{ $shared->data } == @{ $fresh->data }
+        && !grep { $shared->data->[$_] != $fresh->data->[$_] } 0 .. $#{ $shared->data };
+    ok(!$same,
+        'a step between two loop regions reads the shared accumulator, not a fresh zeroed one');
+}
+
+# Different stateful effects in one chain size from their own zoom: the
+# reactionDiffusion state keeps the chain-scoped size, the cellularAutomata
+# instance gets its own. Each inline chain renders as its flattened
+# per-instance form.
+{
+    my $inline = render_dsl(
+        "search synth, mixer\n"
+            . "reactionDiffusion(zoom: x4).blendMode(tex: cellularAutomata(zoom: x16)).write(o0)\nrender(o0)",
+        width => 4, height => 4, seed => 1, time => 0.25,
+    );
+    my $flat = render_dsl(
+        "search synth, mixer\n"
+            . "cellularAutomata(zoom: x16).write(o2)\n"
+            . "reactionDiffusion(zoom: x4).blendMode(tex: read(o2)).write(o0)\nrender(o0)",
+        width => 4, height => 4, seed => 1, time => 0.25,
+    );
+    my $same = @{ $inline->data } == @{ $flat->data }
+        && !grep { $inline->data->[$_] != $flat->data->[$_] } 0 .. $#{ $inline->data };
+    ok($same, 'a stateful subchain renders as its flattened per-instance form');
+}
+
 done_testing();
