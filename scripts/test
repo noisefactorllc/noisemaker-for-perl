@@ -29,6 +29,13 @@ if (defined $ENV{NM_CHANGED_FILES} && $ENV{NM_CHANGED_FILES} =~ /\S/) {
     my @changed = grep { /\S/ } split /\n/, $ENV{NM_CHANGED_FILES};
     my %selected;
     for my $t (@tests) {
+        # A changed t/ test file selects itself; its content need not
+        # reference its own name.
+        (my $tbase = $t) =~ s{^t/}{};
+        if (grep { $_ eq $t || $_ eq $tbase } @changed) {
+            $selected{$t} = 1;
+            next;
+        }
         open my $fh, '<', $t or die "cannot read $t: $!\n";
         local $/;
         my $content = <$fh>;

@@ -224,6 +224,7 @@ flat_same(
             . "read(o0).meshRender().meshRender().write(o1)\nrender(o1)",
         width => 8, height => 8, seed => 1, time => 0.25,
     );
+    is(scalar @{ $out->data }, 8 * 8 * 4, 'the loader chain renders the full RGBA size');
     my $bad = grep { !($_ == $_) || abs($_) == 9**9**9 } @{ $out->data };
     is($bad, 0, 'the loader works with a repeated meshRender in another chain');
 }
