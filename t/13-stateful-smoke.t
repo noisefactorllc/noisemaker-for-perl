@@ -147,4 +147,85 @@ for my $case (
     ok($same, 'a stateful subchain renders as its flattened per-instance form');
 }
 
+# Port of the remaining stateful-chain-instances cases: every stateful
+# instance in a chain keeps its own state and zoom size, so a chain with
+# repeated stateful instances renders the same bytes as its flattened
+# per-instance program.
+sub flat_same {
+    my ($inline_src, $flat_src, $name) = @_;
+    my $inline = render_dsl($inline_src, width => 8, height => 8, seed => 1, time => 0.25);
+    my $flat   = render_dsl($flat_src,   width => 8, height => 8, seed => 1, time => 0.25);
+    my $same = @{ $inline->data } == @{ $flat->data }
+        && !grep { $inline->data->[$_] != $flat->data->[$_] } 0 .. $#{ $inline->data };
+    ok($same, $name);
+}
+
+flat_same(
+    "search synth, mixer\n"
+        . "reactionDiffusion(zoom: x4).blendMode(tex: reactionDiffusion(zoom: x16)).write(o0)\nrender(o0)",
+    "search synth, mixer\n"
+        . "reactionDiffusion(zoom: x16).write(o2)\n"
+        . "reactionDiffusion(zoom: x4).blendMode(tex: read(o2)).write(o0)\nrender(o0)",
+    'two reactionDiffusion instances keep their own state and zoom',
+);
+
+flat_same(
+    "search synth, mixer\n"
+        . "noise(seed: 1).blendMode(tex: reactionDiffusion(zoom: x4)).blendMode(tex: reactionDiffusion(zoom: x16)).write(o0)\nrender(o0)",
+    "search synth, mixer\n"
+        . "reactionDiffusion(zoom: x4).write(o2)\n"
+        . "reactionDiffusion(zoom: x16).write(o3)\n"
+        . "noise(seed: 1).blendMode(tex: read(o2)).blendMode(tex: read(o3)).write(o0)\nrender(o0)",
+    'two reactionDiffusion chain arguments keep their own state',
+);
+
+flat_same(
+    "search synth, mixer\n"
+        . "reactionDiffusion(zoom: x4).blendMode(tex: reactionDiffusion()).blendMode(tex: reactionDiffusion(zoom: x16)).write(o0)\nrender(o0)",
+    "search synth, mixer\n"
+        . "reactionDiffusion().write(o2)\n"
+        . "reactionDiffusion(zoom: x16).write(o3)\n"
+        . "reactionDiffusion(zoom: x4).blendMode(tex: read(o2)).blendMode(tex: read(o3)).write(o0)\nrender(o0)",
+    'repeated state preserves each explicit or default zoom',
+);
+
+flat_same(
+    "search synth, filter\n"
+        . "noise(seed: 1).watercolor().watercolor().write(o0)\nrender(o0)",
+    "search synth, filter\n"
+        . "noise(seed: 1).watercolor().write(o1)\n"
+        . "read(o1).watercolor().write(o0)\nrender(o0)",
+    'repeated stateful filters keep independent ping-pong state',
+);
+
+flat_same(
+    "search synth, mixer\n"
+        . "noise(seed: 1).blendMode(tex: reactionDiffusion(zoom: x4)).blendMode(tex: cellularAutomata(zoom: x16)).write(o0)\nrender(o0)",
+    "search synth, mixer\n"
+        . "cellularAutomata(zoom: x16).write(o2)\n"
+        . "reactionDiffusion(zoom: x4).write(o3)\n"
+        . "noise(seed: 1).blendMode(tex: read(o3)).blendMode(tex: read(o2)).write(o0)\nrender(o0)",
+    'mixed stateful chain arguments size from their own zoom',
+);
+
+flat_same(
+    "search render\n"
+        . "meshLoader().meshRender().meshRender().write(o0)\nrender(o0)",
+    "search render\n"
+        . "meshLoader().meshRender().write(o1)\n"
+        . "read(o1).meshRender().write(o0)\nrender(o0)",
+    'repeated mesh renderers keep the loader mesh',
+);
+
+{
+    my $out = render_dsl(
+        "search render\n"
+            . "meshLoader().write(o0)\n"
+            . "read(o0).meshRender().meshRender().write(o1)\nrender(o1)",
+        width => 8, height => 8, seed => 1, time => 0.25,
+    );
+    my $bad = grep { !($_ == $_) || abs($_) == 9**9**9 } @{ $out->data };
+    is($bad, 0, 'the loader works with a repeated meshRender in another chain');
+}
+
 done_testing();
