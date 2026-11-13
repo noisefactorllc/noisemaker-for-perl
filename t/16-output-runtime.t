@@ -500,6 +500,96 @@ subtest 'Renderer object does not submit failures and disposal is idempotent' =>
     like($@, qr/closed/, 'disposed renderer rejects sinks');
 };
 
+{
+    package Local::ErrorSink;
+    our @ISA = qw(Local::Sink);
+
+    sub configure {
+        my ($self, $descriptor) = @_;
+        push @{ $self->{events} }, ['configure', { %$descriptor }];
+        die $self->{configure_error} if $self->{configure_error};
+    }
+
+    sub onError {
+        my ($self, $error) = @_;
+        push @{ $self->{events} }, ['onError', $error];
+        push @{ $self->{received} }, $error;
+        die $self->{report_error} if $self->{report_error};
+    }
+}
+
+subtest 'Renderer passes each sink its own isolated configure, defer and submit errors' => sub {
+    my $failed = Local::ErrorSink->new(
+        configure_error => "configure failed\n",
+        error           => "submit failed\n",
+        defer_error     => "defer probe failed\n",
+    );
+    # A sink without onError fails exactly as before: counted and isolated.
+    my $silent = Local::ErrorSink->new(
+        configure_error => "silent configure failed\n",
+        error           => "silent submit failed\n",
+    );
+    # A sink whose reporter throws does not stop the render or the frame.
+    my $throwing_reporter = Local::ErrorSink->new(
+        configure_error => "configure failed again\n",
+        report_error    => "reporter failed\n",
+    );
+    # A sink that does not fail sees the same calls and no report.
+    my $healthy = Local::ErrorSink->new(received => []);
+    my $renderer = Math::Fractal::Noisemaker::Renderer->new;
+    $renderer->add_sink($_) for ($failed, $silent, $throwing_reporter, $healthy);
+
+    my $source = "search synth\nsolid(color: [0.2, 0.4, 0.6]).write(o0)\nrender(o0)";
+    my $frame = $renderer->render($source, width => 2, height => 1, presentation_timestamp => 7);
+    is($renderer->should_defer_render, 0, 'defer errors stay isolated');
+
+    is_deeply($failed->{received},
+        ["configure failed\n", "submit failed\n", "defer probe failed\n"],
+        'each failure reaches its own sink in throw order');
+    is(scalar @{ $throwing_reporter->{received} }, 1, 'throwing reporter invoked once');
+    is_deeply($healthy->{received}, [], 'healthy sink receives no report');
+    is_deeply([map { $_->[0] } @{ $healthy->{events} }],
+        [qw(configure submit defer_render)],
+        'healthy sink configured, submitted and probed');
+    is($healthy->{events}[1][2], 7, 'healthy sink sees the presentation timestamp');
+    is_deeply($renderer->sink_manager->stats_for($failed),
+        { accepted => 0, dropped => 0, failed => 3 }, 'failing sink counted per failure');
+    is_deeply($renderer->sink_manager->stats_for($silent),
+        { accepted => 0, dropped => 0, failed => 2 }, 'silent sink counted and unreported');
+    is_deeply($renderer->sink_manager->stats_for($throwing_reporter),
+        { accepted => 1, dropped => 0, failed => 1 }, 'throwing reporter isolated');
+    is_deeply($renderer->sink_manager->stats_for($healthy),
+        { accepted => 1, dropped => 0, failed => 0 }, 'healthy sink accepts');
+    is($frame->width, 2, 'frame width preserved');
+    is($frame->height, 1, 'frame height preserved');
+};
+
+{
+    package Local::SnakeErrorSink;
+    our @ISA = qw(Local::Sink);
+
+    sub configure {
+        my ($self, $descriptor) = @_;
+        push @{ $self->{events} }, ['configure', { %$descriptor }];
+        die $self->{configure_error} if $self->{configure_error};
+    }
+
+    sub on_error {
+        my ($self, $error) = @_;
+        push @{ $self->{received} }, $error;
+    }
+}
+
+subtest 'Renderer forwards each error to a snake_case on_error sink' => sub {
+    my $sink = Local::SnakeErrorSink->new(configure_error => "snake configure failed\n");
+    my $renderer = Math::Fractal::Noisemaker::Renderer->new;
+    $renderer->add_sink($sink);
+    my $source = "search synth\nsolid(color: [0.2, 0.4, 0.6]).write(o0)\nrender(o0)";
+    my $frame = $renderer->render($source, width => 1, height => 1);
+    is_deeply($sink->{received}, ["snake configure failed\n"], 'on_error receives the sink error');
+    is($frame->width, 1, 'snake sink failure leaves the frame intact');
+};
+
 subtest 'SinkManager should_defer_render checks sinks with strict boolean semantics' => sub {
     my $manager = Math::Fractal::Noisemaker::SinkManager->new;
     is($manager->should_defer_render, 0, 'empty manager does not defer');

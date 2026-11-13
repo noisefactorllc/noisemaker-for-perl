@@ -16,7 +16,7 @@ use File::Spec     ();
 use JSON::PP       ();
 use Exporter 'import';
 use POSIX          ();
-use Scalar::Util qw(looks_like_number);
+use Scalar::Util qw(looks_like_number blessed);
 use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC);
 
 use Math::Fractal::Noisemaker::CpuFrameExportAdapter;
@@ -1390,12 +1390,29 @@ sub render_dsl {
     return $rendered;
 }
 
+# Pass an isolated sink failure to the sink that threw it. A sink opts in
+# with an optional onError(error) method (on_error is the snake_case alias),
+# for example to end an output whose new size it cannot send. Rendering and
+# the other sinks continue either way.
+sub _report_sink_error {
+    my ($error, $sink) = @_;
+    return unless defined $sink && blessed $sink;
+    my $method = $sink->can('onError')  ? 'onError'
+               : $sink->can('on_error') ? 'on_error'
+               :                          undef;
+    $sink->$method($error) if defined $method;
+}
+
 # Stateful renderer facade for output sinks and bounded frame export.
 sub new {
     my ($class, %options) = @_;
     return bless {
         sink_manager => Math::Fractal::Noisemaker::SinkManager->new(
-            on_error => $options{on_sink_error},
+            # A caller-supplied on_sink_error keeps the older behaviour; by
+            # default each sink receives its own isolated errors.
+            on_error => exists $options{on_sink_error}
+                ? $options{on_sink_error}
+                : \&_report_sink_error,
         ),
         sink_descriptor => {
             width => 0, height => 0, format => 'rgba8unorm',
@@ -1583,7 +1600,9 @@ Perl, so a custom bundle must be trusted.
 =head2 new(on_sink_error => sub { ... })
 
 Creates a renderer with an independent sink manager. The optional callback
-receives C<($error, $sink)>. Construction does not render anything.
+receives C<($error, $sink)>. By default, each sink that declares C<onError>
+(or C<on_error>) receives its own isolated failures as C<< $sink->onError($error) >>.
+Construction does not render anything.
 
 =head2 render($source, %options)
 
