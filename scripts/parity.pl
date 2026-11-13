@@ -354,7 +354,8 @@ for my $eid (@ids) {
             || $oracle_pin->{revision} eq '3ea825a87224de9eb26d786acf5fc8262b4ce2eb'
             || $oracle_pin->{revision} eq '207487f62486c9bf1ad417d32f3d2541a83d1816'
             || $oracle_pin->{revision} eq 'ae27c898ecbef822c945f42e850c21c2201af160'
-            || $oracle_pin->{revision} eq '730a1ef5756c562eafb5b039c71750f029204f58')
+            || $oracle_pin->{revision} eq '730a1ef5756c562eafb5b039c71750f029204f58'
+            || $oracle_pin->{revision} eq 'a7c26f6655184126b25292df7161518f37748fa5')
         && $reviewed_grain_seed_time) {
         # The reviewed allowance only counts as a pass with its source-bound
         # capture pair retained: an unreviewed NEAR case must not pass.
