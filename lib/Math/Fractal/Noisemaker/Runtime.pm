@@ -228,7 +228,11 @@ sub construct {
             if (_is_vec($c)) { push @ivals, map { $wrap->($_) } @$c }
             else             { push @ivals, $wrap->($c) }
         }
-        return $ivals[0] if $width == 1;
+        # Supplied components fill left to right and the oracle zero-fills
+        # any remaining slot (`ivec3(ivec2(-4, 5))` is (-4, 5, 0) and
+        # `uvec3()` is (0, 0, 0)); no integer-vector slot stays undefined.
+        return defined $ivals[0] ? $ivals[0] : 0 if $width == 1;
+        push @ivals, (0) x ($width - @ivals) if @ivals < $width;
         return bless [@ivals[0 .. $width - 1]], 'Math::Fractal::Noisemaker::Runtime::IVec';
     }
     if ($width == 1) {
