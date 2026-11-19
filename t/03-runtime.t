@@ -89,8 +89,6 @@ my $sub = $rt->swizzle($iv, 'xy');
 is(ref $sub, 'Math::Fractal::Noisemaker::Runtime::IVec', 'ivec swizzle stays IVec');
 is_deeply([@$sub], [5, 6], 'ivec swizzle values');
 
-# Integer constructors fill components left to right and the oracle
-# zero-fills every remaining slot; no slot stays undefined.
 is_deeply([@{ $rt->construct(3, $rt->construct(2, $rt->i(-4), $rt->i(5), 'int'), 'int') }],
           [-4, 5, 0], 'ivec3(ivec2(-4, 5)) zero-fills the third slot');
 is_deeply([@{ $rt->construct(3, 'uint') }], [0, 0, 0], 'uvec3() zero-fills every slot');
