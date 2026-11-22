@@ -246,7 +246,7 @@
     "render/render3d:render3d": "6e36e33fb43c2f031bb22fd787a54df64367a9f05e4835822dba07762bc800a3",
     "render/renderCubemap3d:renderCubemap3d": "93162b85b7415b2e5886f3fb9d25bdfbd98733a2f28fe917527646bc3a5d4959",
     "render/renderCubemapSurface:renderCubemapSurface": "68d9e00cf7695461e610e831d4be9ff2ec115ade67909200a8f068cf7f7c040c",
-    "render/renderLandscape3d:landscape": "270ae35b701f68e8d1b846e8a64407ed4b5281edfa588a1bc916b16b61955569",
+    "render/renderLandscape3d:landscape": "9b6ec36ed361dedf8b16a55bf8a7608e7cd14fcfe179926fae07929d72e6b542",
     "render/renderLit3d:renderLit3d": "d0bfd1fd9cc7223c364d0f3cf78639a6f661d7fe7b69fb2c9850dbcbb263387b",
     "synth/bitwise:bitwise": "cea5c703d058636a55a729c94222cf825e180ff88cb7dd1fdb562f423c924d27",
     "synth/cell:cell": "fb2a3633217f02a71f4467cc13270cc7a4ab45c976d9cf156b614b05349fd6e3",
@@ -298,5 +298,5 @@
   },
   "source": "https://shaders.noisedeck.app",
   "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-  "version": "1.0.345"
+  "version": "1.0.355"
 }
