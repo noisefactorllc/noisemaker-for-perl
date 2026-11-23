@@ -7,27 +7,47 @@ my $run_pixel = sub {
     my $rt = $ctx->rt;
     my $U = $ctx->uniforms;
     my $g = {};
-    my ($imageTexel__ivec2_ivec2, $columnHeight__ivec2, $density__ivec3, $main__void);
+    my ($terrainSpan__void, $terrainColumn__ivec2, $inTerrain__ivec2, $imageTexel__ivec2_ivec2, $columnHeight__ivec2, $density__ivec3, $main__void);
     my $_retc;
     my $_u_heightTex = $ctx->texture_binding('heightTex');
     my $_u_tex = $ctx->texture_binding('tex');
     my $_u_volumeSize = exists $U->{'volumeSize'} ? $U->{'volumeSize'} : 0;
     my $_u_heightScale = exists $U->{'heightScale'} ? $U->{'heightScale'} : $rt->f(0.0);
     my $_u_baseHeight = exists $U->{'baseHeight'} ? $U->{'baseHeight'} : $rt->f(0.0);
+    my $_u_aspect = exists $U->{'aspect'} ? $U->{'aspect'} : $rt->f(0.0);
+    my $_u_aspectInv = exists $U->{'aspectInv'} ? $U->{'aspectInv'} : $rt->f(0.0);
     $g->{fragColor} = $rt->construct(4, 0.0);
     $g->{geoOut} = $rt->construct(4, 0.0);
+    $terrainSpan__void = sub {
+        my ($halfSize);
+        $halfSize = $rt->binary('*', $rt->construct(1, $_u_volumeSize), $rt->f(0.5), 1, 'float');
+        return $rt->construct(2, (($rt->binary('<', $_u_aspect, $rt->f(1))) ? ($rt->component_wise('max', $rt->i(2), $rt->binary('*', $rt->i(2), $rt->construct(1, $rt->component_wise('floor', $rt->binary('+', $rt->binary('*', $halfSize, $_u_aspect, 1, 'float'), $rt->f(0.5), 1, 'float')), 'int'), 1, 'int'))) : ($_u_volumeSize)), (($rt->binary('<', $_u_aspectInv, $rt->f(1))) ? ($rt->component_wise('max', $rt->i(2), $rt->binary('*', $rt->i(2), $rt->construct(1, $rt->component_wise('floor', $rt->binary('+', $rt->binary('*', $halfSize, $_u_aspectInv, 1, 'float'), $rt->f(0.5), 1, 'float')), 'int'), 1, 'int'))) : ($_u_volumeSize)), 'int');
+    };
+    $terrainColumn__ivec2 = sub {
+        my ($column) = @_;
+        $column = $rt->copy($column, 'int');
+        return $rt->binary('-', $rt->construct(2, $rt->swizzle($column, 'x'), $rt->binary('-', $rt->binary('-', $_u_volumeSize, $rt->i(1), 1, 'int'), $rt->swizzle($column, 'y'), 1, 'int'), 'int'), $rt->binary('/', $rt->binary('-', $_u_volumeSize, $terrainSpan__void->(), 2, 'int'), $rt->i(2), 2, 'int'), 2, 'int');
+    };
+    $inTerrain__ivec2 = sub {
+        my ($column) = @_;
+        $column = $rt->copy($column, 'int');
+        my ($image);
+        $image = $terrainColumn__ivec2->($column);
+        return (($rt->component_wise('all', $rt->component_wise('greaterThanEqual', $image, $rt->construct(2, $rt->i(0), 'int')))) && ($rt->component_wise('all', $rt->component_wise('lessThan', $image, $terrainSpan__void->()))) ? 1 : 0);
+    };
     $imageTexel__ivec2_ivec2 = sub {
         my ($column, $size) = @_;
         $column = $rt->copy($column, 'int');
         $size = $rt->copy($size, 'int');
-        my ($image);
-        $image = $rt->construct(2, $rt->swizzle($column, 'x'), $rt->binary('-', $rt->binary('-', $_u_volumeSize, $rt->i(1), 1, 'int'), $rt->swizzle($column, 'y'), 1, 'int'), 'int');
-        return $rt->component_wise('clamp', $rt->binary('/', $rt->binary('*', $rt->binary('+', $rt->binary('*', $image, $rt->i(2), 2, 'int'), $rt->i(1), 2, 'int'), $size, 2, 'int'), $rt->binary('*', $_u_volumeSize, $rt->i(2), 1, 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int'));
+        return $rt->component_wise('clamp', $rt->binary('/', $rt->binary('*', $rt->binary('+', $rt->binary('*', $terrainColumn__ivec2->($column), $rt->i(2), 2, 'int'), $rt->i(1), 2, 'int'), $size, 2, 'int'), $rt->binary('*', $terrainSpan__void->(), $rt->i(2), 2, 'int'), 2, 'int'), $rt->construct(2, $rt->i(0), 'int'), $rt->binary('-', $size, $rt->i(1), 2, 'int'));
     };
     $columnHeight__ivec2 = sub {
         my ($column) = @_;
         $column = $rt->copy($column, 'int');
         my ($luminance, $rgb);
+        if ((($inTerrain__ivec2->($column)) ? 0 : 1)) {
+            return $rt->f(0);
+        }
         $rgb = $rt->swizzle($rt->texel_fetch($_u_heightTex, $imageTexel__ivec2_ivec2->($column, $rt->texture_size($_u_heightTex)), $rt->i(0)), 'rgb');
         $luminance = $rt->dot($rgb, $rt->construct(3, $rt->f(0.21260000000000001), $rt->f(0.71519999999999995), $rt->f(0.0722)));
         return $rt->component_wise('floor', $rt->binary('+', $rt->binary('*', $rt->component_wise('clamp', $rt->binary('+', $rt->binary('*', $luminance, $_u_heightScale, 1, 'float'), $_u_baseHeight, 1, 'float'), $rt->f(0), $rt->f(1)), $rt->construct(1, $_u_volumeSize), 1, 'float'), $rt->f(0.5), 1, 'float'));

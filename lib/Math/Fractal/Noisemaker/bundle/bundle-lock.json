@@ -215,7 +215,7 @@
     "points/flock:passthrough": "789e9923cbdde796cc1ffcfa0e5b78a981fa6ed45815c03d2d0faeeb8ec89394",
     "points/flow:agent": "0fdce137250e47988fb6e089d38fb22cc47ef05b593d07eee21417d25eb59d8c",
     "points/flow:passthrough": "789e9923cbdde796cc1ffcfa0e5b78a981fa6ed45815c03d2d0faeeb8ec89394",
-    "points/heightGrid:agent": "78f4791c91eb874c3c024be5d79534e45c478dc61e47a0bc4ba392ed2bd480d2",
+    "points/heightGrid:agent": "27d494941e36fd86b3e930937864a1a2c30ac77fd89c3cc1cac1f4fbf02cdfdb",
     "points/heightGrid:passthrough": "789e9923cbdde796cc1ffcfa0e5b78a981fa6ed45815c03d2d0faeeb8ec89394",
     "points/hydraulic:agent": "74196efb3c71b6a3d9cd69bca0f9b249533665acff9a62fb045e1ccb9e5dccc7",
     "points/hydraulic:passthrough": "789e9923cbdde796cc1ffcfa0e5b78a981fa6ed45815c03d2d0faeeb8ec89394",
@@ -291,12 +291,12 @@
     "synth3d/cellularAutomata3d:simulate": "d1f88b1bb7eedf31cedd23e59996d54efef8f3eb84bc24a3bed3a1cde0bc2b64",
     "synth3d/flythrough3d:precompute": "2694825664eef632449b197e1bce585f7878c6358a4d5260c72729b015d02a62",
     "synth3d/fractal3d:precompute": "4bc39fb7920cf0829cc6a6fc4670cdac9f5ea68c5438f569050a4732c1e6de19",
-    "synth3d/heightmap3d:precompute": "85d3d98f08181500765e54b01153163ac6a18a1db7766e88a32fa7de0628e0dc",
+    "synth3d/heightmap3d:precompute": "8797f5f7cd9a16e4a0bcb1de2ea5032748c90e0f371f0608130204666dc8d741",
     "synth3d/noise3d:precompute": "a34609b241a33e51d1d0fd60ea94b6ef681b37a196efa101c2af4a4f1239b208",
     "synth3d/reactionDiffusion3d:simulate": "8bd1504a960862595eeeb96c92a42192b5d87ef2df7c45db63f0effa051a8c67",
     "synth3d/shape3d:precompute": "53b240191c2f0d2e61b5dacecb532ecd3b8aad3973bbf8e38d8712073d50d14f"
   },
   "source": "https://shaders.noisedeck.app",
   "statefulRevision": "a024dc3a960cc44af454abc7aebce50456c194e6",
-  "version": "1.0.355"
+  "version": "1.0.357"
 }

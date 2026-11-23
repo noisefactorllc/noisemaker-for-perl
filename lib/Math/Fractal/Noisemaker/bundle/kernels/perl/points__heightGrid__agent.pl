@@ -16,17 +16,19 @@ my $run_pixel = sub {
     my $_u_gridScale = exists $U->{'gridScale'} ? $U->{'gridScale'} : $rt->f(0.0);
     my $_u_heightScale = exists $U->{'heightScale'} ? $U->{'heightScale'} : $rt->f(0.0);
     my $_u_heightOffset = exists $U->{'heightOffset'} ? $U->{'heightOffset'} : $rt->f(0.0);
+    my $_u_aspectInv = exists $U->{'aspectInv'} ? $U->{'aspectInv'} : $rt->f(0.0);
     $g->{outXYZ} = $rt->construct(4, 0.0);
     $g->{outVel} = $rt->construct(4, 0.0);
     $g->{outRGBA} = $rt->construct(4, 0.0);
     $main__void = sub {
-        my ($coord, $elevation, $heightColor, $stateSize, $uv);
+        my ($coord, $elevation, $gridDepth, $heightColor, $stateSize, $uv);
         $coord = $rt->construct(2, $rt->swizzle($ctx->{frag_coord}, 'xy'), 'int');
         $stateSize = $rt->texture_size($_u_xyzTex);
         $uv = $rt->construct(2, $rt->metal_divide($rt->binary('+', $rt->construct_raw(2, $rt->construct(2, $coord)), $rt->f(0.5), 2, 'float'), $rt->construct_raw(2, $rt->construct(2, $stateSize))));
         $heightColor = $rt->swizzle($rt->texture($_u_heightTex, $uv), 'rgb');
         $elevation = $rt->dot($heightColor, $rt->construct(3, $rt->f(0.21260000000000001), $rt->f(0.71519999999999995), $rt->f(0.0722)));
-        scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rt->binary('-', $rt->swizzle($uv, 'x'), $rt->f(0.5), 1, 'float'), $_u_gridScale, 1, 'float'), $rt->binary('+', $rt->binary('*', $elevation, $_u_heightScale, 1, 'float'), $_u_heightOffset, 1, 'float'), $rt->binary('*', $rt->binary('-', $rt->f(0.5), $rt->swizzle($uv, 'y'), 1, 'float'), $_u_gridScale, 1, 'float'), $rt->f(1)))}; $g->{outXYZ} };
+        $gridDepth = $rt->binary('*', $_u_gridScale, $_u_aspectInv, 1, 'float');
+        scalar do { @{$g->{outXYZ}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->binary('*', $rt->binary('-', $rt->swizzle($uv, 'x'), $rt->f(0.5), 1, 'float'), $_u_gridScale, 1, 'float'), $rt->binary('+', $rt->binary('*', $elevation, $_u_heightScale, 1, 'float'), $_u_heightOffset, 1, 'float'), $rt->binary('*', $rt->binary('-', $rt->f(0.5), $rt->swizzle($uv, 'y'), 1, 'float'), $gridDepth, 1, 'float'), $rt->f(1)))}; $g->{outXYZ} };
         scalar do { @{$g->{outVel}} = map { $rt->f32($_) } @{($rt->construct(4, $rt->f(0), $rt->f(0), $rt->f(0), $rt->swizzle($rt->texel_fetch($_u_velTex, $coord, $rt->i(0)), 'w')))}; $g->{outVel} };
         scalar do { @{$g->{outRGBA}} = map { $rt->f32($_) } @{($rt->texture($_u_diffuseTex, $uv))}; $g->{outRGBA} };
     };
