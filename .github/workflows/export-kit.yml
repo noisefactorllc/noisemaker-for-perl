@@ -14,7 +14,7 @@ on:
   schedule:
     - cron: '41 7 * * 1'
   push:
-    branches: [main]
+    branches: [main, 2.x]
     paths:
       - "export-kit/**"
       - ".github/workflows/export-kit.yml"
@@ -23,6 +23,7 @@ on:
       - "lib/**"
       - "bin/make-noise"
       - "t/**"
+      - "xt/**"
       - "scripts/**"
       - "Makefile.PL"
       - "MANIFEST*"
@@ -87,6 +88,10 @@ jobs:
           make distcheck
           make disttest TEST_VERBOSE=1 | tee "$RUNNER_TEMP/distribution-tests.log"
           require_no_skips "$RUNNER_TEMP/distribution-tests.log"
+      # The workflow contract reads .github/, which the distribution does not
+      # ship, so it runs from xt/ against the checkout.
+      - name: Check the workflow contract
+        run: prove -l xt
       - name: Check public POD
         run: |
           perl -MPod::Checker=podchecker -e 'my $bad=0; for (@ARGV) { $bad++ if podchecker($_) > 0 } exit($bad ? 1 : 0)' lib/Math/Fractal/Noisemaker.pm lib/Math/Fractal/Noisemaker/*.pm lib/Math/Fractal/Noisemaker/Transpiler/Build.pm
@@ -560,7 +565,7 @@ jobs:
 
   dispatch:
     needs: [test, parity, windows, perl32]
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    if: github.event_name != 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
-# Repository test entrypoint: runs the prove suite under t/.
+# Repository test entrypoint: runs the prove suite under t/, and the
+# repository tests under xt/ that the distribution does not ship.
 #
 # Environment:
 #   NOISEMAKER_CPU_DIR — path to a pinned noisemaker-for-cpu checkout
@@ -20,10 +21,10 @@ chdir(File::Spec->catdir($repo, '..')) or die "cannot cd to repository root: $!\
 my $root = getcwd();
 
 # NM_CHANGED_FILES — one changed path per line, from the supervisor. When set,
-# run only the t/ tests that reference those paths (by full path or basename)
-# so the changed code is exercised within a bounded invocation; every matched
-# test still runs. Unset runs the whole suite as before.
-my @tests = grep { -f } glob 't/*.t';
+# run only the t/ and xt/ tests that reference those paths (by full path or
+# basename) so the changed code is exercised within a bounded invocation; every
+# matched test still runs. Unset runs the whole suite as before.
+my @tests = grep { -f } glob 't/*.t xt/*.t';
 my $scoped = 0;
 if (defined $ENV{NM_CHANGED_FILES} && $ENV{NM_CHANGED_FILES} =~ /\S/) {
     my @changed = grep { /\S/ } split /\n/, $ENV{NM_CHANGED_FILES};
@@ -31,7 +32,7 @@ if (defined $ENV{NM_CHANGED_FILES} && $ENV{NM_CHANGED_FILES} =~ /\S/) {
     for my $t (@tests) {
         # A changed t/ test file selects itself; its content need not
         # reference its own name.
-        (my $tbase = $t) =~ s{^t/}{};
+        (my $tbase = $t) =~ s{^x?t/}{};
         if (grep { $_ eq $t || $_ eq $tbase } @changed) {
             $selected{$t} = 1;
             next;
@@ -53,7 +54,7 @@ if (defined $ENV{NM_CHANGED_FILES} && $ENV{NM_CHANGED_FILES} =~ /\S/) {
     $scoped = 1;
     print "NM_CHANGED_FILES set: running only tests referencing changed paths\n";
     unless (@tests) {
-        print "No t/ test references the changed paths; nothing to run\n";
+        print "No t/ or xt/ test references the changed paths; nothing to run\n";
         exit 0;
     }
 }
@@ -92,7 +93,7 @@ if (defined $ENV{NM_SHARD_INDEX} && defined $ENV{NM_SHARD_COUNT}) {
 print "== prove suite ==\n";
 my @prove = ('prove', '-j2', '-lr');
 if ($scoped || $sharded) { push @prove, @tests }
-else { push @prove, 't' }
+else { push @prove, 't', 'xt' }
 if (system(@prove) != 0) {
     print "FAIL: test suite reported failures\n";
     $fail = 1;
