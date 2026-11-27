@@ -20,6 +20,7 @@ use POSIX ();
 
 use Math::Fractal::Noisemaker::Sampler qw(sample_bilinear sample_nearest_bottom_left);
 use Math::Fractal::Noisemaker::PaletteData ();
+use Math::Fractal::Noisemaker::Remap ();
 
 my %ADAPTERS;
 
@@ -32,6 +33,8 @@ sub get_adapter {
     my ($effect_id, $program) = @_;
     return $ADAPTERS{"$effect_id:$program"};
 }
+
+register('synth/remap', 'remap', \&Math::Fractal::Noisemaker::Remap::factory);
 
 sub _f32 { unpack('f', pack('f', $_[0])) }
 

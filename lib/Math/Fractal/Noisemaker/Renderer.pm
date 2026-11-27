@@ -16,7 +16,7 @@ use File::Spec     ();
 use JSON::PP       ();
 use Exporter 'import';
 use POSIX          ();
-use Scalar::Util qw(looks_like_number blessed);
+use Scalar::Util qw(looks_like_number blessed refaddr);
 use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC);
 
 use Math::Fractal::Noisemaker::CpuFrameExportAdapter;
@@ -36,7 +36,7 @@ use Math::Fractal::Noisemaker::Iteration qw(
     iteration_delta_time
     wrap01
 );
-use Math::Fractal::Noisemaker::PassRunner qw(run_pass run_pass_deriv run_pass_mrt);
+use Math::Fractal::Noisemaker::PassRunner qw(run_pass run_pass_deriv run_pass_mrt blend_pass_output);
 use Math::Fractal::Noisemaker::Runtime;
 use Math::Fractal::Noisemaker::Surface;
 use Math::Fractal::Noisemaker::SinkManager;
@@ -54,6 +54,57 @@ my $CACHE = Math::Fractal::Noisemaker::KernelCache->new;
 
 sub f32 { unpack('f', pack('f', $_[0])) }
 
+my $BINDING = __PACKAGE__ . '::TextureBinding';
+my @AGENT_OUTPUTS = qw(outputXyz outputVel outputRgba);
+my %AGENT_CHANNELS;
+@AGENT_CHANNELS{@AGENT_OUTPUTS} = qw(inputXyz inputVel inputRgba);
+
+# All published aliases refer to this cell when a new Surface replaces its target.
+sub _binding { my $surface = shift; return bless \$surface, $BINDING }
+sub _texture_surface { return ref($_[0]) eq $BINDING ? ${$_[0]} : $_[0] }
+
+sub _pass_outputs {
+    my ($pass) = @_;
+    return $pass->{outputs} if $pass->{outputs} && keys %{ $pass->{outputs} };
+    return $pass->{storageTextures} || {};
+}
+
+sub _shared_storage {
+    my ($steps, $effects) = @_;
+    my (%writers, @order, @shared);
+    my @steps = grep { $_->{kind} eq 'effect' } @$steps;
+    for my $step (@steps) {
+        for my $pass (@{ $effects->{ $step->{effect_id} }{passes} }) {
+            my $storage = $pass->{storageTextures} || next;
+            for my $key (@{ $pass->{storageTextureOrder} // [sort keys %$storage] }) {
+                my $name = $storage->{$key};
+                next unless $name =~ /\Aglobal_/ && $name ne 'global_accum' && !is_particle_state_name($name);
+                push @order, $name unless exists $writers{$name};
+                $writers{$name} = $step;
+            }
+        }
+    }
+    for my $name (@order) {
+        my $owner = $writers{$name};
+        my %users = ($owner->{effect_id} => 1);
+        for my $step (@steps) {
+            my $eff = $effects->{ $step->{effect_id} };
+            if (exists(($eff->{textures} || {})->{$name})) {
+                $owner = $step;
+            }
+            else {
+                my @names = @{$eff}{qw(outputTex outputTex3d outputGeo), keys %AGENT_CHANNELS};
+                push @names, values %{ $_->{inputs} || {} }, values %{ _pass_outputs($_) } for @{ $eff->{passes} };
+                next unless grep { defined $_ && $_ eq $name } @names;
+            }
+            $users{$step->{effect_id}} = 1;
+        }
+        push @shared, { name => $name, owner => $owner, users => \%users, binding => _binding(undef) }
+            if keys(%users) > 1;
+    }
+    return \@shared;
+}
+
 sub _is_chain_bundle {
     my ($value) = @_;
     return ref $value eq 'HASH' && exists $value->{image};
@@ -61,7 +112,10 @@ sub _is_chain_bundle {
 
 sub _chain_bundle {
     my ($value) = @_;
-    return $value if _is_chain_bundle($value);
+    if (_is_chain_bundle($value)) {
+        return ref($value->{image}) eq $BINDING
+            ? { %$value, imageBinding => $value->{image}, image => _texture_surface($value->{image}) } : $value;
+    }
     return { image => $value, volume => undef, geometry => undef, volumeSize => undef };
 }
 
@@ -124,7 +178,7 @@ sub _choice_value {
 }
 
 sub _coerce {
-    my ($spec, $value) = @_;
+    my ($spec, $value, $double_precision) = @_;
     my $t = $spec->{type} || '';
     $value = $spec->{default} unless defined $value;
     # An `osc(...)` automation value (numeric params only, matching the JS
@@ -143,16 +197,16 @@ sub _coerce {
         $value = _parse_hex($value) if defined $value && !ref $value;
         my @components = @{ $value || [0, 0, 0] };
         # A color uniform is vec3; the effect's separate alpha parameter owns opacity.
-        return [map { f32($_) } @components[0 .. 2]];
+        return [map { $double_precision ? 0 + $_ : f32($_) } @components[0 .. 2]];
     }
     if ($t eq 'vec2' || $t eq 'vec3' || $t eq 'vec4' || $t eq 'mat3') {
         if (defined $value && !ref $value) {    # CLI --param: "0.1,0.2,0.3"
             $value = [map { 0 + $_ } split /,/, $value];
         }
-        return [map { f32($_) } @{ $value || [] }];
+        return [map { $double_precision ? 0 + $_ : f32($_) } @{ $value || [] }];
     }
     if ($t eq 'float') {
-        return f32(defined $value ? $value : 0);
+        return $double_precision ? 0 + ($value // 0) : f32($value // 0);
     }
     if ($t eq 'int' || $t eq 'enum' || $t eq 'member' || $t eq 'palette') {
         if (defined $value && !looks_like_number($value)) {    # enum name lookup
@@ -225,7 +279,7 @@ sub _resolve_effect_automation {
         my $type  = ref $spec eq 'HASH' ? ($spec->{type} || '') : '';
         if ($type eq 'float' || $type eq 'int') {
             my $resolved = resolve_automation_uniform($value, $time, _automation_param_spec($spec));
-            $resolved{$name} = $type eq 'float' && !ref $resolved ? f32($resolved) : $resolved;
+            $resolved{$name} = $type eq 'float' && !ref $resolved && !_uses_remap_precision($eff) ? f32($resolved) : $resolved;
         }
         else {
             $resolved{$name} = $value;
@@ -351,13 +405,12 @@ sub _validate_parameters {
     }
 }
 
-# Pack synth/remap's std140 data[267] block from the bound uniforms — port of
-# the reference remapUniformData. At zoneCount=0 this yields the background
-# color for every pixel.
+# The generated GLSL program uses the float32 std140 layout. The reference
+# CPU adapter reads the original double-precision zone uniforms separately.
 sub _remap_uniform_data {
     my ($u, $width, $height) = @_;
     my $g = sub { my ($name, $default) = @_; defined $u->{$name} ? $u->{$name} : $default };
-    my @data = map { [0.0, 0.0, 0.0, 0.0] } 1 .. 267;
+    my @data = map { [0.0, 0.0, 0.0, 0.0] } 1 .. 275;
     my $bg = $g->('bgColor', [0, 0, 0]);
     # Elements snap to f32 — the reference packs a Float32Array (numpy F32).
     $data[0] = [map { f32($_) } $bg->[0], $bg->[1], $bg->[2], $g->('bgAlpha', 1)];
@@ -371,6 +424,7 @@ sub _remap_uniform_data {
             my $v = $g->("zone${zone}_v${pair}", [0, 0, 0, 0]);
             $data[ 10 + $zone * 32 + $pair ] = [map { f32($_) } @$v];
         }
+        $data[267 + $zone] = [map { f32($_) } @{$g->("zone${zone}_bounds", [0, 0, 1, 1])}];
     }
     $data[266] = [0.0 + $width, 0.0 + $height, 0, 0];
     return \@data;
@@ -418,36 +472,47 @@ sub _canonical_uniforms {
     return \%u;
 }
 
+sub _uses_remap_precision {
+    my ($eff) = @_;
+    return ($eff->{namespace} // '') eq 'synth' && ($eff->{func} // '') eq 'remap';
+}
+
 sub _normalized_params {
     my ($eff, $params, $seed) = @_;
     my %normalized;
+    my $double_precision = _uses_remap_precision($eff);
     for my $name (sort keys %{ $eff->{params} || {} }) {
         my $spec = $eff->{params}{$name};
         next unless ref $spec eq 'HASH';
         next if ($spec->{type} || '') eq 'surface';
         my $value = ($name eq 'seed' && !exists $params->{seed}) ? $seed : $params->{$name};
-        $normalized{$name} = _coerce($spec, $value);
+        $normalized{$name} = _coerce($spec, $value, $double_precision);
     }
     return \%normalized;
 }
 
 sub _effect_bindings {
-    my ($eff, $normalized, $inputs, $blank) = @_;
+    my ($eff, $normalized, $inputs, $blank, $compiled_chain) = @_;
     my (%uniforms, %surfaces);
     for my $name (sort keys %{ $eff->{params} || {} }) {
         my $spec = $eff->{params}{$name};
         next unless ref $spec eq 'HASH';
         if (($spec->{type} || '') eq 'surface') {
-            my $sampler = $spec->{uniform} || $spec->{texture} || $name;
-            my $provided = defined $inputs->{$sampler} ? $inputs->{$sampler} : $inputs->{$name};
+            my $sampler = $compiled_chain ? ($spec->{texture} // $name) : ($spec->{uniform} || $spec->{texture} || $name);
+            my $provided = $compiled_chain ? $inputs->{$name}
+                : defined $inputs->{$sampler} ? $inputs->{$sampler} : $inputs->{$name};
             $surfaces{$sampler} = defined $provided ? $provided : $blank;
             $uniforms{ $spec->{colorModeUniform} } = defined $provided ? 1 : 0
                 if defined $spec->{colorModeUniform};
             next;
         }
         my $value = $normalized->{$name};
-        $uniforms{ $spec->{uniform} } = $value if defined $spec->{uniform};
-        $uniforms{ $spec->{define} }  = $value if defined $spec->{define};
+        if ($compiled_chain) {
+            $uniforms{ $spec->{define} || $spec->{uniform} || $name } = $value;
+        } else {
+            $uniforms{ $spec->{uniform} } = $value if defined $spec->{uniform};
+            $uniforms{ $spec->{define} }  = $value if defined $spec->{define};
+        }
     }
 
     if (($eff->{namespace} || '') eq 'classicNoisedeck') {
@@ -484,7 +549,7 @@ sub _texture_dimension {
         return $value > 0 ? $value : 1;
     }
     if (ref $spec eq 'HASH' && exists $spec->{inputOverride}) {
-        my $input = ($resources || {})->{ $spec->{inputOverride} };
+        my $input = _texture_surface(($resources || {})->{ $spec->{inputOverride} });
         return $axis eq 'width' ? $input->width : $input->height if defined $input;
     }
     if (ref $spec eq 'HASH' && exists $spec->{param}) {
@@ -528,6 +593,12 @@ sub _texture_dimension {
 
 sub _destination {
     my ($eff, $name, $params, $width, $height, $pass, $resources) = @_;
+    my $binding = ($resources || {})->{$name};
+    if (ref $binding eq $BINDING && $$binding) {
+        my $surface = Math::Fractal::Noisemaker::Surface->new($$binding->width, $$binding->height);
+        $surface->format($$binding->format);
+        return $surface;
+    }
     my $spec = ($eff->{textures} || {})->{$name} || {};
     my $viewport = ($pass || {})->{viewport} || {};
     my $dest_width  = _texture_dimension(
@@ -567,7 +638,7 @@ sub _declares_inherited_state_size_textures {
 }
 
 sub _prepare_state {
-    my ($step, $width, $height, $seed, $owner_state_size, $input_bundle, $time) = @_;
+    my ($step, $width, $height, $seed, $owner_state_size, $input_bundle, $time, $shared, $iterated) = @_;
     my $eff = meta()->{effects}{ $step->{effect_id} }
         or die "unknown effect '$step->{effect_id}' (not in bundle)\n";
     _validate_parameters($step->{effect_id}, $eff, $step->{params});
@@ -605,6 +676,7 @@ sub _prepare_state {
     _inherit_volume_size($step->{effect_id}, $eff, $params, $input_bundle);
     my $domain = $eff->{domain} || 'image';
     my $state = {
+        shared_storage => $shared,
         step        => $step,
         effect_id   => $step->{effect_id},
         eff         => $eff,
@@ -618,7 +690,7 @@ sub _prepare_state {
         scalar grep { defined $_ && ($_ eq 'selfTex' || $_ eq 'feedback') }
             values %{ $pass->{inputs} || {} };
     } @{ $eff->{passes} || [] };
-    if ($uses_self) {
+    if ($uses_self && (!$shared || $iterated)) {
         $state->{self_tex} = _destination($eff, 'outputTex', $params, $width, $height);
         $state->{self_tex}->clear;
     }
@@ -656,15 +728,17 @@ sub _particle_destination {
 }
 
 sub _output_destination {
-    my ($name, $state, $states, $width, $height, $pass, $resources) = @_;
-    return is_particle_state_name($name)
+    my ($name, $state, $states, $width, $height, $pass, $resources, $group) = @_;
+    return $group && is_particle_state_name($name)
         ? _particle_destination($name, $state, $states, $width, $height)
         : _destination($state->{eff}, $name, $state->{params}, $width, $height, $pass, $resources);
 }
 
 sub _output_format {
-    my ($name, $state, $states) = @_;
-    if (is_particle_state_name($name)) {
+    my ($name, $state, $states, $group, $resources) = @_;
+    my $binding = ($resources || {})->{$name};
+    return $$binding->format // 'rgba16f' if ref $binding eq $BINDING && $$binding;
+    if ($group && is_particle_state_name($name)) {
         my $owner = _particle_definition_state($name, $states);
         return _format_for($owner->{eff}, $name) if $owner;
         return 'rgba32f' if $name eq 'global_xyz' || $name eq 'global_vel';
@@ -678,36 +752,57 @@ sub _resolve_particle_input {
     my ($name, $state, $states, $group_resources, $width, $height) = @_;
     if (!defined $group_resources->{$name}) {
         $group_resources->{$name} = _particle_destination($name, $state, $states, $width, $height);
+        $group_resources->{$name}->format(_output_format($name, $state, $states, $group_resources))
+            if $state->{shared_storage};
         $group_resources->{$name}->clear;
     }
-    return $group_resources->{$name};
+    return _texture_surface($group_resources->{$name});
 }
 
 sub _store_output {
     my ($name, $surface, $state, $group_resources) = @_;
-    if (is_particle_state_name($name) || $name eq 'global_accum') {
-        $group_resources->{$name} = $surface;
-    }
-    else {
-        $state->{attachments}{$name} = $surface;
-    }
+    my $table = $group_resources && (is_particle_state_name($name) || $name eq 'global_accum')
+        ? $group_resources : $state->{attachments};
+    if (ref $table->{$name} eq $BINDING) { ${ $table->{$name} } = $surface }
+    else { $table->{$name} = $surface }
+}
+
+# Descriptor controls use JS Number comparison. Missing uniforms compare unequal
+# to every literal; null, false and an empty string are distinct from missing.
+sub _control_number {
+    my ($value) = @_;
+    return 0 unless defined $value;
+    return $value ? 1 : 0 if JSON::PP::is_bool($value);
+    $value = join ',', map { defined $_ ? $_ : '' } @$value if ref $value eq 'ARRAY';
+    return 0 if !ref $value && $value =~ /\A\s*\z/;
+    return looks_like_number($value) ? 0 + $value : 0 + 'NaN';
 }
 
 sub _pass_is_active {
-    my ($pass, $uniforms) = @_;
+    my ($pass, $uniforms, $compiled_chain) = @_;
     my $conditions = $pass->{conditions} || return 1;
-    for my $entry (@{ $conditions->{runIf} || [] }) {
-        return 0 if 0 + ($uniforms->{ $entry->{uniform} } || 0) != 0 + $entry->{equals};
-    }
-    for my $entry (@{ $conditions->{skipIf} || [] }) {
-        return 0 if 0 + ($uniforms->{ $entry->{uniform} } || 0) == 0 + $entry->{equals};
+    for my $gate (qw(runIf skipIf)) {
+        for my $entry (@{ $conditions->{$gate} || [] }) {
+            my $name = $entry->{uniform};
+            my $match = $compiled_chain
+                ? exists $uniforms->{$name} && exists $entry->{equals}
+                    && _control_number($uniforms->{$name}) == _control_number($entry->{equals})
+                : 0 + ($uniforms->{$name} || 0) == 0 + $entry->{equals};
+            return 0 if $gate eq 'runIf' ? !$match : $match;
+        }
     }
     return 1;
 }
 
 sub _repeat_count {
-    my ($pass, $uniforms) = @_;
+    my ($pass, $uniforms, $compiled_chain) = @_;
     my $repeat = $pass->{repeat};
+    if ($compiled_chain) {
+        return 1 unless defined $repeat;
+        my $count = Math::Fractal::Noisemaker::DSL::_is_number($repeat)
+            ? POSIX::ceil($repeat) : int(_control_number($uniforms->{$repeat} // 1));
+        return $count > 0 ? $count : 0;
+    }
     $repeat = defined $repeat && !ref $repeat && $repeat !~ /^-?\d+(?:\.\d+)?$/
         ? (defined $uniforms->{$repeat} ? $uniforms->{$repeat} : 1)
         : (defined $repeat ? $repeat : 1);
@@ -720,17 +815,17 @@ sub _pass_uniforms {
     my %uniforms = %$base;
     for my $name (sort keys %{ $pass->{uniforms} || {} }) {
         my $source = $pass->{uniforms}{$name};
-        if (!ref $source && exists $params->{$source}) {
+        if (defined $source && !ref $source && exists $params->{$source}) {
             $uniforms{$name} = $params->{$source};
         }
-        elsif (!ref $source && exists $base->{$source}) {
+        elsif (defined $source && !ref $source && exists $base->{$source}) {
             $uniforms{$name} = $base->{$source};
         }
         elsif (!(defined $source && !ref $source && $source eq $name && exists $uniforms{$name})) {
             $uniforms{$name} = $source;
         }
     }
-    return \%uniforms;
+    return { %uniforms, %{ $pass->{defines} || {} } };
 }
 
 sub _initialize_overlay {
@@ -739,7 +834,7 @@ sub _initialize_overlay {
     my $effect_id = $state->{effect_id};
     return unless Math::Fractal::Noisemaker::OverlayGen::is_overlay_effect($effect_id);
     my %produced;
-    $produced{$_} = 1 for map { values %{ $_->{outputs} || {} } } @{ $state->{eff}{passes} || [] };
+    $produced{$_} = 1 for map { values %{ _pass_outputs($_) } } @{ $state->{eff}{passes} || [] };
     return if $produced{overlayTex} || exists $inputs->{overlayTex};
     my %gen = map { $_ => $state->{params}{$_} } grep { exists $state->{params}{$_} } qw(seed density);
     $state->{attachments}{overlayTex} =
@@ -846,9 +941,75 @@ sub _ensure_consumed_scratch {
     }
 }
 
+sub _seed_chain_resources {
+    my ($state, $inputs, $bundle, $group, $width, $height, $seed, $time) = @_;
+    my $resources = $state->{attachments};
+    my $eff = $state->{eff};
+    $resources->{$_} = $inputs->{$_} for keys %$inputs;
+    if ($bundle->{imageBinding}) {
+        for my $name (keys %$resources) {
+            $resources->{$name} = $bundle->{imageBinding}
+                if refaddr($resources->{$name}) == refaddr($bundle->{image});
+        }
+    }
+    for my $shared (@{ $state->{shared_storage} }) {
+        next unless $shared->{users}{ $state->{effect_id} };
+        my $name = $shared->{name};
+        my $binding = $shared->{binding};
+        unless ($$binding) {
+            my $owner = $shared->{owner};
+            my $owner_eff = meta()->{effects}{ $owner->{effect_id} };
+            my $params = $state->{params};
+            if ($owner->{effect_id} ne $state->{effect_id}) {
+                $params = _normalized_params($owner_eff, $owner->{params}, $seed);
+                $params = _resolve_effect_automation($owner_eff, $params, $time) // $params;
+            }
+            $$binding = _destination($owner_eff, $name, $params, $width, $height, undef, $resources);
+            $$binding->format(_format_for($owner_eff, $name));
+        }
+        $resources->{$name} = $binding;
+    }
+    for my $name (values %AGENT_CHANNELS) {
+        if (!exists(($eff->{textures} || {})->{global_xyz}) && $bundle->{$name}) {
+            $resources->{$name} = $bundle->{$name};
+        } else {
+            delete $resources->{$name};
+        }
+    }
+    if ($state->{self_tex}) {
+        $resources->{selfTex} = $resources->{feedback} = $state->{self_tex};
+    }
+    my (%produced, %consumed);
+    for my $pass (@{ $eff->{passes} }) {
+        $produced{$_} = 1 for values %{ _pass_outputs($pass) };
+        $consumed{$_} = 1 for values %{ $pass->{inputs} || {} };
+    }
+    for my $name (@{ $eff->{textureOrder} // [sort keys %{ $eff->{textures} || {} }] }) {
+        next if exists $resources->{$name};
+        next if $group ? is_particle_state_name($name) : ($produced{$name} && !($consumed{$name} && $name =~ /\A_/));
+        $resources->{$name} = _destination($eff, $name, $state->{params}, $width, $height, undef,
+            $group ? undef : $resources);
+        $resources->{$name}->format(_format_for($eff, $name));
+    }
+}
+
+sub _published_name {
+    my ($field, $state) = @_;
+    my $eff = $state->{eff};
+    my $fallback = $eff->{$field};
+    return $fallback unless exists $state->{attachments}{$field};
+    return $field if $field eq 'outputTex' && !defined $fallback;
+    for my $pass (@{ $eff->{passes} }) {
+        return $field if grep { $_ eq $field } values %{ _pass_outputs($pass) };
+    }
+    return $fallback;
+}
+
 sub _run_state_once {
     my ($state, $inputs, $states, $group_resources, %opt) = @_;
     my ($width, $height, $seed, $time) = @opt{qw(width height seed time)};
+    my $compiled_chain = $state->{shared_storage};
+    $group_resources = undef if $compiled_chain && !$opt{iterated};
     my $input_bundle = $opt{input_bundle} || _chain_bundle($inputs->{inputTex});
     my $blank = Math::Fractal::Noisemaker::Surface->new(1, 1);
     # Automation-driven params (`osc(...)`) re-resolve against this run's own
@@ -861,36 +1022,50 @@ sub _run_state_once {
         $state->{params} = $refreshed;
     }
     my ($effect_uniforms, $surface_params) =
-        _effect_bindings($state->{eff}, $state->{params}, $inputs, $blank);
-    my %effective_inputs = (%$inputs, %$surface_params);
+        _effect_bindings($state->{eff}, $state->{params}, $inputs, $blank, $compiled_chain);
+    my %effective_inputs = $compiled_chain ? %$surface_params : (%$inputs, %$surface_params);
+    if ($compiled_chain) {
+        if ($input_bundle->{image} && (!$opt{iterated} || !exists $effective_inputs{inputTex})) {
+            $effective_inputs{inputTex} = $input_bundle->{imageBinding} // $input_bundle->{image};
+        }
+        if (my $external = $state->{eff}{externalTexture}) {
+            my $surface = ($opt{external_textures} || {})->{$external} or die "$state->{effect_id} requires external texture \"$external\"\n";
+            $effective_inputs{$external} = bless { %$surface, filter => 'linear' }, ref $surface;
+        }
+    }
     $effective_inputs{inputTex3d} = $input_bundle->{volume} if defined $input_bundle->{volume};
     $effective_inputs{inputGeo}   = $input_bundle->{geometry} if defined $input_bundle->{geometry};
     _seed_typed_inputs($state, $input_bundle, \%effective_inputs, $width, $height);
-    _initialize_overlay($state, \%effective_inputs, $width, $height);
-    _ensure_iteration_scratch($state, \%effective_inputs, $width, $height) if $opt{iterated};
-    _ensure_consumed_scratch($state, \%effective_inputs, $width, $height);
+    _initialize_overlay($state, \%effective_inputs, $width, $height) unless $compiled_chain && $opt{iterated};
+    unless ($compiled_chain) {
+        _ensure_iteration_scratch($state, \%effective_inputs, $width, $height) if $opt{iterated};
+        _ensure_consumed_scratch($state, \%effective_inputs, $width, $height);
+    }
+    my %external_textures;
+    _bind_external_inputs($state, $effect_uniforms, \%external_textures, $opt{external_inputs});
     my $uniforms = _canonical_uniforms(
         $width, $height, $time, $seed, $effect_uniforms,
         $opt{frame}, $opt{delta_time}, $width, $height,
     );
     $uniforms->{data} = _remap_uniform_data($uniforms, $width, $height)
         if $state->{effect_id} eq 'synth/remap';
-    my %external_textures;
-    _bind_external_inputs($state, $uniforms, \%external_textures, $opt{external_inputs});
     $effective_inputs{$_} //= $external_textures{$_} for keys %external_textures;
+    _seed_chain_resources($state, \%effective_inputs, $input_bundle, $group_resources, $width, $height, $seed, $time)
+        if $compiled_chain;
     my $runtime = Math::Fractal::Noisemaker::Runtime->new;
     my $result;
     my $last_output;
     my $external_tex = $state->{eff}{externalTexture};
 
     for my $pass (@{ $state->{eff}{passes} || [] }) {
-        next unless _pass_is_active($pass, $uniforms);
-        my $repeat = _repeat_count($pass, $uniforms);
+        my $controls = $compiled_chain ? $effect_uniforms : $uniforms;
+        next unless _pass_is_active($pass, $controls, $compiled_chain);
+        my $repeat = _repeat_count($pass, $controls, $compiled_chain);
         next unless $repeat;
         for (1 .. $repeat) {
             my %textures;
-            my %resources = (%effective_inputs, %{ $state->{attachments} }, %$group_resources);
-            for my $sampler (sort keys %$surface_params) {
+            my %resources = (%effective_inputs, %{ $state->{attachments} }, %{ $group_resources || {} });
+            for my $sampler ($compiled_chain ? () : sort keys %$surface_params) {
                 my $surface = $surface_params->{$sampler};
                 $surface->filter((defined $external_tex && $sampler eq $external_tex) ? 'linear' : 'nearest');
                 $textures{$sampler} = $surface;
@@ -898,14 +1073,18 @@ sub _run_state_once {
             for my $sampler (sort keys %{ $pass->{inputs} || {} }) {
                 my $source = $pass->{inputs}{$sampler};
                 my $surface;
-                if (is_particle_state_name($source)) {
+                if ($group_resources && is_particle_state_name($source)) {
                     $surface = _resolve_particle_input($source, $state, $states, $group_resources, $width, $height);
                 }
-                elsif (defined $source && $source eq 'global_accum') {
-                    $surface = $group_resources->{$source};
+                elsif ($group_resources && defined $source && $source eq 'global_accum' &&
+                        (!$compiled_chain || exists $group_resources->{$source})) {
+                    $surface = _texture_surface($group_resources->{$source});
                 }
                 elsif (defined $source && ($source eq 'selfTex' || $source eq 'feedback')) {
                     $surface = $state->{self_tex} || $blank;
+                }
+                elsif ($compiled_chain) {
+                    $surface = _texture_surface($state->{attachments}{$source});
                 }
                 else {
                     $surface = $state->{attachments}{$source}
@@ -914,31 +1093,37 @@ sub _run_state_once {
                 }
                 die "$state->{effect_id} pass '$pass->{name}' requires texture \"$source\"\n"
                     unless defined $surface;
-                $surface->filter((defined $external_tex && $sampler eq $external_tex) ? 'linear' : 'nearest');
+                $surface->filter((defined $external_tex && $sampler eq $external_tex) ? 'linear' : 'nearest') unless $compiled_chain;
                 $textures{$sampler} = $surface;
             }
 
             my $compiled = $pass->{drawMode} ? undef : _kernel_for($pass->{key});
-            my @output_variables =
-                $compiled && ($pass->{drawBuffers} || 0) >= 2 && ref $compiled->{output_names} eq 'ARRAY'
-                ? @{ $compiled->{output_names} }
-                : (sort keys %{ $pass->{outputs} || {} });
+            my $output_map = _pass_outputs($pass);
+            my $is_mrt = $compiled && ($pass->{drawBuffers} || 0) >= 2 && ref $compiled->{output_names} eq 'ARRAY';
+            my @output_variables = sort keys %$output_map;
+            if ($is_mrt) {
+                @output_variables = @{ $compiled->{output_names} };
+            } elsif ($compiled_chain && @output_variables) {
+                my $order = $pass->{outputs} && keys %{ $pass->{outputs} }
+                    ? $pass->{outputOrder} : $pass->{storageTextureOrder};
+                @output_variables = ($order ? $order->[0] : $output_variables[0]);
+            }
             die "$state->{effect_id} pass '$pass->{name}' has no fragment output\n"
                 unless @output_variables;
             my @output_names = map {
-                defined $pass->{outputs}{$_}
-                    ? $pass->{outputs}{$_}
+                defined $output_map->{$_}
+                    ? $output_map->{$_}
                     : die "$state->{effect_id} pass '$pass->{name}' has no destination for output '$_'\n"
             } @output_variables;
             my @destinations = map {
-                _output_destination($_, $state, $states, $width, $height, $pass, \%resources)
+                _output_destination($_, $state, $states, $width, $height, $pass, \%resources, $group_resources)
             } @output_names;
             # Stamp each destination with its attachment format (the counterpart
             # of the oracle's canonicalDestination surface.format), so draw ops
             # can match the attachment's write semantics (e.g. rgba16f additive
             # blending truncates to half float on every write).
             for my $index (0 .. $#destinations) {
-                $destinations[$index]->format(_output_format($output_names[$index], $state, $states));
+                $destinations[$index]->format(_output_format($output_names[$index], $state, $states, $group_resources, \%resources));
             }
             my ($dest_width, $dest_height) = ($destinations[0]->width, $destinations[0]->height);
             for my $destination (@destinations) {
@@ -962,10 +1147,12 @@ sub _run_state_once {
                     $state->{effect_id}, $pass->{program});
                 die "Missing CPU mesh adapter \"$state->{effect_id}:$pass->{program}\"\n"
                     unless ref $adapter eq 'CODE';
-                my $previous = $state->{attachments}{ $output_names[0] };
+                my $previous = _texture_surface($state->{attachments}{ $output_names[0] });
                 @{ $destinations[0]->data } = @{ $previous->data }
                     if defined $previous && @{ $previous->data } == @{ $destinations[0]->data };
                 $adapter->({
+                    pass            => $pass,
+                    inputs          => \%textures,
                     uniforms        => $pass_uniforms,
                     destination     => $destinations[0],
                     external_inputs => $opt{external_inputs},
@@ -976,9 +1163,10 @@ sub _run_state_once {
                     $state->{effect_id}, $pass->{program});
                 die "Missing CPU scatter adapter '$state->{effect_id}:$pass->{program}'\n"
                     unless ref $draw_op eq 'CODE';
-                my $previous = (is_particle_state_name($output_names[0]) || $output_names[0] eq 'global_accum')
+                my $previous = $group_resources && (is_particle_state_name($output_names[0]) || $output_names[0] eq 'global_accum')
                     ? $group_resources->{ $output_names[0] }
                     : $state->{attachments}{ $output_names[0] };
+                $previous = _texture_surface($previous);
                 @{ $destinations[0]->data } = @{ $previous->data }
                     if defined $previous && @{ $previous->data } == @{ $destinations[0]->data };
                 $draw_op->({
@@ -1003,7 +1191,7 @@ sub _run_state_once {
                     seed       => $seed,
                     blank      => $blank,
                 );
-                if (@destinations > 1) {
+                if ($compiled_chain ? $is_mrt : @destinations > 1) {
                     run_pass_mrt($kernel, $ctx, \@destinations);
                 }
                 else {
@@ -1013,7 +1201,14 @@ sub _run_state_once {
                 }
             }
             for my $index (0 .. $#destinations) {
-                quantize_texture($destinations[$index], _output_format($output_names[$index], $state, $states));
+                my $name = $output_names[$index];
+                my $format = _output_format($name, $state, $states, $group_resources, \%resources);
+                $destinations[$index]->format($format) if $compiled_chain;
+                if ($pass->{blend} && !$pass->{drawMode}) {
+                    my $table = $group_resources && exists $group_resources->{$name} ? $group_resources : $state->{attachments};
+                    blend_pass_output($pass->{blend}, $destinations[$index], _texture_surface($table->{$name}));
+                }
+                quantize_texture($destinations[$index], $format);
                 _store_output($output_names[$index], $destinations[$index], $state, $group_resources);
             }
             $result = $destinations[-1];
@@ -1021,14 +1216,17 @@ sub _run_state_once {
         }
     }
 
-    my %resources = (%{ $state->{attachments} }, %$group_resources);
+    my %resources = (%{ $state->{attachments} }, %{ $group_resources || {} });
     my $domain = $state->{eff}{domain} || 'image';
     my $is_volume_domain = $domain =~ /\Avolume-/ ? 1 : 0;
-    my $image = defined $state->{eff}{outputTex}
-        ? _bundle_output($state->{eff}{outputTex}, $input_bundle->{image}, \%resources)
-        : ($resources{outputTex} || ($is_volume_domain ? $input_bundle->{image} : $last_output));
-    my $volume = _bundle_output($state->{eff}{outputTex3d}, $input_bundle->{volume}, \%resources);
-    my $geometry = _bundle_output($state->{eff}{outputGeo}, $input_bundle->{geometry}, \%resources);
+    my $image_name = $compiled_chain ? _published_name('outputTex', $state) : $state->{eff}{outputTex};
+    my $inherited = $input_bundle->{imageBinding} // $input_bundle->{image};
+    my $image = defined $image_name
+        ? ($compiled_chain && $image_name eq 'inputTex' ? ($resources{inputTex} // $inherited)
+            : _bundle_output($image_name, $inherited, \%resources))
+        : ($resources{outputTex} // ($is_volume_domain ? $inherited : $last_output));
+    my $volume = _texture_surface(_bundle_output($state->{eff}{outputTex3d}, $input_bundle->{volume}, \%resources));
+    my $geometry = _texture_surface(_bundle_output($state->{eff}{outputGeo}, $input_bundle->{geometry}, \%resources));
     my $volume_size = $domain eq 'volume-generator'
         ? ($state->{params}{volumeSize} // (defined $volume ? $volume->width : undef))
         : ($input_bundle->{volumeSize} // $state->{params}{volumeSize}
@@ -1041,15 +1239,26 @@ sub _run_state_once {
             . $volume->width . 'x' . $volume->height . "\n"
             if $volume->width != $volume_size || $volume->height != $expected_height;
     }
-    $result = ($opt{input_was_bundle} || $is_volume_domain)
-        ? {
-            image => $image, volume => $volume, geometry => $geometry,
-            volumeSize => $volume_size,
+    my %channels;
+    if ($compiled_chain) {
+        my $published_image = $image;
+        for my $field (@AGENT_OUTPUTS) {
+            my $input = $AGENT_CHANNELS{$field};
+            my $name = _published_name($field, $state) // $input;
+            my $table = $group_resources && exists $group_resources->{$name} ? $group_resources : $state->{attachments};
+            my $resource = $table->{$name} or next;
+            my $binding = ref($resource) eq $BINDING ? $resource : ($table->{$name} = _binding($resource));
+            $channels{$input} = $binding;
+            $image = $binding if defined $published_image && refaddr($$binding) == refaddr($published_image);
         }
+    }
+    $result = ($opt{input_was_bundle} || $is_volume_domain || keys(%channels) || ref($image) eq $BINDING)
+        ? { image => $image, volume => $volume, geometry => $geometry, volumeSize => $volume_size, %channels }
         : $image;
     die "$state->{effect_id} did not produce outputTex\n"
         if !defined $image && $domain ne 'volume-generator' && $domain ne 'volume-filter';
     if ($state->{self_tex}) {
+        $image = _texture_surface($image);
         unless (@{ $state->{self_tex}->data } == @{ $image->data }) {
             my $self_size = $state->{self_tex}->width . 'x' . $state->{self_tex}->height;
             my $output_size = $image->width . 'x' . $image->height;
@@ -1062,15 +1271,20 @@ sub _run_state_once {
 
 sub _zero_iteration_output {
     my ($input, $width, $height, $state) = @_;
+    my $clone = sub {
+        my $surface = _texture_surface(shift) or return undef;
+        my $copy = $surface->clone;
+        $copy->format($surface->format) if $state && $state->{shared_storage};
+        return $copy;
+    };
     if (_is_chain_bundle($input)) {
         return {
-            image => defined $input->{image} ? $input->{image}->clone : undef,
-            volume => defined $input->{volume} ? $input->{volume}->clone : undef,
-            geometry => defined $input->{geometry} ? $input->{geometry}->clone : undef,
-            volumeSize => $input->{volumeSize},
+            %$input,
+            image => $clone->($input->{image}), volume => $clone->($input->{volume}),
+            geometry => $clone->($input->{geometry}),
         };
     }
-    return $input->clone if defined $input;
+    return $clone->($input) if defined $input;
     if ($state && ($state->{eff}{domain} || '') eq 'volume-generator') {
         my $volume = _destination(
             $state->{eff}, $state->{eff}{outputTex3d}, $state->{params}, $width, $height,
@@ -1146,6 +1360,7 @@ sub render_effect {
 # that must already have been written.
 sub _resolve_surface_marker {
     my ($marker, $current, $surfaces) = @_;
+    return undef unless defined $marker;
     return $current if !ref $marker && $marker eq '@current';
     my $name = $marker->[1];
     my $surf = $surfaces->{$name};
@@ -1153,20 +1368,18 @@ sub _resolve_surface_marker {
     return $surf;
 }
 
-# Mirror the JS renderer's per-step binding: the chain's current image is the
-# effect's inputTex; each surface param is bound by param name (the path
-# render_effect resolves), and external textures (imageTex/textTex/named)
-# pass straight through. Explicit surface args and inputTex-defaults win over
-# them.
+# Surface parameter markers are separate from the chain image and external
+# textures; an explicit none must stay blank even when their names coincide.
 sub _inputs_for_step {
-    my ($step, $current, $surfaces, $external_textures) = @_;
+    my ($step, $current, $surfaces) = @_;
     my $bundle = _chain_bundle($current);
-    my %inputs = %{ $external_textures || {} };
-    $inputs{inputTex}   = $bundle->{image} if defined $bundle->{image};
-    $inputs{inputTex3d} = $bundle->{volume} if defined $bundle->{volume};
-    $inputs{inputGeo}   = $bundle->{geometry} if defined $bundle->{geometry};
+    my $image = $bundle->{imageBinding} // $bundle->{image};
+    my %inputs;
     for my $pname (sort keys %{ $step->{surfaces} }) {
-        my $surf = _resolve_surface_marker($step->{surfaces}{$pname}, $bundle->{image}, $surfaces);
+        my $marker = $step->{surfaces}{$pname};
+        my $surf = _resolve_surface_marker($marker, $image, $surfaces);
+        die "$step->{effect_id} parameter \"$pname\" requires an input surface\n"
+            if defined $marker && !ref($marker) && $marker eq '@current' && !$surf;
         $inputs{$pname} = $surf if defined $surf;
     }
     return \%inputs;
@@ -1174,13 +1387,15 @@ sub _inputs_for_step {
 
 sub _run_effect_step {
     my ($step, $current, $surfaces, $external_textures, $width, $height, $seed, $time,
-        $external_inputs) = @_;
-    my $inputs = _inputs_for_step($step, $current, $surfaces, $external_textures);
-    return render_effect(
-        $step->{effect_id}, $step->{params}, $inputs,
+        $external_inputs, $shared) = @_;
+    my $inputs = _inputs_for_step($step, $current, $surfaces);
+    my $bundle = _chain_bundle($current);
+    my $state = _prepare_state($step, $width, $height, $seed, undef, $bundle, $time, $shared, 0);
+    return _run_state_once($state, $inputs, [$state], undef,
         width => $width, height => $height, seed => $seed, time => $time,
-        external_inputs => $external_inputs,
-    );
+        frame => 0, delta_time => 0, iterated => 0, input_bundle => $bundle,
+        input_was_bundle => _is_chain_bundle($current), external_inputs => $external_inputs,
+        external_textures => $external_textures);
 }
 
 # Upstream (shaders/src/runtime/pipeline.js render()) executes each pass exactly
@@ -1206,7 +1421,7 @@ sub _group_iteration_count {
 
 sub _run_iteration_group {
     my ($group, $group_input, $surfaces, $external_textures, $width, $height, $seed, $time,
-        $external_inputs, $chain_resources) = @_;
+        $external_inputs, $chain_resources, $shared) = @_;
     my $group_input_bundle = _chain_bundle($group_input);
     my @states;
     # The group's stateSize owner is its pointsEmit step, which an animated
@@ -1215,7 +1430,7 @@ sub _run_iteration_group {
     for my $index (0 .. $#{ $group->{steps} }) {
         my $state = _prepare_state(
             $group->{steps}[$index], $width, $height, $seed,
-            $index == 0 ? undef : $owner_state_size, $group_input_bundle, $time,
+            $index == 0 ? undef : $owner_state_size, $group_input_bundle, $time, $shared, 1,
         );
         push @states, $state;
     }
@@ -1240,9 +1455,10 @@ sub _run_iteration_group {
         # zeroed one. An inherited surface of the wrong size (cannot arise in
         # one chain's image stream, but guarded) is dropped and re-created.
         my $inherited = $chain_resources ? $chain_resources->{global_accum} : undef;
-        if ($inherited
-            && ($inherited->width != $input_image->width
-                || $inherited->height != $input_image->height))
+        my $previous = _texture_surface($inherited);
+        if ($previous
+            && ($previous->width != $input_image->width
+                || $previous->height != $input_image->height))
         {
             delete $chain_resources->{global_accum};
             $inherited = undef;
@@ -1263,7 +1479,7 @@ sub _run_iteration_group {
         my $step_input = $group_input;
         for my $state (@states) {
             my $inputs = _inputs_for_step(
-                $state->{step}, $step_input, $surfaces, $external_textures);
+                $state->{step}, $step_input, $surfaces);
             my $step_input_bundle = _chain_bundle($step_input);
             $step_input = _run_state_once(
                 $state, $inputs, \@states, \%group_resources,
@@ -1272,7 +1488,7 @@ sub _run_iteration_group {
                 frame => $iteration, delta_time => iteration_delta_time(), iterated => 1,
                 input_bundle => $step_input_bundle,
                 input_was_bundle => _is_chain_bundle($step_input),
-                external_inputs => $external_inputs,
+                external_inputs => $external_inputs, external_textures => $external_textures,
             );
         }
         $last = $step_input;
@@ -1300,6 +1516,7 @@ sub _run_chain {
     # Each inline chain argument is its own chain scope (a fresh map inside
     # the recursive call).
     my %chain_resources;
+    my $shared = _shared_storage($chain->{steps}, meta()->{effects});
     my $current;
     for my $group (@{ compute_iteration_groups($chain->{steps}, meta()->{effects}) }) {
         my $step = @{ $group->{steps} } == 1 ? $group->{steps}[0] : undef;
@@ -1355,12 +1572,14 @@ sub _run_chain {
                 $current = _run_iteration_group(
                     $group, $current, $surfaces, $external_textures,
                     $width, $height, $seed, $time, $external_inputs,
-                    \%chain_resources,
+                    \%chain_resources, $shared,
                 );
             }
             else {
-                $current = _run_effect_step($step, $current, $surfaces, $external_textures,
-                    $width, $height, $seed, $time, $external_inputs);
+                for my $effect_step (@{ $group->{steps} }) {
+                    $current = _run_effect_step($effect_step, $current, $surfaces, $external_textures,
+                        $width, $height, $seed, $time, $external_inputs, $shared);
+                }
             }
         }
     }

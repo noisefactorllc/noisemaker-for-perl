@@ -9,13 +9,14 @@ package Math::Fractal::Noisemaker::PassRunner;
 # into $out; we store them into the top-down row.
 
 use strict;
+use B ();
 use warnings;
 use Exporter 'import';
 
 use Math::Fractal::Noisemaker::Surface;
 use Math::Fractal::Noisemaker::Runtime;
 
-our @EXPORT_OK = qw(run_pass run_pass_deriv run_pass_mrt);
+our @EXPORT_OK = qw(run_pass run_pass_deriv run_pass_mrt blend_pass_output);
 
 sub _f32 { unpack('f', pack('f', $_[0])) }
 
@@ -58,6 +59,44 @@ sub texture_binding {
 }
 
 package Math::Fractal::Noisemaker::PassRunner;
+
+sub _blend_factor {
+    my ($factor) = @_;
+    my $key = lc($factor // 'one');
+    # GL enum numbers and named strings are distinct descriptor values.
+    return sub { 1 } if $key =~ /\A\d+\z/
+        && !(B::svref_2object(\$factor)->FLAGS & (B::SVf_IOK | B::SVf_NOK));
+    $key =~ tr/_/-/;
+    return sub { 0 } if $key eq '0' || $key eq 'zero';
+    return sub { $_[0] } if $key =~ /\A(?:768|src-color|src)\z/;
+    return sub { 1 - $_[0] } if $key =~ /\A(?:769|one-minus-src-color|one-minus-src)\z/;
+    return sub { $_[2] } if $key eq '770' || $key eq 'src-alpha';
+    return sub { 1 - $_[2] } if $key eq '771' || $key eq 'one-minus-src-alpha';
+    return sub { $_[3] } if $key eq '772' || $key eq 'dst-alpha';
+    return sub { 1 - $_[3] } if $key eq '773' || $key eq 'one-minus-dst-alpha';
+    return sub { $_[1] } if $key =~ /\A(?:774|dst-color|dst)\z/;
+    return sub { 1 - $_[1] } if $key =~ /\A(?:775|one-minus-dst-color|one-minus-dst)\z/;
+    return sub { 1 };
+}
+
+sub blend_pass_output {
+    my ($blend, $surface, $previous) = @_;
+    my ($source_weight, $dest_weight) = map { _blend_factor($_) }
+        ref $blend eq 'ARRAY' ? @{$blend}[0, 1] : ('one', 'one');
+    my $out = $surface->data;
+    my $back = $previous && $previous->width == $surface->width && $previous->height == $surface->height
+        ? $previous->data : undef;
+    for (my $pixel = 0; $pixel < @$out; $pixel += 4) {
+        my $src_alpha = $out->[$pixel + 3];
+        my $dst_alpha = $back ? $back->[$pixel + 3] : 0;
+        for my $i ($pixel .. $pixel + 3) {
+            my $src = $out->[$i];
+            my $dst = $back ? $back->[$i] : 0;
+            $out->[$i] = _f32($src * $source_weight->($src, $dst, $src_alpha, $dst_alpha)
+                + $dst * $dest_weight->($src, $dst, $src_alpha, $dst_alpha));
+        }
+    }
+}
 
 sub run_pass {
     my ($kernel, $ctx, $width, $height) = @_;

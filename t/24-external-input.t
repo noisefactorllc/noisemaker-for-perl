@@ -123,6 +123,37 @@ subtest 'the renderer binds external inputs' => sub {
         'the clear pass is an ordinary kernel');
 };
 
+subtest 'mesh passes respect a positive count uniform, then their count or bound extent' => sub {
+    my @positions = (-1, -1, 0, 0, -1, 0, -1, 1, 0, 0, -1, 0, 1, -1, 0, 0, 1, 0);
+    my $mesh = pack_mesh_data_for_textures(\@positions, [(0, 0, 1) x 6], [(0) x 12], 3, 2);
+    my $def = Math::Fractal::Noisemaker::Renderer::meta()->{effects}{'render/meshRender'};
+    my ($pass) = grep { ($_->{drawMode} || '') eq 'triangles' } @{ $def->{passes} };
+    my %defaults = map { ($_->{uniform} => $_->{default}) } values %{ $def->{params} };
+    my %uniforms = map { $_ => $defaults{ $pass->{uniforms}{$_} } } keys %{ $pass->{uniforms} };
+    my $adapter = Math::Fractal::Noisemaker::MeshRender::get_adapter('render/meshRender', 'render');
+    my $extent = Math::Fractal::Noisemaker::Surface->new(3, 2);
+    for my $case (
+        ['screen', 3, 'meshPositions', 0], [3, undef, 'meshPositions', 0],
+        [undef, undef, 'meshPositions', 0], [3, 6, 'meshPositions', 1],
+        ['screen', 0, 'meshPositions', 1], ['auto', -1, 'inputTex', 1],
+        ['input', 'invalid', 'meshPositions', 1], [3, '6', 'meshPositions', 0],
+        ['screen', undef, undef, 0], [100, undef, 'meshPositions', 1],
+        [3, undef, 'meshPositions', 0, 'aspect'], [3, 6, 'meshPositions', 1, 'aspect'],
+    ) {
+        my ($count, $override, $input, $right, $uniform_name) = @$case;
+        $uniform_name //= 'vertices';
+        my $out = Math::Fractal::Noisemaker::Surface->new(8, 8);
+        $adapter->({
+            destination => $out, uniforms => { %uniforms, $uniform_name => $override },
+            pass => { %$pass, count => $count, countUniform => $uniform_name },
+            inputs => defined($input) ? { $input => $extent } : {},
+            external_inputs => { meshData => { %$mesh, texWidth => 3, texHeight => 2 } },
+        });
+        is_deeply([map { $out->data->[(5 * 8 + $_) * 4 + 3] } (1, 5)],
+            [1, $right], join(' / ', map { defined $_ ? $_ : 'absent' } @$case[0..2]));
+    }
+};
+
 subtest 'random effects never need external inputs' => sub {
     # Load bin/make-noise in a child perl with exit and rand overridden, so rand
     # walks every index of the generator pool once.

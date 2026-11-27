@@ -62,10 +62,10 @@ sub _mashup {
 
 sub _remap {
     my %params = (
-        zoneCount  => { type => 'int',   default => 0,         uniform => 'zoneCount' },
+        zoneCount  => { type => 'int',   default => 0,         uniform => 'zoneCount', min => 0, max => 8 },
         bgColor    => { type => 'color', default => [0, 0, 0], uniform => 'bgColor' },
-        bgAlpha    => { type => 'float', default => 1,         uniform => 'bgAlpha' },
-        smoothEdge => { type => 'float', default => 0.04,      uniform => 'smoothEdge' },
+        bgAlpha    => { type => 'float', default => 1,         uniform => 'bgAlpha', min => 0, max => 1 },
+        smoothEdge => { type => 'float', default => 0.04,      uniform => 'smoothEdge', min => 0, max => 1 },
     );
     my @order = qw(zoneCount bgColor bgAlpha smoothEdge);
     my %inputs;
@@ -74,6 +74,16 @@ sub _remap {
         $params{$name} = { type => 'surface', default => 'none', colorModeUniform => 'zone' . $z . '_active' };
         $inputs{$name} = $name;
         push @order, $name;
+        my $prefix = "zone${z}_";
+        $params{$prefix . 'count'} = { type => 'int', default => 0, min => 0, max => 64, uniform => $prefix . 'count' };
+        $params{$prefix . 'alpha'} = { type => 'float', default => 1, min => 0, max => 1, uniform => $prefix . 'alpha' };
+        $params{$prefix . 'bounds'} = { type => 'vec4', default => [0, 0, 1, 1], uniform => $prefix . 'bounds' };
+        push @order, map { $prefix . $_ } qw(count alpha bounds);
+        for my $pair (0 .. 31) {
+            my $vertex = $prefix . 'v' . $pair;
+            $params{$vertex} = { type => 'vec4', default => [0, 0, 0, 0], uniform => $vertex };
+            push @order, $vertex;
+        }
     }
     return {
         namespace  => 'synth',

@@ -55,7 +55,7 @@ my $run_pixel = sub {
         my ($hashed, $noise);
         $hashed = $rt->construct(3, $rt->binary('^', $rt->construct(1, $rt->swizzle($cell, 'x'), 'uint'), $seed, 1, 'uint'), $rt->binary('^', $rt->construct(1, $rt->swizzle($cell, 'y'), 'uint'), $rt->binary('+', $rt->binary('*', $seed, $rt->i(2654435769), 1, 'uint'), $rt->i(2135587861), 1, 'uint'), 1, 'uint'), $rt->binary('^', $rt->construct(1, $rt->swizzle($cell, 'z'), 'uint'), $rt->binary('+', $rt->binary('*', $seed, $rt->i(1663821211), 1, 'uint'), $rt->i(1542469173), 1, 'uint'), 1, 'uint'), 'uint');
         $noise = $rt->pcg3d($hashed);
-        return $rt->binary('*', $rt->construct(1, $rt->swizzle($noise, 'x')), $g->{UINT32_TO_FLOAT}, 1, 'float');
+        return $rt->binary('*', $rt->swizzle($noise, 'x'), $g->{UINT32_TO_FLOAT}, 1, 'float');
     };
     $periodic_value__float_float = sub {
         my ($time_value, $sample_val) = @_;

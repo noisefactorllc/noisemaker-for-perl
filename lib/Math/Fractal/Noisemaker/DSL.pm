@@ -36,6 +36,7 @@ package Math::Fractal::Noisemaker::DSL;
 use strict;
 use warnings;
 use JSON::PP     ();
+use Hash::Util::FieldHash qw(fieldhash);
 use Scalar::Util qw(looks_like_number);
 use B ();
 use Exporter 'import';
@@ -51,6 +52,11 @@ our @EXPORT_OK = qw(tokenize_dsl parse_dsl compile_dsl);
 my $_UNSUPPORTED_INPUT = bless {}, __PACKAGE__ . '::UnsupportedInput';
 sub _is_unsupported_input { ref($_[0]) eq __PACKAGE__ . '::UnsupportedInput' }
 
+sub _is_boolean_literal {
+    my ($value) = @_;
+    return defined $value && !ref $value && ($value eq 'true' || $value eq 'false') && Scalar::Util::isdual($value);
+}
+
 
 # JSON-style string quoting for diagnostic text, matching Python json.dumps
 # (ascii mode mirrors ensure_ascii=True) so error messages stay byte-equal.
@@ -60,6 +66,10 @@ sub _jq { $_JSON_STR->encode(defined $_[0] ? "$_[0]" : '') }
 
 # Every internal diagnostic goes through the located error object below.
 sub _throw { Math::Fractal::Noisemaker::DSL::Error->throw(@_) }
+
+# Retain hex spelling without blessing the public AST's array references.
+# Fieldhash drops entries when their arrays leave scope.
+fieldhash my %_HEX_COLORS;
 
 # ---- tokenizer (port of dsl/tokenizer.py tokenize_dsl) ----
 
@@ -149,10 +159,10 @@ sub tokenize_dsl {
             $push_tok->('string', $value, $location, $value);
             next;
         }
-        if ($char eq '"') {
-            $advance->();
+        if ($char eq '"' || $char eq "'") {
+            my $quote = $advance->();
             my $value = '';
-            while ($index < $length && substr($source, $index, 1) ne '"') {
+            while ($index < $length && substr($source, $index, 1) ne $quote) {
                 if (substr($source, $index, 1) eq "\n") {
                     _throw('Unterminated string', $location);
                 }
@@ -243,6 +253,7 @@ sub _parse_color {
     }
     my @values = map { hex(substr($hexit, $_, 2)) / 255 } (0, 2, 4);
     push @values, hex(substr($hexit, 6, 2)) / 255 if length($hexit) == 8;
+    $_HEX_COLORS{\@values} = 1;
     return \@values;
 }
 
@@ -283,10 +294,11 @@ sub previous { $_[0]{tokens}[ $_[0]{current} - 1 ] }
 
 sub at_end { $_[0]->peek->{type} eq 'eof' }
 
-sub check { $_[0]->peek->{lexeme} eq $_[1] }
+sub check { $_[0]->peek->{type} ne 'string' && $_[0]->peek->{lexeme} eq $_[1] }
 
 sub match {
     my ($self, @lexemes) = @_;
+    return 0 if $self->peek->{type} eq 'string';
     my $lex = $self->peek->{lexeme};
     return 0 unless grep { $_ eq $lex } @lexemes;
     $self->{current}++;
@@ -378,6 +390,8 @@ sub parse_binding {
     my $value;
     if ($self->peek->{type} eq 'identifier' && $self->peek(1)->{lexeme} eq '(') {
         $value = $self->parse_call;
+        $value = $self->parse_expression_chain($value)
+            if ($value->{name} eq 'read' || $value->{name} eq 'read3d') && $self->is_punctuation('.');
     }
     else {
         $value = $self->parse_value_expression;
@@ -423,14 +437,26 @@ sub parse_write3d {
     my $volume = $reference->();
     $self->consume(',');
     my $geometry = $reference->();
+    my @args = map { { name => undef, value => $_, loc => $_->{loc} } } ($volume, $geometry);
+    $self->parse_io_element_id(\@args);
     $self->consume(')');
     return {
         kind    => 'Call',
         name    => 'write3d',
-        args    => [ map { { name => undef, value => $_, loc => $_->{loc} } } ($volume, $geometry) ],
+        args    => \@args,
         argMode => 'positional',
         loc     => _location($name),
     };
+}
+
+sub parse_io_element_id {
+    my ($self, $args) = @_;
+    return 0 unless $self->check(',') && $self->peek(1)->{type} eq 'identifier'
+        && $self->peek(1)->{lexeme} eq '_id' && $self->peek(2)->{type} eq 'punctuation'
+        && $self->peek(2)->{lexeme} eq ':';
+    $self->{current} += 3;
+    push @$args, $self->parse_argument('_id');
+    return 1;
 }
 
 sub at_subchain {
@@ -504,6 +530,12 @@ sub parse_subchain {
     return { kind => 'Subchain', name => $meta{name}, id => $meta{id}, body => \@body, loc => _location($start) };
 }
 
+sub parse_argument {
+    my ($self, $name) = @_;
+    my $start = $self->peek;
+    return { name => $name, value => $self->parse_value_expression, loc => _location($start) };
+}
+
 sub parse_call {
     my ($self) = @_;
     my $name = $self->identifier('Expected effect or IO function name');
@@ -513,6 +545,8 @@ sub parse_call {
     if (!$self->check(')')) {
         while (1) {
             my $is_named = $self->peek->{type} eq 'identifier' && $self->peek(1)->{lexeme} eq ':';
+            _throw('write() requires a positional surface before _id', _location($self->peek))
+                if $name->{lexeme} eq 'write' && $is_named && $self->peek->{lexeme} eq '_id';
             my $next_mode = $is_named ? 'named' : 'positional';
             # Upstream's parseCall lets the midi() and audio() value calls mix
             # positional and keyword arguments (`allowMixed`); every other call
@@ -526,9 +560,17 @@ sub parse_call {
                 $arg_name = $self->identifier->{lexeme};
                 $self->consume(':');
             }
-            my $start = $self->peek;
-            push @args, { name => $arg_name, value => $self->parse_value_expression, loc => _location($start) };
-            last unless $self->match(',');
+            push @args, $self->parse_argument($arg_name);
+            if ($mode eq 'positional' && $name->{lexeme} eq 'write') {
+                $self->parse_io_element_id(\@args);
+                last;
+            }
+            if ($mode eq 'positional' && ($name->{lexeme} eq 'read' || $name->{lexeme} eq 'read3d')
+                && $self->parse_io_element_id(\@args)) {
+                $self->match(',');
+                last;
+            }
+            last unless $self->match(',') && !$self->check(')');
         }
     }
     $self->consume(')');
@@ -559,7 +601,7 @@ sub parse_value_expression {
     my ($self, $min_precedence) = @_;
     $min_precedence = 0 unless defined $min_precedence;
     my $left = $self->parse_value_unary;
-    while (1) {
+    while ($self->peek->{type} eq 'operator') {
         my $lex = $self->peek->{lexeme};
         my $prec = exists $_PRECEDENCE{$lex} ? $_PRECEDENCE{$lex} : -1;
         last if $prec < $min_precedence;
@@ -603,12 +645,10 @@ sub parse_value_primary {
         return $token->{value};
     }
     if ($token->{lexeme} eq 'true' || $token->{lexeme} eq 'false') {
-        # Upstream keeps JS booleans in the AST; the Perl parser keeps the
-        # 'true'/'false' token string so automation fields can gate boolean
-        # coercion (allowBoolean). _evaluate_value lowers it to 1/0 where a
-        # raw value is consumed.
+        # Keep the public AST spelling while distinguishing true from "true".
+        # Only the keyword carries a numeric value alongside its string.
         $self->{current}++;
-        return $token->{lexeme};
+        return Scalar::Util::dualvar($token->{lexeme} eq 'true' ? 1 : 0, $token->{lexeme});
     }
     if ($token->{type} eq 'color') {
         $self->{current}++;
@@ -622,7 +662,7 @@ sub parse_value_primary {
         if (!$self->check(']')) {
             while (1) {
                 push @values, $self->parse_value_expression;
-                last unless $self->match(',');
+                last unless $self->match(',') && !$self->check(']');
             }
         }
         $self->consume(']');
@@ -647,51 +687,34 @@ sub parse_value_primary {
         my $name = $token->{lexeme};
         # A one-argument `read3d(vol0)` names a volume or geometry for a parameter,
         # as upstream's validator reads it. With two arguments it starts a chain.
-        if ($name eq 'read3d' && $self->is_punctuation('(')) {
+        if (($name eq 'read3d' || $name eq 'read') && $self->is_punctuation('(')) {
             $self->{current}--;
             my $call = $self->parse_call;
-            if (@{ $call->{args} } == 1 && ref($call->{args}[0]{value}) eq 'HASH'
-                && ($call->{args}[0]{value}{kind} // '') eq 'identifier') {
-                return $call->{args}[0]{value};
+            return $self->parse_expression_chain($call) if $self->is_punctuation('.');
+            my @targets = grep { ($_->{name} // '') !~ /\A_(?:id|skip)\z/ } @{ $call->{args} };
+            my $target = @targets == 1 ? $targets[0] : undef;
+            my $value = $target && $target->{value};
+            if ($name eq 'read3d') {
+                return $value if ref $value eq 'HASH' && $value->{kind} eq 'identifier';
+                return $self->parse_expression_chain($call);
             }
-            return $self->parse_expression_chain($call);
+            _throw('Expected surface reference', $call->{loc})
+                unless Math::Fractal::Noisemaker::DSL::_is_surface($value);
+            _throw('read() surface argument must be named "surface" or "tex"', $target->{loc})
+                if defined $target->{name} && $target->{name} ne 'tex' && $target->{name} ne 'surface';
+            return $value;
         }
         # MIDI/audio calls are parsed only for unsupported-input warnings.
         if ($name =~ /\A(?:osc|midi|audio)\z/ && $self->peek->{lexeme} eq '(') {
             $self->{current}--;
             return $self->parse_call;
         }
-        if ($name eq 'read' && $self->match('(')) {
-            if ($self->peek->{type} eq 'identifier' && $self->peek(1)->{lexeme} eq ':') {
-                my $argument_name = $self->identifier->{lexeme};
-                if ($argument_name ne 'surface' && $argument_name ne 'tex') {
-                    _throw('read() surface argument must be named "surface" or "tex"',
-                        _location($self->previous));
-                }
-                $self->consume(':');
-            }
-            my $surface = $self->parse_surface;
-            $self->consume(')');
-            # `read(oN).effect()` in a value position is a chain argument that starts
-            # from the surface. A bare `read(oN)` stays a plain surface reference.
-            if ($self->is_punctuation('.')) {
-                my $read = {
-                    kind    => 'Call',
-                    name    => 'read',
-                    args    => [ { name => undef, value => $surface, loc => $surface->{loc} } ],
-                    argMode => 'positional',
-                    loc     => _location($token),
-                };
-                return $self->parse_expression_chain($read);
-            }
-            return $surface;
-        }
         if (($name eq 'vec2' || $name eq 'vec3' || $name eq 'vec4') && $self->match('(')) {
             my @values;
             if (!$self->check(')')) {
                 while (1) {
                     push @values, $self->parse_value_expression;
-                    last unless $self->match(',');
+                    last unless $self->match(',') && !$self->check(')');
                 }
             }
             $self->consume(')');
@@ -861,10 +884,10 @@ sub _evaluate_value {
     if (ref $value eq 'ARRAY') {
         return [map { _evaluate_value($_, $bindings, $osc_depth) } @$value];
     }
-    if (!ref $value && ($value eq 'true' || $value eq 'false')) {
+    if (_is_boolean_literal($value)) {
         # A boolean literal lowers to 1/0 where a raw value is consumed
         # (effect args, let bindings, osc() number fields).
-        return $value eq 'true' ? 1 : 0;
+        return 0 + $value;
     }
     return $value unless ref $value eq 'HASH';
     my $kind = defined $value->{kind} ? $value->{kind} : '';
@@ -946,33 +969,116 @@ sub _compile_inline_chain {
     return { kind => 'surface', name => $surface, loc => $chain->{loc} };
 }
 
+# Follow value aliases without evaluating discarded expressions or inline chains.
+sub _bound_expression {
+    my ($value, $bindings) = @_;
+    my %seen;
+    while (ref $value eq 'HASH' && $value->{kind} eq 'identifier' && !$seen{ $value->{name} }++) {
+        my $binding = $bindings->{ $value->{name} };
+        last unless $binding && $binding->{kind} eq 'value';
+        $value = $binding->{expr};
+    }
+    return $value;
+}
+
+sub _capture_hex_colors {
+    my ($value, $bindings) = @_;
+    if (ref $value eq 'HASH' && $value->{kind} eq 'Call') {
+        my @args = map { { %$_, value => _capture_hex_colors($_->{value}, $bindings) } } @{ $value->{args} };
+        return { %$value, args => \@args };
+    }
+    if (ref $value eq 'HASH' && $value->{kind} eq 'Chain') {
+        my @calls = map { _capture_hex_colors($_, $bindings) } @{ $value->{calls} };
+        return { %$value, calls => \@calls };
+    }
+    my $resolved = _bound_expression($value, $bindings);
+    return ref $resolved eq 'ARRAY' && $_HEX_COLORS{$resolved} ? $resolved : $value;
+}
+
 sub _resolve_args {
-    my ($args, $bindings) = @_;
-    return [map { { %$_, value => _evaluate_value($_->{value}, $bindings) } } @$args];
+    my ($args, $bindings, $call, $spec) = @_;
+    my @resolved;
+    for my $index (0 .. $#$args) {
+        my $arg = $args->[$index];
+        my $expr = _bound_expression($arg->{value}, $bindings);
+        if ($spec && ref $expr eq 'HASH' && $expr->{kind} eq 'Chain'
+            && grep { $_->{kind} ne 'Call' || $_->{name} eq 'read' || $_->{name} eq 'read3d' } @{ $expr->{calls} }) {
+            my $name = $arg->{name} // $spec->{paramOrder}[$index];
+            $name = $spec->{paramAliases}{$name} // $name if $spec->{paramAliases} && defined $arg->{name};
+            _throw("Chain for argument '$name' in $call->{name}() may contain only effect calls", $expr->{loc}, 'S001');
+        }
+        push @resolved, { %$arg, value => _evaluate_value($arg->{value}, $bindings) };
+    }
+    return \@resolved;
+}
+
+sub _merge_args {
+    my ($stored, $call) = @_;
+    return { %$call, name => $stored->{name} } unless $stored->{argMode};
+    return { %$stored, loc => $call->{loc} } unless $call->{argMode};
+    my @args = (@{ $stored->{args} }, @{ $call->{args} });
+    if ($stored->{argMode} eq 'positional' && $call->{argMode} eq 'positional') {
+        return { %$call, name => $stored->{name}, args => \@args };
+    }
+
+    my (@positional, %named, @order);
+    for my $arg (@args) {
+        my $name = $arg->{name};
+        if (defined $name) {
+            push @order, $name unless exists $named{$name};
+            $named{$name} = $arg;
+        }
+        else { push @positional, $arg }
+    }
+    my $merged = { %$call, name => $stored->{name}, args => [@positional, @named{@order}],
+                   argMode => @positional ? 'merged' : 'named' };
+    if (@positional && grep { defined $_->{name} && $_->{name} !~ /\A_(?:id|skip)\z/ } @{ $stored->{args} }) {
+        $merged->{colorSplatLimit} = $stored->{colorSplatLimit} // scalar grep { !defined $_->{name} } @{ $stored->{args} };
+    }
+    return $merged;
 }
 
 sub _merge_partial {
     my ($stored, $call) = @_;
-    if (!$stored->{argMode}) {
-        return { %$call, name => $stored->{name} };
+    my $merged = _merge_args($stored, $call);
+    my $namespace = $call->{namespace} // $stored->{namespace};
+    $merged->{namespace} = $namespace if defined $namespace;
+    return $merged;
+}
+
+sub _effect_arguments {
+    my ($call, $spec, $bindings) = @_;
+    my $names = $spec->{paramOrder};
+    my @positional = grep { !defined $_->{name} } @{ $call->{args} };
+    my @named = grep { defined $_->{name} } @{ $call->{args} };
+    if (@positional > @$names) {
+        warn "Too many positional arguments for $call->{name}(): '$call->{name}' takes " . scalar(@$names) . "\n";
+        splice @positional, scalar @$names;
     }
-    if (!$call->{argMode}) {
-        return { %$stored, loc => $call->{loc} };
+
+    # Hex at a scalar r/g/b triple supplies its three indexed channels. Any
+    # subsequent positionals keep their original parameter index.
+    for my $r (0 .. $#positional) {
+        next unless $names->[$r] eq 'r';
+        last if $r >= ($call->{colorSplatLimit} // scalar @$names) || $r + 2 >= @$names
+            || $names->[$r + 1] ne 'g' || $names->[$r + 2] ne 'b' || $spec->{params}{r}{type} eq 'color';
+        my $arg = $positional[$r];
+        my $color = _bound_expression($arg->{value}, $bindings);
+        if (ref $color eq 'ARRAY' && $_HEX_COLORS{$color}) {
+            splice @positional, $r, 3, map { { %$arg, value => $_ } } @$color[0..2];
+        }
+        last;
     }
-    if ($stored->{argMode} ne $call->{argMode}) {
-        _throw('Partial and call arguments must use the same named or positional form', $call->{loc});
+    return [@positional, @named] unless ($call->{argMode} // '') eq 'merged';
+
+    my $aliases = $spec->{paramAliases} // {};
+    my %overridden = map { ($aliases->{$_->{name}} // $_->{name}) => 1 } @named;
+    my @indexed;
+    for my $index (0 .. $#positional) {
+        my $name = $names->[$index];
+        push @indexed, { %{ $positional[$index] }, name => $name } unless $overridden{$name};
     }
-    if ($stored->{argMode} eq 'positional') {
-        return { %$call, name => $stored->{name}, args => [@{ $stored->{args} }, @{ $call->{args} }] };
-    }
-    # Named merge preserves Python dict-update order: stored names first (a
-    # re-supplied name keeps its slot, value overridden), new names appended.
-    my (%merged, @order);
-    for my $arg (@{ $stored->{args} }, @{ $call->{args} }) {
-        push @order, $arg->{name} unless exists $merged{ $arg->{name} };
-        $merged{ $arg->{name} } = $arg;
-    }
-    return { %$call, name => $stored->{name}, args => [map { $merged{$_} } @order], argMode => 'named' };
+    return [@indexed, @named];
 }
 
 sub _resolve_effect {
@@ -1006,7 +1112,7 @@ sub _surface_marker {
 my $ALIAS_EOL_DATE = '2027-06-01';
 
 sub _normalize_effect {
-    my ($effect_id, $spec, $args) = @_;
+    my ($effect_id, $spec, $args, $loc) = @_;
     my $param_specs = $spec->{params};
     my $param_names = $spec->{paramOrder};
     my $aliases = $spec->{paramAliases};
@@ -1055,6 +1161,10 @@ sub _normalize_effect {
     }
     for my $name (@$param_names) {
         my $pspec = $param_specs->{$name};
+        if (ref $params{$name} eq 'ARRAY' && ref $pspec eq 'HASH') {
+            _throw("Parameter \"$name\" must be a finite number", $loc) if $pspec->{type} eq 'float';
+            _throw("Parameter \"$name\" must be an integer", $loc) if $pspec->{type} eq 'int';
+        }
         next unless ref $pspec eq 'HASH' && defined $pspec->{type} && $pspec->{type} eq 'surface';
         next if $provided{$name} || !exists $pspec->{default};
         my $marker = _surface_marker($pspec->{default}, $name, undef);
@@ -1102,28 +1212,11 @@ sub _compile_chain {
     my $has_volume            = 0;
     my $starts_with_generator = 0;
     my $open_loop;
-    my $calls = $chain->{calls};
     # A subchain block contributes its body calls in place. Upstream's validator
     # wraps them in `_subchain_begin`/`_subchain_end` markers, which its expander
     # passes through without a render pass; the body's calls take the subchain's
     # position and the following calls shift, as upstream's flatMap does.
-    my @flat_calls;
-    my $pos = 0;
-    while ($pos <= $#$calls) {
-        my $call = $calls->[ $pos++ ];
-        if (($call->{kind} // '') eq 'Subchain') {
-            my $binding = $bindings->{ $call->{name} // '' };
-            if (defined $binding) {
-                _throw("Binding \"$call->{name}\" is not callable", $call->{loc})
-                    unless $binding->{kind} eq 'partial';
-                $call = _merge_partial($binding->{call}, $call);
-            }
-            splice @$calls, $pos, 0, @{ $call->{body} };
-            next;
-        }
-        push @flat_calls, $call;
-    }
-    $calls = \@flat_calls;
+    my $calls = [map { $_->{kind} eq 'Subchain' ? @{ $_->{body} } : $_ } @{ $chain->{calls} }];
     for my $index (0 .. $#$calls) {
         my $call = $calls->[$index];
         my $binding = $bindings->{ $call->{name} };
@@ -1139,6 +1232,33 @@ sub _compile_chain {
                 $call = _merge_partial($binding->{call}, $call);
             }
         }
+        my $read = $call->{name} eq 'read' || $call->{name} eq 'read3d';
+        my (%metadata, @parameters);
+        for my $arg (@{ $call->{args} }) {
+            my $name = $arg->{name} // '';
+            if ($name eq '_id') {
+                delete $metadata{_id};
+                my $id = $arg->{value};
+                $metadata{_id} = $id if !ref $id && !_is_boolean_literal($id)
+                    && $id =~ /\A[A-Za-z][A-Za-z0-9_]*\z/ && !_is_number($id);
+                next;
+            }
+            if ($name eq '_skip') {
+                my $keyword = _is_boolean_literal($arg->{value});
+                if ($read) {
+                    delete $metadata{_skip};
+                    $metadata{_skip} = JSON::PP::true if $keyword && $arg->{value} eq 'true';
+                    next;
+                }
+                next if $keyword && $arg->{value} eq 'false';
+            }
+            push @parameters, $arg;
+        }
+        $call = { %$call, args => \@parameters };
+        my $namespaces = $call->{namespace} ? [ $call->{namespace} ] : $search;
+        my $effect_id = _resolve_effect($call->{name}, $namespaces, $effects);
+        my $spec = defined $effect_id ? $effects->{$effect_id} : undef;
+        my $raw = $spec ? _effect_arguments($call, $spec, $bindings) : \@parameters;
         # Chain arguments compile while this call's arguments resolve; they
         # belong to this call (upstream swaps bindings.pending around
         # resolveArgs and restores it in a finally).
@@ -1146,14 +1266,14 @@ sub _compile_chain {
         my $inline_chains;
         {
             local $_SCOPE->{pending} = [];
-            $args = _resolve_args($call->{args}, $bindings);
+            $args = _resolve_args($raw, $bindings, $call, $spec);
             $inline_chains = $_SCOPE->{pending};
         }
         if ($call->{name} eq 'read') {
             if ($index != 0 || @$args != 1 || !_is_surface($args->[0]{value})) {
                 _throw('read(surface) must begin a chain', $call->{loc});
             }
-            push @steps, { kind => 'read', surface => $args->[0]{value}{name}, loc => $call->{loc} };
+            push @steps, { %metadata, kind => 'read', surface => $args->[0]{value}{name}, loc => $call->{loc} };
             $has_input = 1;
             $has_image = 1;
             next;
@@ -1163,7 +1283,7 @@ sub _compile_chain {
             if (!$has_image || @$args != 1 || !_is_surface($args->[0]{value})) {
                 _throw('write(surface) requires a current image', $call->{loc});
             }
-            push @steps, { kind => 'write', surface => $args->[0]{value}{name}, loc => $call->{loc} };
+            push @steps, { %metadata, kind => 'write', surface => $args->[0]{value}{name}, loc => $call->{loc} };
             next;
         }
         # Built-in volume I/O (upstream `_write3d` and `_read3d`). write3d stores the
@@ -1178,6 +1298,7 @@ sub _compile_chain {
             my $references = _volume_references($call);
             _throw('Expected surface reference', $call->{loc}) unless $references;
             push @steps, {
+                %metadata,
                 kind     => 'write3d',
                 volume   => $references->[0],
                 geometry => $references->[1],
@@ -1187,6 +1308,7 @@ sub _compile_chain {
         }
         if ($index == 0 && $call->{name} eq 'read3d' && (my $references = _read3d_references($call))) {
             push @steps, {
+                %metadata,
                 kind     => 'read3d',
                 volume   => $references->[0],
                 geometry => $references->[1],
@@ -1194,16 +1316,12 @@ sub _compile_chain {
             };
             $has_input = 1;
             $has_volume = 1;
-            $has_image = 1;
             next;
         }
-        my $namespaces = $call->{namespace} ? [ $call->{namespace} ] : $search;
-        my $effect_id = _resolve_effect($call->{name}, $namespaces, $effects);
         if (!defined $effect_id) {
             _throw("Unknown effect \"$call->{name}\" in search namespaces " . join(', ', @$namespaces),
                 $call->{loc});
         }
-        my $spec = $effects->{$effect_id};
         my $domain = $spec->{domain} || 'image';
         if ($domain eq 'volume-generator') {
             if ($index != 0 && !($spec->{iterated} && $has_volume)) {
@@ -1251,8 +1369,9 @@ sub _compile_chain {
             $has_input = 1;
             $has_image = 1;
         }
-        my ($params, $surfaces) = _normalize_effect($effect_id, $spec, $args);
+        my ($params, $surfaces) = _normalize_effect($effect_id, $spec, $args, $call->{loc});
         my %step = (
+            %metadata,
             kind      => 'effect',
             effect_id => $effect_id,
             params    => $params,
@@ -1310,10 +1429,15 @@ sub compile_dsl {
         my $value = $binding->{value};
         if (ref $value eq 'HASH' && ($value->{kind} // '') eq 'Call'
             && $value->{name} !~ /\A(?:osc|midi|audio)\z/) {
-            # A partial keeps its call unresolved. Its arguments resolve where
-            # it is called, as upstream's validator substitutes a symbol at
-            # each use (compiler.js declareBinding).
-            $bindings{ $binding->{name} } = { kind => 'partial', call => $value };
+            my $call = _capture_hex_colors($value, \%bindings);
+            my $previous = $bindings{ $call->{name} };
+            if ($previous && $previous->{kind} eq 'partial') {
+                $call = _merge_partial($previous->{call}, $call);
+            }
+            elsif ($previous && $previous->{kind} eq 'alias') {
+                $call = { %$call, name => $previous->{name} };
+            }
+            $bindings{ $binding->{name} } = { kind => 'partial', call => $call };
             return;
         }
         if (my $alias = $alias_binding->($value)) {
@@ -1328,7 +1452,9 @@ sub compile_dsl {
             && !defined _resolve_effect($value->{name}, $ast->{search}, $effects)) {
             _throw("Variable used before assignment: '$value->{name}'", $value->{loc});
         }
-        $bindings{ $binding->{name} } = { kind => 'value', expr => $value, resolved => 0, value => undef };
+        $bindings{ $binding->{name} } = {
+            kind => 'value', expr => _capture_hex_colors($value, \%bindings), resolved => 0, value => undef,
+        };
     };
 
     my $declare_through = sub {
@@ -1381,12 +1507,13 @@ use overload
     fallback => 1;
 
 sub new {
-    my ($class, $message, $location) = @_;
+    my ($class, $message, $location, $code) = @_;
     $location = {} unless ref $location eq 'HASH';
     my $source_name = defined $location->{sourceName} ? $location->{sourceName} : '<dsl>';
     my $line        = defined $location->{line}       ? $location->{line}       : 1;
     my $column      = defined $location->{column}     ? $location->{column}     : 1;
     return bless {
+        (defined $code ? (code => $code) : ()),
         message     => "$source_name:$line:$column: $message\n",
         source_name => $source_name,
         line        => $line,
@@ -1400,6 +1527,7 @@ sub message     { $_[0]{message} }
 sub source_name { $_[0]{source_name} }
 sub line        { $_[0]{line} }
 sub column      { $_[0]{column} }
+sub code        { $_[0]{code} }
 
 1;
 

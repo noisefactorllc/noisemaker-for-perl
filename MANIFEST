@@ -401,3 +401,7 @@ t/35-param-aliases.t
 t/data/cpu-adapter-sync/median-radius-2.rgba
 t/data/cpu-adapter-sync/median-radius-3.rgba
 t/data/cpu-adapter-sync/median-radius-1.rgba
+lib/Math/Fractal/Noisemaker/Remap.pm
+t/06-dsl-stable-bindings.t
+t/37-texture-handoffs.t
+t/38-remap.t

@@ -230,6 +230,44 @@ sub read_fixture {
     return scalar <$fh>;
 }
 
+subtest 'CDN refreshes published texture names in an old cache' => sub {
+    my $dir = tempdir(CLEANUP => 1);
+    make_path("$dir/test/effects/synth");
+    write_fixture("$dir/test/effects/synth/probe.json", encode_json({
+        namespace => 'synth', func => 'probe', params => {}, paramOrder => [],
+    }));
+    my $requests = 0;
+    no warnings 'redefine';
+    local *Math::Fractal::Noisemaker::Transpiler::CDN::cache_root = sub { $dir };
+    local *Math::Fractal::Noisemaker::Transpiler::CDN::_fetch_text = sub {
+        ++$requests;
+        return q!const e={namespace:"synth",func:"probe",globals:{},passes:[{inputs:{outputGeo:"map"},outputs:{z:"first",outputTex:"work"}},{storageTextures:{z:"global_a",a:"global_b"}}],textures:{zAnchor:{width:3},aAux:{width:{inputOverride:"zAnchor"}}},outputTex:"final",outputTex3d:"vol",outputGeo:"geo",outputXyz:"xyz",outputVel:"vel",outputRgba:"rgba"};!;
+    };
+    for (1..2) {
+        my $effect = Math::Fractal::Noisemaker::Transpiler::CDN::fetch_effect('synth/probe', 'test');
+        is_deeply([@$effect{qw(outputTex outputTex3d outputGeo outputXyz outputVel outputRgba)}],
+            [qw(final vol geo xyz vel rgba)], 'published names survive a cold or warm read');
+        is_deeply($effect->{textureOrder}, [qw(zAnchor aAux)], 'texture declaration order survives the cache');
+        is_deeply($effect->{passes}[1]{storageTextureOrder}, [qw(z a)], 'storage binding order survives the cache');
+        is_deeply($effect->{passes}[0]{outputOrder}, [qw(z outputTex)], 'fragment attachment order survives the cache');
+    }
+    is($requests, 1, 'the old cache is refreshed once');
+    my $nested = q!const e={func:"probe",passes:[{inputs:{outputGeo:"map"},outputs:{outputTex:"work"}}]}!;
+    my $fields = Math::Fractal::Noisemaker::Transpiler::CDN::_descriptor_fields(\$nested, 'synth/probe');
+    ok(!exists($fields->{outputGeo}) && !exists($fields->{outputTex}), 'pass fields cannot publish a texture');
+    my $class = q!class E { constructor(){set(this,"func","probe");set(this,"outputTex","final")} }!;
+    $fields = Math::Fractal::Noisemaker::Transpiler::CDN::_descriptor_fields(\$class, 'synth/probe');
+    is(Math::Fractal::Noisemaker::Transpiler::CDN::_read_literal(\$class, $fields->{outputTex}),
+        'final', 'emitted class fields publish their configured texture');
+    for my $invalid ('""', '"   "', '7', 'null') {
+        local *Math::Fractal::Noisemaker::Transpiler::CDN::_fetch_text = sub {
+            return qq!const e={namespace:"synth",func:"invalid",globals:{},passes:[],outputVel:$invalid}!;
+        };
+        eval { Math::Fractal::Noisemaker::Transpiler::CDN::fetch_effect('synth/invalid', 'test') };
+        like($@, qr/outputVel must be a non-empty string/, "rejects explicit $invalid as a published texture");
+    }
+};
+
 subtest 'authored stateful metadata retains its newly compiled kernel' => sub {
     my $dir = tempdir(CLEANUP => 1);
     make_path("$dir/kernels/perl");
@@ -267,7 +305,7 @@ subtest 'authored stateful metadata retains its newly compiled kernel' => sub {
         $escaped =~ s/`/\\`/g;
         my $cdn = 'stateStep:{glsl:`' . $escaped . '`},unused:{glsl:`invalid GLSL {`}';
         my $programs = Math::Fractal::Noisemaker::Transpiler::CDN::_extract_programs(\$cdn);
-        return {namespace => 'synth', func => 'fixture',
+        return {namespace => 'synth', func => 'fixture', outputXyz => 'state',
             params => $id eq 'synth/reactionDiffusion' ? {}
                 : {cellWidth => {type => 'int', define => 'CW', default => 41}}, textures => {},
             passes => [{program => $id eq 'synth/reactionDiffusion' ? 'unused' : 'main'}],
@@ -278,8 +316,9 @@ subtest 'authored stateful metadata retains its newly compiled kernel' => sub {
     is_deeply(\@fetched, ['synth/fixture', 'synth/reactionDiffusion'],
         'a subset build also fetches the preserved authored stateful kernel');
     my $meta = decode_json(read_fixture("$dir/metadata.json"));
-    is_deeply($meta->{effects}{'synth/reactionDiffusion'}, $stateful,
-        'authored pass scheduling, bindings, params, and textures stay intact');
+    is_deeply($meta->{effects}{'synth/reactionDiffusion'}, { %$stateful, outputXyz => 'state' },
+        'the rebuilt stateful graph publishes the selected version\'s texture');
+    is($meta->{effects}{'synth/fixture'}{outputXyz}, 'state', 'ordinary definitions also publish agent channels');
     my $kernel = Math::Fractal::Noisemaker::KernelCache::load_kernel(
         read_fixture("$dir/kernels/perl/synth__reactionDiffusion__stateStep.pl"), 'rebuilt authored fixture');
     my @pixel;

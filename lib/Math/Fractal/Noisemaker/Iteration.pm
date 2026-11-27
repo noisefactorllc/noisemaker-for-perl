@@ -44,8 +44,10 @@ sub _references_particle_state {
     my ($step, $effects) = @_;
     my $definition = _definition($step, $effects);
     for my $pass (@{ $definition->{passes} || [] }) {
-        for my $name (values %{ $pass->{inputs} || {} }, values %{ $pass->{outputs} || {} }) {
-            return 1 if is_particle_state_name($name);
+        my $outputs = $pass->{outputs};
+        $outputs = $pass->{storageTextures} unless $outputs && keys %$outputs;
+        for my $name (values %{ $pass->{inputs} || {} }, values %{ $outputs || {} }) {
+            return 1 if is_particle_state_name($name) || ($name // '') =~ /\Ainput(?:Xyz|Vel|Rgba)\z/;
         }
     }
     return 0;
@@ -102,13 +104,14 @@ sub group_owner_state_size {
         }
     }
     $owner ||= $steps->[0];
-    return undef unless exists $owner->{params}{stateSize};
     my $spec = (_definition($owner, $effects)->{params} || {})->{stateSize};
+    my $size = $owner->{params}{stateSize} // ($spec || {})->{default};
+    return undef unless defined $size;
     # Upstream plan params are compile-normalized, so cpu's groupOwnerStateSize
     # returns a number (x64 -> 64). The port keeps raw DSL values in the plan;
     # coerce against the owner's own spec so joining steps inherit the resolved
     # size (a joining step's spec need not share the owner's choices).
-    return $coerce ? $coerce->($spec, $owner->{params}{stateSize}) : $owner->{params}{stateSize};
+    return $coerce ? $coerce->($spec, $size) : $size;
 }
 
 sub compute_iteration_groups {

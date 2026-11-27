@@ -26,6 +26,7 @@ my $run_pixel = sub {
     $g->{PI} = $rt->f(3.1415926535897931);
     $g->{MAX_STEPS} = $rt->i(256);
     $g->{MAX_DIST} = $rt->f(10);
+    $g->{MARCHER_LIGHT_X} = $rt->f(1);
     $atlasTexel__ivec3_int = sub {
         my ($p, $volSize) = @_;
         $p = $rt->copy($p, 'int');
@@ -293,7 +294,7 @@ my $run_pixel = sub {
         $rd = $rt->copy($rd, 'float');
         my ($amb, $baseColor, $colorVariance, $diff, $halfVec, $lightDir, $n, $rim, $spec, $volColor);
         $n = $calcNormal__vec3->($p);
-        $lightDir = $rt->normalize($rt->construct(3, $rt->f(1), $rt->f(1), $rt->unary('-', $rt->f(1))));
+        $lightDir = $rt->normalize($rt->construct(3, $g->{MARCHER_LIGHT_X}, $rt->f(1), $rt->unary('-', $rt->f(1))));
         $diff = $rt->component_wise('max', $rt->dot($n, $lightDir), $rt->f(0));
         $amb = $rt->f(0.14999999999999999);
         $halfVec = $rt->normalize($rt->binary('-', $lightDir, $rd, 3, 'float'));
@@ -314,7 +315,7 @@ my $run_pixel = sub {
         $n = $rt->copy($n, 'float');
         $voxel = $rt->copy($voxel, 'int');
         my ($amb, $baseColor, $colorVariance, $diff, $faceShade, $lightDir, $volColor);
-        $lightDir = $rt->normalize($rt->construct(3, $rt->f(1), $rt->f(1), $rt->unary('-', $rt->f(1))));
+        $lightDir = $rt->normalize($rt->construct(3, $g->{MARCHER_LIGHT_X}, $rt->f(1), $rt->unary('-', $rt->f(1))));
         $diff = $rt->component_wise('max', $rt->dot($n, $lightDir), $rt->f(0));
         $amb = $rt->f(0.29999999999999999);
         $volColor = $sampleVoxel__ivec3->($voxel);

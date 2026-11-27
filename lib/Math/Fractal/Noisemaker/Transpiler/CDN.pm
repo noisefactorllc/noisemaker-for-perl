@@ -387,40 +387,117 @@ sub _parse_field {
 # order, but the ORACLE binds mixer surface params by definition order, so the
 # bundle must record it. Walks the raw text, skipping strings/nested values.
 sub ordered_object_keys {
-    my ($text) = @_;
+    my ($text, $positions) = @_;
     my @keys;
     my $i = index($text, '{');
     return \@keys if $i < 0;
-    my $n     = length $text;
+    my $n = length $text;
     my $depth = 0;
     while ($i < $n) {
         my $c = substr($text, $i, 1);
-        if ($c eq '"' || $c eq "'") {
-            my $end = _skip_string(\$text, $i);
-            if ($depth == 1) {
-                my $body = substr($text, $i + 1, $end - $i - 2);
-                my $k    = $end;
-                $k++ while $k < $n && substr($text, $k, 1) =~ /\s/;
-                push @keys, $body if $k < $n && substr($text, $k, 1) eq ':';
-            }
-            $i = $end;
-            next;
-        }
-        if ($depth == 1 && $c =~ /[A-Za-z_\$]/) {
-            my $end = $i + 1;
+        my ($key, $end);
+        if ($c eq '"' || $c eq "'" || $c eq '`') {
+            $end = _skip_string(\$text, $i);
+            $key = substr($text, $i + 1, $end - $i - 2) if $depth == 1;
+        } elsif ($depth == 1 && $c =~ /[A-Za-z_\$]/) {
+            $end = $i + 1;
             $end++ while $end < $n && substr($text, $end, 1) =~ /[A-Za-z0-9_\$]/;
-            my $after = $end;
-            $after++ while $after < $n && substr($text, $after, 1) =~ /\s/;
-            push @keys, substr($text, $i, $end - $i)
-                if $after < $n && substr($text, $after, 1) eq ':';
+            $key = substr($text, $i, $end - $i);
+        }
+        if (defined $end) {
             $i = $end;
+            next unless defined $key;
+            $i++ while $i < $n && substr($text, $i, 1) =~ /\s/;
+            if (substr($text, $i, 1) eq ':') {
+                push @keys, $key;
+                $i++;
+                $i++ while $i < $n && substr($text, $i, 1) =~ /\s/;
+                $positions->{$key} = $i if $positions;
+            }
             next;
         }
         if    ($c eq '{' || $c eq '[') { $depth++ }
-        elsif ($c eq '}' || $c eq ']') { $depth--; return \@keys if $depth == 0 }
+        elsif ($c eq '}' || $c eq ']') { $depth--; last if !$depth }
         $i++;
     }
     return \@keys;
+}
+
+# Ordered storage attachments determine allocation order across pass instances.
+# Preserve the source order before canonical JSON sorts the pass's binding keys.
+my %ATTACHMENT_ORDERS = (outputs => 'outputOrder', storageTextures => 'storageTextureOrder');
+
+sub _missing_attachment_order {
+    my ($pass) = @_;
+    for my $field (keys %ATTACHMENT_ORDERS) {
+        return 1 if keys(%{ $pass->{$field} || {} }) > 1 && !$pass->{ $ATTACHMENT_ORDERS{$field} };
+    }
+    return 0;
+}
+
+sub _attachment_orders {
+    my ($text, $start, $passes) = @_;
+    return unless defined $start && substr($$text, $start, 1) eq '[';
+    my $i = $start + 1;
+    for my $pass (@$passes) {
+        $i++ while substr($$text, $i, 1) =~ /[\s,]/;
+        last unless substr($$text, $i, 1) eq '{';
+        my $object = _extract_balanced($text, $i);
+        $i += length $object;
+        next unless _missing_attachment_order($pass);
+        my %positions;
+        ordered_object_keys($object, \%positions);
+        for my $field (keys %ATTACHMENT_ORDERS) {
+            next unless keys(%{ $pass->{$field} || {} }) > 1;
+            my $start = $positions{$field};
+            $pass->{ $ATTACHMENT_ORDERS{$field} } = ordered_object_keys(_extract_balanced(\$object, $start))
+                if defined $start && substr($object, $start, 1) eq '{';
+        }
+    }
+}
+
+# Locate fields on the effect itself. A pass sampler or attachment can legally
+# have the same name as a published texture. Keep each object's fields separate.
+sub _descriptor_fields {
+    my ($text, $effect_id) = @_;
+    my ($namespace, $func) = split m{/}, $effect_id, 2;
+    my (@objects, @scopes);
+    my %wanted = map { $_ => 1 } qw(namespace func textures passes outputTex outputTex3d outputGeo outputXyz outputVel outputRgba);
+    while ($$text =~ m{/\*.*?\*/|//[^\n]*|([{}])|(["'`])|([A-Za-z_\$][\w\$]*)}gs) {
+        my ($brace, $quote, $key) = ($1, $2, $3);
+        if (defined $brace) {
+            if ($brace eq '{') {
+                push @scopes, {};
+            } elsif (@scopes) {
+                my $closed = pop @scopes;
+                push @objects, $closed if exists $closed->{func} || exists $closed->{namespace};
+            }
+            next;
+        }
+        if (defined $quote) {
+            my $start = pos($$text) - 1;
+            my $end = _skip_string($text, $start);
+            $key = substr($$text, $start + 1, $end - $start - 2);
+            pos($$text) = $end;
+        }
+        next unless @scopes && defined $key;
+        if (!$quote && $key eq 'this' && $$text =~ /\G\s*,\s*["'](\w+)["']\s*,\s*/gc) {
+            $key = $1; # Minified class-field initializer: define(this, "field", value).
+        } else {
+            next unless $wanted{$key} && $$text =~ /\G\s*:\s*/gc;
+        }
+        next unless $wanted{$key};
+        $scopes[-1]{$key} = pos($$text);
+    }
+    # The shader section may begin before the enclosing descriptor has closed.
+    push @objects, reverse @scopes;
+    for my $object (@objects) {
+        my $position = $object->{func} // $object->{namespace};
+        next unless defined $position;
+        my $name = exists $object->{func} ? $func : $namespace;
+        return $object if substr($$text, $position) =~ /\A["']\Q$name\E["']/;
+    }
+    return {};
 }
 
 sub _project_effect {
@@ -436,11 +513,12 @@ sub _project_effect {
         :                                    'image';
 
     if (my $outputs = $VOLUME_OUTPUTS{$effect_id}) {
-        ($result->{outputTex3d}, $result->{outputGeo}) = @$outputs;
+        $result->{outputTex3d} //= $outputs->[0];
+        $result->{outputGeo} //= $outputs->[1];
     }
     elsif ($result->{domain} eq 'volume-renderer') {
-        $result->{outputTex3d} = 'inputTex3d';
-        $result->{outputGeo}   = 'screenGeoBuffer';
+        $result->{outputTex3d} //= 'inputTex3d';
+        $result->{outputGeo}   //= 'screenGeoBuffer';
     }
 
     if ($effect_id eq 'render/loopBegin' || $effect_id eq 'render/loopEnd') {
@@ -459,6 +537,7 @@ sub _project_effect {
     for my $pass (@{ $result->{passes} || [] }) {
         next unless ($pass->{drawBuffers} || 0) >= 2 && exists $pass->{outputs}{color};
         $pass->{outputs}{fragColor} = delete $pass->{outputs}{color};
+        $_ = 'fragColor' for grep { $_ eq 'color' } @{ $pass->{outputOrder} || [] };
     }
     return $result;
 }
@@ -471,12 +550,13 @@ sub fetch_effect {
     if (-e $cache) {
         my $text   = _read_file($cache);
         my $result = $_JSON->decode($text);
-        # Older caches were canonical JSON without paramOrder. Hash key order
-        # cannot reconstruct source positional order, so refresh those records
-        # from the authoritative module instead of silently alphabetizing them.
+        # Canonical JSON sorts keys, so older entries without declaration
+        # order or published texture names must be refreshed from source.
+        my $missing_attachment_order = grep { _missing_attachment_order($_) } @{ $result->{passes} || [] };
         return _project_effect($result, $effect_id)
-            if ($result->{paramOrder} && @{ $result->{paramOrder} })
-                || !keys %{ $result->{params} || {} };
+            if !$missing_attachment_order && exists $result->{outputXyz} && (exists $result->{textureOrder} || keys(%{$result->{textures} || {}}) < 2)
+                && (($result->{paramOrder} && @{ $result->{paramOrder} })
+                || !keys %{ $result->{params} || {} });
     }
 
     my $bundle = _fetch_text("$CDN_BASE/$version/effects/$effect_id.js");
@@ -516,6 +596,21 @@ sub fetch_effect {
             programs        => _extract_programs(\$bundle),
         };
     }
+    my $fields = _descriptor_fields(\$region, $effect_id);
+    for my $field (qw(outputTex outputTex3d outputGeo outputXyz outputVel outputRgba)) {
+        my $start = $fields->{$field};
+        $result->{$field} = defined $start ? _read_literal(\$region, $start) : undef;
+        die "CDN effect '$effect_id': $field must be a non-empty string\n"
+            if defined $start && (substr($region, $start, 1) !~ /["']/ || $result->{$field} !~ /\S/);
+    }
+    if (keys(%{ $result->{textures} || {} }) > 1) {
+        my $start = $fields->{textures};
+        $result->{textureOrder} = defined $start && substr($region, $start, 1) eq '{'
+            ? ordered_object_keys(_extract_balanced(\$region, $start))
+            : undef;
+    }
+    _attachment_orders(\$region, $fields->{passes}, $result->{passes})
+        if grep { _missing_attachment_order($_) } @{ $result->{passes} || [] };
     # The cache is written with canonical (sorted) JSON, so paramOrder is
     # stored explicitly — the raw-text key scan on re-read would see sorted
     # keys, not definition order.

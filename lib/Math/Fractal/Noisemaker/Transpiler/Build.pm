@@ -33,6 +33,7 @@ our $STATEFUL_REVISION = 'a024dc3a960cc44af454abc7aebce50456c194e6';
 
 my $_JSON        = JSON::PP->new->utf8->canonical;
 my $_JSON_PRETTY = JSON::PP->new->utf8->canonical->indent->indent_length(2)->space_after;
+my @PUBLISHED_TEXTURES = qw(outputTex outputTex3d outputGeo outputXyz outputVel outputRgba);
 my %_AUTHORED_STATEFUL = map { $_ => 1 } qw(
     filter/convolutionFeedback filter/feedback filter/motionBlur
     filter/temporalAberration points/attractor points/buddhabrot points/dla
@@ -120,6 +121,15 @@ sub _oracle_compatibility {
     if ($key eq 'render/render3d:render3d' || $key eq 'render/renderCubemap3d:renderCubemap3d') {
         my $count = ($perl =~ s{\Q$VOXEL_BOUNDS_SITE\E}{$VOXEL_BOUNDS_NAN}g);
         die "$key voxel-bounds site changed\n" unless $count == 1;
+    }
+    elsif ($key eq 'filter/grain:grain') {
+        # The CPU kernel scales the exact uint32 PCG lane by 2^-32 in double
+        # precision. Rounding the lane first shifts the animated noise phase.
+        my $lane = q{$rt->swizzle($noise, 'x')};
+        my $cast = '$rt->construct(1, ' . $lane . ')';
+        my $scale = q{, $g->{UINT32_TO_FLOAT}, 1, 'float')};
+        my $count = ($perl =~ s{\Q$cast$scale\E}{$lane$scale}g);
+        die "$key hash-to-unit conversion changed\n" unless $count == 1;
     }
     return $perl;
 }
@@ -237,6 +247,7 @@ sub build {
     };
     my $n_ok = 0;
     my %files;
+    my $stateful_revision = _preserve_stateful($bundle, $old_bundle);
     for my $eid (@build_ids) {
         my $eff = eval { fetch_effect($eid) };
         if (!$eff) {
@@ -312,7 +323,24 @@ sub build {
             $pass{uniforms} ||= {};
             push @passes, \%pass;
         }
-        next if $authored{$eid};
+        if ($authored{$eid}) {
+            # Keep the authored CPU pass graph, but publish the texture names
+            # declared by the selected engine version.
+            my $entry = $bundle->{effects}{$eid};
+            delete @$entry{@PUBLISHED_TEXTURES};
+            $entry->{$_} = $eff->{$_} for grep { defined $eff->{$_} } @PUBLISHED_TEXTURES;
+            $entry->{textureOrder} = $eff->{textureOrder}
+                if $eff->{textureOrder} && keys(%{ $entry->{textures} || {} }) > 1;
+            my %source_pass = map { $_->{name} => $_ } grep { defined $_->{name} } @{ $eff->{passes} };
+            for my $pass (@{ $entry->{passes} }) {
+                my $source = defined $pass->{name} && $source_pass{$pass->{name}};
+                next unless $source && $pass->{program} eq $source->{program};
+                for my $order (qw(outputOrder storageTextureOrder)) {
+                    $pass->{$order} = $source->{$order} if $source->{$order};
+                }
+            }
+            next;
+        }
         die "effect $eid has no renderable passes\n" unless @passes;
         $bundle->{effects}{$eid} = {
             namespace => $eff->{namespace},
@@ -327,9 +355,11 @@ sub build {
         };
         $bundle->{effects}{$eid}{externalTexture} = $eff->{externalTexture}
             if $eff->{externalTexture};
+        $bundle->{effects}{$eid}{textureOrder} = $eff->{textureOrder}
+            if $eff->{textureOrder};
         $bundle->{effects}{$eid}{paramAliases} = $eff->{paramAliases}
             if $eff->{paramAliases};
-        for my $field (qw(domain outputTex outputTex3d outputGeo loopRole)) {
+        for my $field ('domain', 'loopRole', @PUBLISHED_TEXTURES) {
             $bundle->{effects}{$eid}{$field} = $eff->{$field}
                 if defined $eff->{$field};
         }
@@ -341,7 +371,6 @@ sub build {
             . join(', ', @drift[0 .. (@drift > 8 ? 7 : $#drift)])
             . "\nRe-run with --update-lock to accept.\n";
     }
-    my $stateful_revision = _preserve_stateful($bundle, $old_bundle);
     my $new_lock = {
         source  => $Math::Fractal::Noisemaker::Transpiler::CDN::CDN_BASE,
         version => $Math::Fractal::Noisemaker::Transpiler::CDN::CDN_VERSION,

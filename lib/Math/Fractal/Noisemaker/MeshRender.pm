@@ -23,7 +23,9 @@ package Math::Fractal::Noisemaker::MeshRender;
 
 use strict;
 use warnings;
+use B ();
 use POSIX ();
+use Scalar::Util qw(looks_like_number);
 use Math::Fractal::Noisemaker::JsTrig qw(js_sin js_cos);
 use Math::Fractal::Noisemaker::ExternalInput qw(empty_mesh_data);
 
@@ -148,7 +150,6 @@ sub mesh_render_triangles {
     my $mesh = ($args->{external_inputs} || {})->{meshData} ||= empty_mesh_data();
     my $positions = $mesh->{positions} // $mesh->{positionData};
     my $normals   = $mesh->{normalData};
-    my ($tex_width, $tex_height) = @$mesh{qw(texWidth texHeight)};
     my $dest = $args->{destination};
     my ($width, $height) = ($dest->width, $dest->height);
     my $data = $dest->data;
@@ -157,7 +158,24 @@ sub mesh_render_triangles {
     # Per-pixel depth buffer cleared to 1.0 for each pass.
     my @depth = (1) x ($width * $height);
     my $covered = 0;
-    my $triangles = int($tex_width * $tex_height / 3);
+    my $available = int(@$positions / 4);
+    my $vertices = $available;
+    if (my $pass = $args->{pass}) {
+        $vertices = $pass->{count} || 3;
+        my $override = defined $pass->{countUniform} ? $args->{uniforms}{ $pass->{countUniform} } : undef;
+        # A string-valued uniform, even "6", is not a numeric override in the CPU renderer.
+        if (defined $override && !ref $override
+            && (B::svref_2object(\$override)->FLAGS & (B::SVf_IOK | B::SVf_NOK)) && $override > 0) {
+            $vertices = $override;
+        }
+        if ($vertices =~ /\A(?:auto|input|screen)\z/) {
+            my $inputs = $args->{inputs} || {};
+            my $extent = $inputs->{meshPositions} || $inputs->{inputTex};
+            $vertices = $extent ? $extent->width * $extent->height : 3;
+        }
+    }
+    $vertices = 0 unless looks_like_number($vertices) && $vertices > 0;
+    my $triangles = int(($vertices < $available ? $vertices : $available) / 3);
     for my $tri (0 .. $triangles - 1) {
         # A triangle of three invalid texels (position w = 0) is skipped. The
         # vertex stage has no side effects, so testing w first changes nothing.

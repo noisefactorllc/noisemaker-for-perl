@@ -299,9 +299,8 @@ for my $eid (@ids) {
                 && $pa[$offset + 3] == 255;
         }
     }
-    my $reviewed_grain_seed_time = $eid eq 'filter/grain'
-        && $SIZE == 64 && $SEED == 97 && $TIME == 0.75
-        && $d == 1 && $changed_pixels == 1 && !$alpha_changed;
+    my $grain_seed_time = $eid eq 'filter/grain' && $SIZE == 64 && $SEED == 97 && $TIME == 0.75;
+    my $reviewed_grain_seed_time = $grain_seed_time && $d == 1 && $changed_pixels == 1 && !$alpha_changed;
     if ($reviewed_grain_seed_time) {
         my $offset = 4 * (10 * 64);
         for my $channel (0 .. 2) {
@@ -370,9 +369,9 @@ for my $eid (@ids) {
     }
     else { push @diffs, [$eid, $d, $changed_pixels] }
 
-    # Retain source-bound captures for reviewed NEAR cases so the required
-    # side-by-side visual verdict stays reproducible at native size.
-    if (@near && $near[-1][0] eq $eid && (my $cap = $ENV{NM_PARITY_CAPTURE_DIR})) {
+    # Keep the grain regression's exact capture pair as well as reviewed NEAR pairs.
+    if (((@near && $near[-1][0] eq $eid) || ($grain_seed_time && $d == 0))
+        && (my $cap = $ENV{NM_PARITY_CAPTURE_DIR})) {
         (my $case = $eid) =~ s{/}{_}g;
         copy(File::Spec->catfile($TMP, 'ph_js.png'), File::Spec->catfile($cap, "$case.js.png"))
             or die "cannot retain reference capture: $!\n";
