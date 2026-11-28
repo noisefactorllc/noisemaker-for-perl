@@ -40,6 +40,29 @@ sub err_str {
     is($color->{lexeme}, '#3af',  'tokenize: color token lexeme');
 }
 
+# Mirrors upstream commit e9b37133 (limit lexer keywords to own properties): a
+# lexeme named like an Object prototype property must lex as an identifier and
+# bind as a let variable. %KEYWORDS is an own-name hash keyed by the exact
+# lexeme, so no inherited lookup can turn those names into keywords.
+{
+    for my $name (qw(toString valueOf constructor hasOwnProperty __proto__)) {
+        is(tokenize_dsl($name)->[0]{type}, 'identifier',
+            "tokenize: prototype-property name lexes as an identifier ($name)");
+    }
+    is_deeply(
+        [map { $_->{type} } @{ tokenize_dsl('scale.toString') }],
+        ['identifier', 'punctuation', 'identifier', 'eof'],
+        'tokenize: dotted prototype-property access lexes as two identifiers'
+    );
+    my $program = "search synth\n"
+        . "let constructor = 2\n"
+        . "noise(scaleX: constructor).write(o0)\n"
+        . "render(o0)\n";
+    my $plan = compile_dsl($program, $effects);
+    is($plan->{chains}[0]{steps}[0]{params}{scaleX}, 2,
+        'compile: prototype-property name binds as a let variable');
+}
+
 # --- parser: program shape ---------------------------------------------------
 
 {
